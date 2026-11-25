@@ -21,7 +21,12 @@ export interface BundleRule {
   key: string;
   name: string;
   enabled: boolean;
-  trigger: { stages?: string[]; minServices?: number };
+  /**
+   * stages: at least one service in any of these stages.
+   * stageGroups: every group must be matched by at least one service
+   *   (e.g. [["chemical"], ["cut","style"]] = color AND (cut OR style)).
+   */
+  trigger: { stages?: string[]; stageGroups?: string[][]; minServices?: number };
   appliesTo: { stages?: string[]; serviceKeys?: string[]; all?: boolean };
   discount: DiscountValue;
 }
@@ -79,6 +84,7 @@ function bundleMatches(rule: BundleRule, lines: PriceLine[]): boolean {
   const t = rule.trigger;
   if (t.minServices !== undefined && lines.length < t.minServices) return false;
   if (t.stages && !lines.some((l) => t.stages!.includes(l.stage))) return false;
+  if (t.stageGroups && !t.stageGroups.every((g) => lines.some((l) => g.includes(l.stage)))) return false;
   return true;
 }
 

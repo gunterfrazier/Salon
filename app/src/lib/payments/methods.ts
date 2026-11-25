@@ -8,8 +8,45 @@ export interface PaymentMethod {
   enabled: boolean;
   /** Can be charged later without the client (enforces no-show / late-cancel fees). */
   canGuarantee: boolean;
+  /** What linking needs: sign in to an account, type a handle, or nothing. */
+  setup: "connect" | "handle" | "none";
   /** Venmo username, $Cashtag, PayPal.Me name, or Zelle/Apple Cash phone or email. */
   handle?: string;
+}
+
+const PHONE = /^\+?1?\D*(\d{3})\D*(\d{3})\D*(\d{4})\D*$/;
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Check a handle and return it in standard form, or an error message. */
+export function validateHandle(key: string, raw: string): { ok: true; value: string } | { ok: false; error: string } {
+  const v = raw.trim();
+  if (!v) return { ok: false, error: "Required." };
+  const phoneOrEmail = (what: string) => {
+    const ph = v.match(PHONE);
+    if (ph) return { ok: true as const, value: `(${ph[1]}) ${ph[2]}-${ph[3]}` };
+    if (EMAIL.test(v)) return { ok: true as const, value: v.toLowerCase() };
+    return { ok: false as const, error: `Enter the phone number or email you use for ${what}.` };
+  };
+  switch (key) {
+    case "venmo_direct": {
+      const h = v.replace(/^@/, "");
+      return /^[A-Za-z0-9_-]{5,30}$/.test(h) ? { ok: true, value: h } : { ok: false, error: "Venmo usernames are 5–30 letters, numbers, - or _." };
+    }
+    case "cash_app_direct": {
+      const h = v.replace(/^\$/, "");
+      return /^[A-Za-z][A-Za-z0-9]{0,19}$/.test(h) ? { ok: true, value: h } : { ok: false, error: "A $Cashtag starts with a letter and has up to 20 letters or numbers." };
+    }
+    case "paypal_me": {
+      const h = v.replace(/^(https?:\/\/)?(www\.)?paypal\.me\//i, "").replace(/\/.*$/, "");
+      return /^[A-Za-z0-9]{1,20}$/.test(h) ? { ok: true, value: h } : { ok: false, error: "Enter your PayPal.Me name (letters and numbers)." };
+    }
+    case "zelle":
+      return phoneOrEmail("Zelle");
+    case "apple_cash":
+      return phoneOrEmail("Apple Cash (iMessage)");
+    default:
+      return { ok: false, error: "This method doesn't use a handle." };
+  }
 }
 
 export interface PaymentRequest {

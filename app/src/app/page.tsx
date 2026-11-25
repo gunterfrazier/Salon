@@ -7,6 +7,7 @@ export default function Home() {
       <p className="text-muted mt-1">Working title. Early build.</p>
       <ul className="mt-6 list-disc pl-5">
         <li><Link className="underline" href="/legend">Color chart</Link></li>
+        <li><Link className="underline" href="/settings/payments">Settings › Payments</Link></li>
       </ul>
     </main>
   );

@@ -1,6 +1,6 @@
 # SalonOS (working title) — Phase 0 / Phase 1 Specification
 
-_Status: draft v0.3 · 2026-11-25_
+_Status: draft v0.4 · 2026-11-25_
 
 ## 1. Goals
 
@@ -141,7 +141,7 @@ A client can book several services in one appointment, e.g. haircut + color + st
 `seed/pricing-rules.json`. Applied per line, in this order:
 1. **Custom price:** the stylist can type a price for any service on any appointment.
 2. **Package discounts:** apply automatically when the trigger matches. Each package can be turned off for a single appointment.
-   - **Cut & Style with color** (on): cut and style booked with a color service are **100% off**. That keeps color + cut + style at your old StyleSeat price until you set color-only prices. You can change it to a smaller % or a dollar amount.
+   - **Color + Cut/Style 5% off** (on): **5% off the whole appointment** when a color service is booked with a cut and/or a style. The percent can be changed, switched to a dollar amount, or turned off.
    - **3+ services** (off, example): 10% off everything.
    - Packages can take a percent, a dollar amount, or a set price.
 3. **Manual discounts** with a reason (Loyal client, Friends & family, Promotion, Service adjustment, Other):
@@ -152,7 +152,14 @@ A client can book several services in one appointment, e.g. haircut + color + st
 - Deposits and fees use the discounted total.
 
 ### 5.5 Payment methods
-`seed/payment-methods.json`. Each method can be turned on or off.
+`seed/payment-methods.json`. **Every method is available. All start off except cash.** The stylist links and switches each one on or off from **Settings → Payments** in the app, any time after launch, to find what works best for her clients. Reports will show payments by method to help compare.
+
+| Linking | What it takes |
+|---|---|
+| Connect | Sign in to the account: **Stripe** (one account covers card, Google Pay, Apple Pay and Cash App Pay), PayPal |
+| Handle | Type a Venmo username, $Cashtag, PayPal.Me name, or Zelle / Apple Cash phone or email. The app checks the format and shows a test link. |
+| None | Cash |
+
 
 | Method | How | Can charge later (no-show fees) | Phase |
 |---|---|---|---|
@@ -269,9 +276,11 @@ Double-booking prevention: a Postgres exclusion constraint on each staff member'
 - Removed the $25 women's/youth cut. Processing-time estimates approved. *(v0.3)*
 - Payments: Stripe for card, Google Pay, Apple Pay and Cash App Pay; manual Zelle, Venmo, Cash App, PayPal.Me, Apple Cash and cash; PayPal/Venmo checkout in Phase 2. Meta Pay dropped. A saved method is optional. *(v0.3)*
 
+- Package discount: 5% off the whole appointment for color + cut and/or style. *(v0.4)*
+- Payment methods: all available, off by default except cash, linked and switched on in the app after launch. *(v0.4)*
+
 ## 11. Open questions
-1. Set **color-only prices** and decide how much the cut & style package should save. Until then, today's prices are kept.
-2. Which payment methods to turn on at launch? Please send your Venmo, Cash App and PayPal.Me handles and your Zelle phone or email.
+1. **Color-only prices.** They still equal the old StyleSeat prices, which included a cut and style. Booking color + cut + style now costs more than on StyleSeat until those are lowered.
 
 ## 12. Reuse from Our Faithful Church App (`gunterfrazier/Apps`)
 Reviewed 2026-11-25. The church app's screens are about 30,000 lines of plain JavaScript stitched into one page, and its data lives mostly in a single catch-all table. Neither fits this app's Next.js + TypeScript setup or its proper tables. Its **server code (Supabase Edge Functions, TypeScript)** is clean and directly useful. Plan: **copy and adapt specific server modules** when each feature is built. Use the rest as reference. No shared package.

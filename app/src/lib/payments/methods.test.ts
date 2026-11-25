@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import methodsJson from "../../../../seed/payment-methods.json";
-import { bookingGuarantee, paymentRequest, type PaymentMethod } from "./methods";
+import { bookingGuarantee, paymentRequest, validateHandle, type PaymentMethod } from "./methods";
 
 const all = methodsJson.methods as PaymentMethod[];
 const m = (key: string, handle?: string) => ({ ...all.find((x) => x.key === key)!, handle });
@@ -37,5 +37,29 @@ describe("booking guarantee", () => {
   });
   it("Zelle with nothing due: booked, any fee becomes a balance owed", () => {
     expect(bookingGuarantee(m("zelle", "x"), 0)).toEqual({ kind: "unsecured", payNow: 0 });
+  });
+});
+
+describe("handle checks", () => {
+  it("cleans up what people type", () => {
+    expect(validateHandle("venmo_direct", "@Styled-By_K")).toEqual({ ok: true, value: "Styled-By_K" });
+    expect(validateHandle("cash_app_direct", "$StyledByK")).toEqual({ ok: true, value: "StyledByK" });
+    expect(validateHandle("paypal_me", "https://paypal.me/StyledByK")).toEqual({ ok: true, value: "StyledByK" });
+    expect(validateHandle("zelle", "555.010.0000")).toEqual({ ok: true, value: "(555) 010-0000" });
+    expect(validateHandle("apple_cash", "+1 555 010 0000")).toEqual({ ok: true, value: "(555) 010-0000" });
+    expect(validateHandle("zelle", "Me@Example.com")).toEqual({ ok: true, value: "me@example.com" });
+  });
+  it("rejects bad input", () => {
+    expect(validateHandle("venmo_direct", "ab").ok).toBe(false);
+    expect(validateHandle("cash_app_direct", "$1abc").ok).toBe(false);
+    expect(validateHandle("zelle", "not a phone").ok).toBe(false);
+    expect(validateHandle("zelle", "").ok).toBe(false);
+  });
+});
+
+describe("defaults", () => {
+  it("every method is available; only cash starts on", () => {
+    expect(all.filter((x) => x.enabled).map((x) => x.key)).toEqual(["cash"]);
+    expect(all.map((x) => x.key)).toEqual(expect.arrayContaining(["card", "google_pay", "apple_pay", "cash_app_pay", "paypal", "venmo", "venmo_direct", "cash_app_direct", "paypal_me", "zelle", "apple_cash", "cash"]));
   });
 });

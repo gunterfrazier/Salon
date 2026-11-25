@@ -1,24 +1,52 @@
 {
-  "_about": "Package discounts applied automatically when services are stacked. Editable in Settings > Pricing. Manual discounts and custom prices can also be applied per booking (see docs/SPEC.md §5).",
+  "_about": "Package discounts applied automatically when services are stacked. Editable in Settings > Pricing. Manual discounts and custom prices can also be applied per booking (see docs/SPEC.md \u00a75).",
   "bundles": [
     {
-      "key": "cut_style_with_color",
-      "name": "Cut & Style with color",
+      "key": "color_with_cut_or_style",
+      "name": "Color + Cut/Style 5% off",
       "enabled": true,
-      "_note": "Default keeps color + cut + style at your old StyleSeat price: the cut and style are free when booked with a color service. Change to a smaller percent or a dollar amount once you set color-only prices.",
-      "trigger": { "stages": ["chemical"] },
-      "appliesTo": { "stages": ["cut", "style"] },
-      "discount": { "kind": "percent", "value": 100 }
+      "_note": "5% off the whole appointment when a color service is booked together with a cut or a style. Change the percent, switch to a dollar amount, or turn it off in Settings > Pricing.",
+      "trigger": {
+        "stageGroups": [
+          [
+            "chemical"
+          ],
+          [
+            "cut",
+            "style"
+          ]
+        ]
+      },
+      "appliesTo": {
+        "all": true
+      },
+      "discount": {
+        "kind": "percent",
+        "value": 5
+      }
     },
     {
       "key": "three_or_more",
       "name": "3+ services",
       "enabled": false,
       "_note": "Example: 10% off everything when 3 or more services are booked together.",
-      "trigger": { "minServices": 3 },
-      "appliesTo": { "all": true },
-      "discount": { "kind": "percent", "value": 10 }
+      "trigger": {
+        "minServices": 3
+      },
+      "appliesTo": {
+        "all": true
+      },
+      "discount": {
+        "kind": "percent",
+        "value": 10
+      }
     }
   ],
-  "manualDiscountReasons": ["Loyal client", "Friends & family", "Promotion", "Service adjustment", "Other"]
+  "manualDiscountReasons": [
+    "Loyal client",
+    "Friends & family",
+    "Promotion",
+    "Service adjustment",
+    "Other"
+  ]
 }

@@ -19,25 +19,30 @@ describe("menu after the split", () => {
 });
 
 describe("package discounts", () => {
-  it("default: color + cut + style costs the old StyleSeat price", () => {
+  it("color + cut + style: 5% off the whole appointment", () => {
     const p = priceAppointment(lines(s.full_highlights, s.womens_cut, s.style), rules);
     expect(p.subtotal).toBe(12500 + 3500 + 2500);
-    expect(p.total).toBe(12500);
-    expect(p.appliedBundles).toEqual(["cut_style_with_color"]);
-    expect(p.lines[1].discounts[0]).toEqual({ source: "bundle", label: "Cut & Style with color", amount: 3500 });
+    expect(p.total).toBe(Math.round(18500 * 0.95));
+    expect(p.appliedBundles).toEqual(["color_with_cut_or_style"]);
+    expect(p.lines[0].discounts[0]).toEqual({ source: "bundle", label: "Color + Cut/Style 5% off", amount: 625 });
   });
 
-  it("cut alone: no package discount", () => {
-    expect(priceAppointment(lines(s.womens_cut), rules).total).toBe(3500);
+  it("color + just a style also qualifies", () => {
+    expect(priceAppointment(lines(s.toner, s.style), rules).total).toBe(Math.round(6500 * 0.95));
+  });
+
+  it("no discount without color, or color alone", () => {
+    expect(priceAppointment(lines(s.womens_cut, s.style), rules).totalDiscount).toBe(0);
+    expect(priceAppointment(lines(s.balayage, s.olaplex), rules).totalDiscount).toBe(0);
   });
 
   it("package can be a dollar amount instead", () => {
-    const custom: BundleRule[] = [{ ...rules[0], discount: { kind: "amount", value: 10 } }];
-    expect(priceAppointment(lines(s.all_over_color, s.womens_cut, s.style), custom).total).toBe(9500 + 2500 + 1500);
+    const custom: BundleRule[] = [{ ...rules[0], appliesTo: { stages: ["cut"] }, discount: { kind: "amount", value: 10 } }];
+    expect(priceAppointment(lines(s.all_over_color, s.womens_cut), custom).total).toBe(9500 + 2500);
   });
 
   it("stylist can switch a package off for one appointment", () => {
-    const p = priceAppointment(lines(s.all_over_color, s.womens_cut), rules, { disabledBundles: ["cut_style_with_color"] });
+    const p = priceAppointment(lines(s.all_over_color, s.womens_cut), rules, { disabledBundles: ["color_with_cut_or_style"] });
     expect(p.total).toBe(13000);
   });
 

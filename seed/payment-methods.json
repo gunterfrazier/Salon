@@ -1,17 +1,115 @@
 {
-  "_about": "How clients can pay. Editable in Settings > Payments. 'canGuarantee' = the app can charge it later without the client (needed to enforce no-show / late-cancel fees automatically). Methods that can't guarantee require the deposit (or full price for flagged clients) to be PAID before the booking is confirmed. Fill in your handles before turning a method on.",
+  "_about": "Every payment option the app supports. All start OFF except cash; link and switch them on in the app (Settings > Payments) whenever you're ready, and switch them off again any time. 'setup' says what linking needs: 'connect' = sign in to the provider's account; 'handle' = type your username/phone/email; 'none' = nothing. 'canGuarantee' = the app can charge it later without the client (no-show / late-cancel fees).",
   "methods": [
-    { "key": "card", "label": "Credit / debit card", "provider": "stripe", "enabled": true, "canGuarantee": true },
-    { "key": "google_pay", "label": "Google Pay", "provider": "stripe", "enabled": true, "canGuarantee": true },
-    { "key": "apple_pay", "label": "Apple Pay", "provider": "stripe", "enabled": true, "canGuarantee": true },
-    { "key": "cash_app_pay", "label": "Cash App Pay", "provider": "stripe", "enabled": true, "canGuarantee": true },
-    { "key": "paypal", "label": "PayPal", "provider": "paypal", "enabled": false, "canGuarantee": true, "_note": "Phase 2. Saved PayPal for later charges needs PayPal's vault feature; confirm during setup." },
-    { "key": "venmo", "label": "Venmo", "provider": "paypal", "enabled": false, "canGuarantee": true, "_note": "Phase 2, through PayPal checkout. Same vault caveat as PayPal." },
-    { "key": "venmo_direct", "label": "Venmo (send to my profile)", "provider": "manual", "enabled": false, "canGuarantee": false, "handle": "", "_note": "Use a Venmo business profile; personal accounts aren't meant for business payments." },
-    { "key": "cash_app_direct", "label": "Cash App (send to my $Cashtag)", "provider": "manual", "enabled": false, "canGuarantee": false, "handle": "" },
-    { "key": "paypal_me", "label": "PayPal.Me", "provider": "manual", "enabled": false, "canGuarantee": false, "handle": "" },
-    { "key": "zelle", "label": "Zelle", "provider": "manual", "enabled": false, "canGuarantee": false, "handle": "", "_note": "Phone or email registered with Zelle. Zelle has no payment link, so clients see your Zelle info, and you mark it paid when it arrives." },
-    { "key": "apple_cash", "label": "Apple Cash", "provider": "manual", "enabled": false, "canGuarantee": false, "handle": "", "_note": "Sent from Messages or Wallet on iPhone to your phone number. No payment link. You need an iPhone to receive it." },
-    { "key": "cash", "label": "Cash", "provider": "manual", "enabled": true, "canGuarantee": false }
+    {
+      "key": "card",
+      "label": "Credit / debit card",
+      "provider": "stripe",
+      "enabled": false,
+      "canGuarantee": true,
+      "setup": "connect",
+      "_note": "Linked together by connecting one Stripe account (sole proprietor). Each can then be switched on separately."
+    },
+    {
+      "key": "google_pay",
+      "label": "Google Pay",
+      "provider": "stripe",
+      "enabled": false,
+      "canGuarantee": true,
+      "setup": "connect",
+      "_note": "Linked together by connecting one Stripe account (sole proprietor). Each can then be switched on separately."
+    },
+    {
+      "key": "apple_pay",
+      "label": "Apple Pay",
+      "provider": "stripe",
+      "enabled": false,
+      "canGuarantee": true,
+      "setup": "connect",
+      "_note": "Linked together by connecting one Stripe account (sole proprietor). Each can then be switched on separately."
+    },
+    {
+      "key": "cash_app_pay",
+      "label": "Cash App Pay",
+      "provider": "stripe",
+      "enabled": false,
+      "canGuarantee": true,
+      "setup": "connect",
+      "_note": "Linked together by connecting one Stripe account (sole proprietor). Each can then be switched on separately."
+    },
+    {
+      "key": "paypal",
+      "label": "PayPal",
+      "provider": "paypal",
+      "enabled": false,
+      "canGuarantee": true,
+      "_note": "Phase 2. Saved PayPal for later charges needs PayPal's vault feature; confirm during setup.",
+      "setup": "connect"
+    },
+    {
+      "key": "venmo",
+      "label": "Venmo",
+      "provider": "paypal",
+      "enabled": false,
+      "canGuarantee": true,
+      "_note": "Phase 2, through PayPal checkout. Same vault caveat as PayPal.",
+      "setup": "connect"
+    },
+    {
+      "key": "venmo_direct",
+      "label": "Venmo (send to my profile)",
+      "provider": "manual",
+      "enabled": false,
+      "canGuarantee": false,
+      "handle": "",
+      "_note": "Use a Venmo business profile; personal accounts aren't meant for business payments.",
+      "setup": "handle"
+    },
+    {
+      "key": "cash_app_direct",
+      "label": "Cash App (send to my $Cashtag)",
+      "provider": "manual",
+      "enabled": false,
+      "canGuarantee": false,
+      "handle": "",
+      "setup": "handle"
+    },
+    {
+      "key": "paypal_me",
+      "label": "PayPal.Me",
+      "provider": "manual",
+      "enabled": false,
+      "canGuarantee": false,
+      "handle": "",
+      "setup": "handle"
+    },
+    {
+      "key": "zelle",
+      "label": "Zelle",
+      "provider": "manual",
+      "enabled": false,
+      "canGuarantee": false,
+      "handle": "",
+      "_note": "Phone or email registered with Zelle. Zelle has no payment link, so clients see your Zelle info, and you mark it paid when it arrives.",
+      "setup": "handle"
+    },
+    {
+      "key": "apple_cash",
+      "label": "Apple Cash",
+      "provider": "manual",
+      "enabled": false,
+      "canGuarantee": false,
+      "handle": "",
+      "_note": "Sent from Messages or Wallet on iPhone to your phone number. No payment link. You need an iPhone to receive it.",
+      "setup": "handle"
+    },
+    {
+      "key": "cash",
+      "label": "Cash",
+      "provider": "manual",
+      "enabled": true,
+      "canGuarantee": false,
+      "setup": "none"
+    }
   ]
 }
