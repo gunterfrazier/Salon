@@ -2,8 +2,10 @@
 // Variables and secrets are set in the Cloudflare dashboard, not here.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "chairvana",
+  "name": "salon",
   "main": ".open-next/worker.js",
+  // Keep variables set in the dashboard (SUPABASE_URL, OWNER_EMAILS, ...) across deploys.
+  "keep_vars": true,
   "compatibility_date": "2026-11-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
@@ -13,7 +15,7 @@
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",
-      "service": "chairvana"
+      "service": "salon"
     }
   ],
   "observability": {

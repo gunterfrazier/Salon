@@ -21,7 +21,7 @@ npm run dev     # http://localhost:3000
 
 ## Deploy (Cloudflare Workers)
 
-Cloudflare builds from `main` with root directory `app`:
+Cloudflare Worker `salon` builds from `main` with root directory `app`:
 
 - Build command: `npm run build:cf` (applies pending database migrations on `main`, then builds with OpenNext)
 - Deploy command: `npx opennextjs-cloudflare deploy`

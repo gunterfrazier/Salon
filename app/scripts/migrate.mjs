@@ -32,8 +32,10 @@ if (!force && !vercelProd && !cloudflareProd) {
 // Prefer the direct (session) connection; fall back to the pooled one.
 const candidates = [process.env.POSTGRES_URL_NON_POOLING, process.env.POSTGRES_URL, process.env.DATABASE_URL].filter(Boolean);
 if (candidates.length === 0) {
-  console.error("[migrate] no database URL set (POSTGRES_URL_NON_POOLING / POSTGRES_URL)");
-  process.exit(1);
+  // Don't block the deploy: the app still runs; new migrations just wait
+  // until the connection string is added as a build secret.
+  console.warn("[migrate] WARNING: no database URL set (POSTGRES_URL_NON_POOLING); skipping migrations");
+  process.exit(0);
 }
 
 /** Supabase uses its own CA; connect with TLS but without CA pinning. */
