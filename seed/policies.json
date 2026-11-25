@@ -4,39 +4,91 @@
   "lateCancelWindowHours": 24,
   "deposits": {
     "newClient": {
-      "enabledFor": { "color": true, "standard": false },
-      "defaultAmount": { "color": 50, "standard": 0 },
-      "minimumAmount": { "color": 50, "standard": 0 },
+      "_note": "Deposit for new clients. Can be turned on for any service category. Amount is always capped at the estimated total of the booked services (a $30 haircut never asks for more than $30).",
+      "enabledFor": {
+        "color": true,
+        "standard": true
+      },
+      "defaultAmount": {
+        "color": 50,
+        "standard": 50
+      },
+      "minimumAmount": {
+        "color": 50,
+        "standard": 0
+      },
       "allowFullPrice": true
     },
     "flaggedClient": {
       "enabled": true,
       "appliesTo": "all_services",
-      "defaultAmount": 50,
-      "minimumAmount": 50,
-      "allowFullPrice": true
+      "amount": "full",
+      "_note": "Clients with an active flag pay the full estimated price of all booked services up front."
     },
     "appliedToFinalBill": true,
     "refundIfCancelledOutsideWindow": true
   },
   "flags": {
-    "createOn": ["late_cancel", "no_show"],
-    "activeForDays": 180,
-    "autoClearAfterOnTimeVisits": null,
-    "stylistCanClearManually": true
+    "createOn": [
+      "late_cancel",
+      "no_show"
+    ],
+    "clearAfterOnTimeVisits": 4,
+    "activeForDays": null,
+    "stylistCanClearManually": true,
+    "stylistCanMakePermanent": true,
+    "_note": "A flag stays active until the client completes N on-time visits after it (default 4). Flags marked permanent never clear. Every flag stays in the client's violation history forever, and past violations always trigger a warning when the client books."
   },
   "fees": {
-    "lateCancel": { "defaultCharge": "full", "autoCharge": true },
-    "noShow": { "defaultCharge": "full", "autoCharge": false, "_note": "No-show is marked by the stylist, so the charge sheet always opens with Full preselected." },
-    "percentPresets": [25, 50, 75, 100]
+    "lateCancel": {
+      "defaultCharge": "full",
+      "autoCharge": true,
+      "_note": "autoCharge true = charge immediately; false = hold for the stylist's one-tap approval."
+    },
+    "noShow": {
+      "defaultCharge": "full",
+      "autoCharge": false,
+      "_note": "No-show is marked by the stylist, so the charge sheet always opens with Full preselected."
+    },
+    "percentPresets": [
+      25,
+      50,
+      75,
+      100
+    ]
   },
   "stylistInitiatedCancel": {
     "promptForCharge": true,
     "reasons": [
-      { "key": "client_requested", "label": "Client asked to cancel", "defaultCharge": "full_if_inside_window_else_none" },
-      { "key": "client_no_contact", "label": "Client unreachable / didn't confirm", "defaultCharge": "full_if_inside_window_else_none" },
-      { "key": "stylist_unavailable", "label": "I can't make it (sick, emergency)", "defaultCharge": "none", "refundDeposit": true },
-      { "key": "other", "label": "Other", "defaultCharge": "none" }
+      {
+        "key": "client_requested",
+        "label": "Client asked to cancel",
+        "defaultCharge": "full_if_inside_window_else_none"
+      },
+      {
+        "key": "client_no_contact",
+        "label": "Client unreachable / didn't confirm",
+        "defaultCharge": "full_if_inside_window_else_none"
+      },
+      {
+        "key": "stylist_unavailable",
+        "label": "I can't make it (sick, emergency)",
+        "defaultCharge": "none",
+        "refundDeposit": true
+      },
+      {
+        "key": "other",
+        "label": "Other",
+        "defaultCharge": "none"
+      }
     ]
+  },
+  "bookingAlerts": {
+    "notifyOnBookingBy": [
+      "active",
+      "permanent",
+      "history"
+    ],
+    "showOnCalendar": true
   }
 }

@@ -1,0 +1,110 @@
+{
+  "_about": "Default starter service menu. Every value is editable in Settings > Services. Prices are mid-range US placeholders compiled from public salon menus (late 2026) and should be replaced with your own. Durations are split into phases: 'active' (stylist busy), 'processing' (stylist free to take another client, e.g. color developing), 'finish' (stylist busy again). Total time = active + processing + finish.",
+  "currency": "USD",
+  "priceTypes": {
+    "fixed": "Exact price",
+    "starting_at": "Price shown as 'from $X'; final price set at checkout",
+    "hourly": "Billed per hour; estimate shown at booking",
+    "free": "No charge"
+  },
+  "depositCategories": {
+    "color": "Color and lightening services. New-client deposit applies by default.",
+    "standard": "All other services. New-client deposit off by default (configurable)."
+  },
+  "lengthModifiers": {
+    "_about": "Optional surcharge by hair length/density, chosen at booking or checkout. Applied only to services with usesLengthModifier=true.",
+    "options": [
+      { "key": "short", "label": "Short (above chin)", "priceAdd": 0, "minutesAdd": 0 },
+      { "key": "medium", "label": "Medium (chin to shoulder)", "priceAdd": 0, "minutesAdd": 0 },
+      { "key": "long", "label": "Long (past shoulders)", "priceAdd": 20, "minutesAdd": 15 },
+      { "key": "extra_long", "label": "Extra long / very thick", "priceAdd": 40, "minutesAdd": 30 }
+    ]
+  },
+  "categories": [
+    {
+      "key": "consultations",
+      "name": "Consultations",
+      "services": [
+        { "key": "new_client_consult", "name": "New Client Consultation", "description": "Discuss goals, hair history and pricing before your first service.", "priceType": "free", "price": 0, "active": 15, "processing": 0, "finish": 0, "depositCategory": "standard", "bookableOnline": true },
+        { "key": "color_consult", "name": "Color Consultation", "description": "Required before color corrections and major color changes. Includes strand test if needed.", "priceType": "free", "price": 0, "active": 20, "processing": 0, "finish": 0, "depositCategory": "standard", "bookableOnline": true }
+      ]
+    },
+    {
+      "key": "cuts_styling",
+      "name": "Haircuts & Styling",
+      "services": [
+        { "key": "womens_cut", "name": "Women's Haircut & Style", "description": "Shampoo, precision cut and blow-dry style.", "priceType": "starting_at", "price": 65, "active": 60, "processing": 0, "finish": 0, "depositCategory": "standard", "usesLengthModifier": true, "bookableOnline": true },
+        { "key": "mens_cut", "name": "Men's Haircut", "description": "Shampoo, clipper and/or scissor cut, style.", "priceType": "fixed", "price": 35, "active": 30, "processing": 0, "finish": 0, "depositCategory": "standard", "bookableOnline": true },
+        { "key": "kids_cut", "name": "Children's Haircut (12 & under)", "priceType": "fixed", "price": 30, "active": 30, "processing": 0, "finish": 0, "depositCategory": "standard", "bookableOnline": true },
+        { "key": "curly_cut", "name": "Curly / Textured Cut", "description": "Dry or wet cut tailored to curl pattern, with diffused style.", "priceType": "starting_at", "price": 85, "active": 75, "processing": 0, "finish": 0, "depositCategory": "standard", "usesLengthModifier": true, "bookableOnline": true },
+        { "key": "bang_trim", "name": "Bang / Fringe Trim", "priceType": "fixed", "price": 15, "active": 15, "processing": 0, "finish": 0, "depositCategory": "standard", "bookableOnline": true },
+        { "key": "blowout", "name": "Shampoo & Blowout", "priceType": "starting_at", "price": 45, "active": 45, "processing": 0, "finish": 0, "depositCategory": "standard", "usesLengthModifier": true, "bookableOnline": true },
+        { "key": "silk_press", "name": "Silk Press", "priceType": "starting_at", "price": 85, "active": 90, "processing": 0, "finish": 0, "depositCategory": "standard", "usesLengthModifier": true, "bookableOnline": true },
+        { "key": "updo", "name": "Special Occasion Style / Updo", "priceType": "starting_at", "price": 85, "active": 60, "processing": 0, "finish": 0, "depositCategory": "standard", "bookableOnline": true }
+      ]
+    },
+    {
+      "key": "color",
+      "name": "Color",
+      "services": [
+        { "key": "root_touchup", "name": "Root Touch-Up", "description": "Single-process color applied to regrowth (up to ~1.5 in).", "priceType": "starting_at", "price": 85, "active": 30, "processing": 35, "finish": 20, "depositCategory": "color", "bookableOnline": true },
+        { "key": "all_over_color", "name": "All-Over Color (Single Process)", "priceType": "starting_at", "price": 105, "active": 35, "processing": 35, "finish": 25, "depositCategory": "color", "usesLengthModifier": true, "bookableOnline": true },
+        { "key": "gray_blending", "name": "Gray Blending", "description": "Soft, low-maintenance coverage that blends gray rather than fully covering it.", "priceType": "starting_at", "price": 95, "active": 30, "processing": 30, "finish": 20, "depositCategory": "color", "bookableOnline": true },
+        { "key": "gloss_toner", "name": "Gloss / Toner", "description": "Refreshes tone and shine. Can be booked alone or as an add-on.", "priceType": "fixed", "price": 45, "active": 15, "processing": 20, "finish": 15, "depositCategory": "color", "bookableOnline": true },
+        { "key": "color_correction", "name": "Color Correction", "description": "Fixing uneven, banded or unwanted color. Consultation required first.", "priceType": "hourly", "price": 100, "estimatedHours": 3, "active": 90, "processing": 45, "finish": 45, "depositCategory": "color", "requiresConsultation": "color_consult", "bookableOnline": false }
+      ]
+    },
+    {
+      "key": "lightening",
+      "name": "Highlights & Lightening",
+      "services": [
+        { "key": "face_frame", "name": "Face-Frame / Money Piece", "priceType": "starting_at", "price": 75, "active": 30, "processing": 30, "finish": 20, "depositCategory": "color", "bookableOnline": true },
+        { "key": "partial_highlights", "name": "Partial Highlights", "description": "Foils around the face and crown.", "priceType": "starting_at", "price": 125, "active": 60, "processing": 35, "finish": 30, "depositCategory": "color", "usesLengthModifier": true, "bookableOnline": true },
+        { "key": "full_highlights", "name": "Full Highlights", "priceType": "starting_at", "price": 175, "active": 90, "processing": 40, "finish": 30, "depositCategory": "color", "usesLengthModifier": true, "bookableOnline": true },
+        { "key": "partial_balayage", "name": "Partial Balayage", "description": "Hand-painted lightening for natural dimension, focused on the top and face.", "priceType": "starting_at", "price": 160, "active": 75, "processing": 40, "finish": 35, "depositCategory": "color", "usesLengthModifier": true, "bookableOnline": true },
+        { "key": "full_balayage", "name": "Full Balayage", "priceType": "starting_at", "price": 230, "active": 105, "processing": 45, "finish": 40, "depositCategory": "color", "usesLengthModifier": true, "bookableOnline": true },
+        { "key": "color_melt", "name": "Ombré / Color Melt", "priceType": "starting_at", "price": 180, "active": 90, "processing": 40, "finish": 35, "depositCategory": "color", "usesLengthModifier": true, "bookableOnline": true },
+        { "key": "double_process", "name": "Double Process (Lighten & Tone)", "priceType": "starting_at", "price": 190, "active": 75, "processing": 50, "finish": 40, "depositCategory": "color", "requiresConsultation": "color_consult", "bookableOnline": false }
+      ]
+    },
+    {
+      "key": "texture",
+      "name": "Texture & Smoothing",
+      "services": [
+        { "key": "smoothing", "name": "Keratin / Smoothing Treatment", "priceType": "starting_at", "price": 250, "active": 60, "processing": 30, "finish": 60, "depositCategory": "standard", "usesLengthModifier": true, "bookableOnline": true },
+        { "key": "perm", "name": "Perm / Body Wave", "priceType": "starting_at", "price": 120, "active": 45, "processing": 30, "finish": 30, "depositCategory": "standard", "bookableOnline": true },
+        { "key": "relaxer", "name": "Relaxer Retouch", "priceType": "starting_at", "price": 95, "active": 30, "processing": 20, "finish": 30, "depositCategory": "standard", "bookableOnline": true }
+      ]
+    },
+    {
+      "key": "treatments",
+      "name": "Treatments",
+      "services": [
+        { "key": "deep_conditioning", "name": "Deep Conditioning Treatment", "priceType": "fixed", "price": 30, "active": 10, "processing": 15, "finish": 5, "depositCategory": "standard", "bookableOnline": true },
+        { "key": "scalp_treatment", "name": "Scalp Treatment", "priceType": "fixed", "price": 35, "active": 20, "processing": 10, "finish": 0, "depositCategory": "standard", "bookableOnline": true }
+      ]
+    },
+    {
+      "key": "extensions",
+      "name": "Extensions",
+      "services": [
+        { "key": "ext_consult", "name": "Extension Consultation & Color Match", "priceType": "free", "price": 0, "active": 20, "processing": 0, "finish": 0, "depositCategory": "standard", "bookableOnline": true },
+        { "key": "tape_in_install", "name": "Tape-In Install (labor)", "description": "Hair priced separately.", "priceType": "starting_at", "price": 200, "active": 120, "processing": 0, "finish": 0, "depositCategory": "standard", "requiresConsultation": "ext_consult", "bookableOnline": false },
+        { "key": "ext_move_up", "name": "Extension Move-Up", "priceType": "starting_at", "price": 150, "active": 90, "processing": 0, "finish": 0, "depositCategory": "standard", "bookableOnline": true },
+        { "key": "ext_removal", "name": "Extension Removal", "priceType": "fixed", "price": 50, "active": 45, "processing": 0, "finish": 0, "depositCategory": "standard", "bookableOnline": true }
+      ]
+    },
+    {
+      "key": "add_ons",
+      "name": "Add-Ons",
+      "_about": "Add-ons can only be booked together with a main service. 'attachesTo' limits which categories they appear with.",
+      "services": [
+        { "key": "addon_cut_with_color", "name": "Haircut (with color service)", "priceType": "fixed", "price": 45, "active": 30, "processing": 0, "finish": 0, "isAddOn": true, "attachesTo": ["color", "lightening"], "depositCategory": "standard", "bookableOnline": true },
+        { "key": "addon_toner", "name": "Toner Add-On", "priceType": "fixed", "price": 30, "active": 10, "processing": 20, "finish": 5, "isAddOn": true, "attachesTo": ["lightening"], "depositCategory": "color", "bookableOnline": true },
+        { "key": "addon_bond_builder", "name": "Bond-Building Treatment", "priceType": "fixed", "price": 30, "active": 5, "processing": 10, "finish": 0, "isAddOn": true, "attachesTo": ["color", "lightening", "texture"], "depositCategory": "standard", "bookableOnline": true },
+        { "key": "addon_deep_condition", "name": "Deep Conditioning Add-On", "priceType": "fixed", "price": 20, "active": 5, "processing": 10, "finish": 0, "isAddOn": true, "depositCategory": "standard", "bookableOnline": true },
+        { "key": "addon_curl_style", "name": "Curl / Iron Styling", "priceType": "fixed", "price": 20, "active": 15, "processing": 0, "finish": 0, "isAddOn": true, "depositCategory": "standard", "bookableOnline": true }
+      ]
+    }
+  ]
+}

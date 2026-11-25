@@ -1,6 +1,6 @@
 # SalonOS (working title) — Phase 0 / Phase 1 Specification
 
-_Status: draft v0.1 · 2026-11-25_
+_Status: draft v0.2 · 2026-11-25_
 
 ## 1. Goals
 
@@ -37,28 +37,40 @@ All values below are defaults stored in settings (`seed/policies.json`) and edit
 - Bookings the stylist creates (from a call or text) send the client a link to add a card. The appointment shows **"Card needed"** until they do.
 
 ### 4.2 Who must pay a deposit
-A deposit is required when **either** is true:
-1. **New client**: no completed appointment on record. By default this applies to **color services** only (the `color` deposit category). It can be switched on for other services too.
-2. **Flagged client**: has an active late-cancel or no-show flag (see 4.4). Applies to **any** service.
+A deposit is required when **any** of these is true:
+1. **New client** (no visits here or imported from StyleSeat). Can be switched on per category. By default it's on for **all services**.
+2. **Flagged client** (active or permanent flag, see 4.4): **full estimated price** of every booked service, paid up front.
+3. **Standing override** on the client ("always pays in full" or a set amount).
 
 ### 4.3 Deposit amount
-- Default **$50**. This is also the **minimum**.
-- The stylist can raise it to any amount up to the **full estimated price** of the booked services, either per booking or as a standing per-client setting ("this client always pays in full").
+- **New clients:** default **$50**. For color, $50 is also the minimum. The stylist can raise it up to the full estimated price.
+- **Always capped at the total of the booked services.** A $30 haircut never asks for more than $30.
+- **Flagged clients:** the full estimated total of all booked services.
 - The deposit is charged at booking and **applied to the final bill** at checkout.
-- Client cancels **outside** the 24h window: deposit refunded automatically (setting).
+- If the client cancels **outside** the 24h window, the deposit is refunded automatically. This is a setting.
 
-### 4.4 Client flags
-- Created automatically when an appointment is recorded as a **late cancellation** (cancelled less than 24h before start) or a **no-show**.
-- Shown as a badge on the client card, the calendar block, and in the booking flow, e.g. ⚠ Late cancel – Oct 12 or ⛔ No-show – Nov 3.
-- **Active for 180 days** by default (setting). The stylist can **clear or waive** a flag manually and must enter a note.
-- While a flag is active, any new booking (online or stylist-created) requires a deposit. The client sees: "A deposit is required to book."
-- History is kept after a flag expires. The client card shows lifetime counts, e.g. 2 late cancels, 1 no-show.
+### 4.4 Client flags & violation history
+- A flag is created automatically for a **late cancellation** (less than 24h notice) or a **no-show**.
+- **Active flag:** the client pays in full for any booking.
+  - It clears after **4 on-time visits** that come after the violation. The number is customizable (Settings → Policies).
+  - An optional time limit can also clear it. This is off by default.
+- **Permanent flag:** the stylist can mark any flag permanent. It never clears, and the client always pays in full.
+- **Manual clear:** the stylist can clear a flag by hand, with a note.
+- **History is permanent.** Every violation stays on the client's record forever, even after it clears.
+- **Client standing** is the worst status that applies: permanent → active → past violation → clear.
+- **Booking alert:** whenever a client with **any** violation history books (online or by the stylist), the stylist gets an alert. It shows:
+  - the standing, the most recent violation and its date, and the counts (e.g. "2 no-shows, 1 late cancellation")
+  - for an active flag, how many on-time visits are left until it clears
+  - a **View history** link listing each violation: date, type, the services booked that day, fee charged, and status
+- **Calendar:** each appointment block shows the client's standing chip, and tapping it opens the same history.
+- **Color chart:** see §4.7 and the `/legend` page in the app.
 
 ### 4.5 Fees for late cancellation & no-show
 - **Default charge = full estimated price** of the booked services, minus any deposit already collected.
 - **Client cancels online inside 24h:**
   - The client is warned before confirming: "Cancelling now will charge $X per policy."
-  - The fee is charged automatically, a flag is created, and the stylist gets a notification.
+  - The fee is **charged automatically by default**. A setting switches this to **wait for the stylist's one-tap approval**.
+  - A flag is created and the stylist gets a notification.
   - Any charge can be refunded or reduced later from the appointment screen.
 - **Stylist marks No-show:** the charge sheet opens with **Full** preselected (see 4.6). The stylist confirms or adjusts, and a flag is created.
 
@@ -87,9 +99,27 @@ Whenever the stylist cancels from the app, a **Cancel appointment** sheet opens:
 - **Card declined:** the balance is recorded on the client card as **Outstanding balance**, and the client must pay it before their next booking.
 - **Reschedule:** a reschedule inside 24h counts as a late cancel. This is a setting, **off** by default.
 
+### 4.7 Color chart
+Every status pairs a color with an icon and a label, so it never depends on color alone. Light and dark versions are defined in `app/src/lib/ui/status-colors.ts`.
+
+| Family | Status | Icon | Color | Meaning |
+|---|---|---|---|---|
+| Violation | Permanent flag | ⛔ | Dark red | Never clears; full payment always |
+| Violation | No-show (active) | ✖ | Red | Full payment until cleared |
+| Violation | Late cancel (active) | ⏱ | Orange | Full payment until cleared |
+| Warning | Past violation | ⚠ | Yellow | Cleared; heads-up only |
+| Money | Balance owed | $ | Purple | Must be paid before next booking |
+| Action | Card / deposit needed | 💳 | Blue | Client hasn't added card / paid deposit |
+| Info | Deposit paid | ✓ | Green | Applied to final bill |
+| Info | New client | ★ | Teal | First visit |
+
+Calendar phases: hands-on time (solid), **processing (striped, open for another client)**, finish (solid).
+
 ## 5. Service menu
 
-- Starter menu in `seed/service-menu.json`, built from typical US salon menus. It covers consultations, cuts and styling, color, highlights and lightening, texture, treatments, extensions and add-ons.
+- `seed/service-menu.json` is **your StyleSeat menu**: 19 services with your names, prices, total times and descriptions, plus your hours (America/Chicago time).
+  - StyleSeat has no processing-time field, so the split of each color service into hands-on, processing and finish time is an **estimate** for you to adjust.
+- `seed/service-menu-generic.json` is a 36-service general template for adding new services.
 - **Each service has:**
   - name and description
   - price type: fixed, starting at, hourly, or free
@@ -104,6 +134,15 @@ Whenever the stylist cancels from the app, a **Cancel appointment** sheet opens:
   - add, remove, reorder and rename categories and services
   - hide a service from online booking
   - optional per-client price overrides
+
+### Stacking services
+A client can book several services in one appointment, e.g. haircut + color + style.
+- **Billing:** each service is a separate line on the bill.
+- **Time:** the appointment length is the sum of every service's time, back to back. Each service keeps its own hands-on, processing and finish phases.
+- **Order:** suggested as chemical → treatment → cut → style → wax → fees. The stylist can reorder.
+- **Deposits:** calculated on the combined total.
+- **Overlap warning:** your chemical services already include a cut and style. If a separate cut or style is stacked on top, the app warns that it's already included.
+- **Add-ons:** the Travel Fee can't be booked alone.
 
 ### Processing-time scheduling
 The calendar marks the **processing** phase as open time, so the stylist can book a short service (cut, gloss, blowout) inside another client's processing gap. The booking page offers those slots only when the service fits entirely inside the gap. This can be turned off per service.
@@ -148,7 +187,7 @@ services(id, business_id, category_id, name, description, price_type, price, est
 clients(id, business_id, first, last, phone, email, notes, stripe_customer_id,
         deposit_override[none|amount|full], deposit_override_amount, source[styleseat_import|online|manual])
 client_flags(id, business_id, client_id, type[late_cancel|no_show], appointment_id,
-             created_at, expires_at, cleared_at, cleared_by, clear_note)
+             created_at, fee_charged, permanent, cleared_at, cleared_by, clear_note)  -- never deleted
 appointments(id, business_id, client_id, staff_id, start_at, end_at,
              status[booked|confirmed|checked_in|in_service|completed|cancelled|no_show],
              cancelled_by[client|stylist], cancel_reason, cancelled_at, booked_via[online|stylist],
@@ -168,6 +207,9 @@ messages(id, business_id, client_id, channel[sms|email], template, body, status,
 Double-booking prevention: a Postgres exclusion constraint on each staff member's *busy* time ranges (the active and finish phases).
 
 ## 8. StyleSeat migration
+
+> **Policy difference:** the policy currently shown on StyleSeat charges **50%** for late cancellations and 100% for no-shows. This app defaults to **100% for both**, per your instructions. Before switching, update the policy text clients agree to (and StyleSeat's, if it's still in use).
+
 
 - **Clients:** in StyleSeat, open Clients → menu → *Export Client List*. StyleSeat emails a CSV with names, email, phone and notes. We map it into `clients`, tag each row with `source=styleseat_import`, and keep the notes.
 - **Appointment history and future bookings:** StyleSeat has no self-service export. Ask StyleSeat support for a CSV. If none arrives, future appointments are re-entered by hand during the side-by-side period. Imported clients with past visits get marked as **not new**, so they aren't asked for a new-client deposit.
@@ -189,10 +231,16 @@ Double-booking prevention: a Postgres exclusion constraint on each staff member'
 - [ ] Draft the client-facing policy text and message templates
 - [ ] Start the Twilio 10DLC registration steps (with you)
 
-## 10. Open questions
-1. New clients booking **non-color** services: deposit off by default. Is that right?
-2. Flagged clients: is the deposit the same $50 minimum (up to full), regardless of service?
-3. How long should a flag stay active: 180 days, or until N on-time visits?
-4. Should a client's online late-cancel charge happen **automatically**, or wait for your one-tap approval?
-5. Are you a sole proprietor or an LLC? This affects the Stripe and Twilio registration paths.
-6. Your actual StyleSeat menu: send a screenshot or the list so the seed matches your services.
+## 10. Decisions log
+- Deposits can apply to any service, capped at the booked total. *(v0.2)*
+- Flagged clients pay the full estimated price. *(v0.2)*
+- Flags clear after 4 on-time visits (customizable). Permanent flags are available. History is kept forever, and any history triggers a booking alert. *(v0.2)*
+- Late-cancel charges are automatic by default; approval mode is a setting. *(v0.2)*
+- Business type: **sole proprietor**. *(v0.2)*
+  - **Stripe:** register as an individual / sole proprietorship, using an SSN (or an EIN if you have one).
+  - **Twilio texting:** register as a "Sole Proprietor" brand. That allows one phone number and lower sending limits, which is plenty for a solo stylist. Registration includes a one-time code sent to your mobile phone.
+
+## 11. Open questions
+1. Should your chemical services stay "with cut & style" (one price)? Or split them into color-only services, with a cut and style stacked on as separate lines?
+2. You have both "Women's Cut" ($35) and "Women's or Youth Female's Cut" ($25+). Keep both?
+3. Check the estimated processing times on your color services.

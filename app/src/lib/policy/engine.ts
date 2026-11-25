@@ -1,14 +1,7 @@
-import type {
-  BookedService,
-  Cents,
-  ClientFlag,
-  ClientPolicyState,
-  FlagType,
-  PolicySettings,
-} from "./types";
+import { clientStanding } from "./flags";
+import type { BookedService, Cents, ClientPolicyState, FlagType, PolicySettings } from "./types";
 
 const HOUR_MS = 60 * 60 * 1000;
-const DAY_MS = 24 * HOUR_MS;
 
 export const dollars = (d: number): Cents => Math.round(d * 100);
 
@@ -17,15 +10,7 @@ export function estimatedTotal(services: BookedService[]): Cents {
 }
 
 export function isNewClient(client: ClientPolicyState): boolean {
-  return client.completedVisits === 0;
-}
-
-export function activeFlags(flags: ClientFlag[], now: Date): ClientFlag[] {
-  return flags.filter((f) => !f.clearedAt && f.expiresAt.getTime() > now.getTime());
-}
-
-export function flagExpiry(createdAt: Date, policy: PolicySettings): Date {
-  return new Date(createdAt.getTime() + policy.flags.activeForDays * DAY_MS);
+  return client.onTimeVisits.length + client.priorVisitCount === 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -70,11 +55,12 @@ export function depositRequirement(
     }
   }
 
+  // Active or permanent flag: the full estimated price of everything booked.
   const fc = policy.deposits.flaggedClient;
-  if (fc.enabled && activeFlags(client.flags, now).length > 0 && services.length > 0) {
+  if (fc.enabled && services.length > 0 && clientStanding(client, policy, now).depositRequired) {
     reasons.push("flagged_client");
-    minimum = Math.max(minimum, dollars(fc.minimumAmount));
-    defaultAmount = Math.max(defaultAmount, dollars(fc.defaultAmount));
+    minimum = full;
+    defaultAmount = full;
   }
 
   const o = client.depositOverride;

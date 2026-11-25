@@ -11,6 +11,8 @@ create table businesses (
   timezone text not null default 'America/New_York',
   policy_settings jsonb not null,          -- seed/policies.json
   booking_settings jsonb not null default '{}'::jsonb,
+  -- {"mon": null, "tue": ["15:30","19:00"], ...}
+  business_hours jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
 );
 
@@ -127,23 +129,33 @@ create table appointments (
   cancelled_at timestamptz,
   policy_consent_id uuid references policy_consents(id),
   notes text,
+  -- Completed without a late cancel or no-show; counts toward clearing flags.
+  on_time boolean generated always as (status = 'completed') stored,
   created_at timestamptz not null default now()
 );
 create index appointments_calendar on appointments(business_id, staff_id, start_at);
 
+-- Violation record. Never deleted: it is the client's permanent history.
+-- Active vs. resolved is computed (app/src/lib/policy/flags.ts) from
+-- on-time visits since the flag, the optional time limit, `permanent`
+-- and `cleared_at`.
 create table client_flags (
   id uuid primary key default gen_random_uuid(),
   business_id uuid not null references businesses(id) on delete cascade,
   client_id uuid not null references clients(id) on delete cascade,
   type flag_type not null,
-  appointment_id uuid references appointments(id),
+  appointment_id uuid not null references appointments(id),
   created_at timestamptz not null default now(),
-  expires_at timestamptz not null,
+  fee_charged_cents int,
+  permanent boolean not null default false,
+  made_permanent_at timestamptz,
+  made_permanent_by uuid references staff(id),
   cleared_at timestamptz,
   cleared_by uuid references staff(id),
   clear_note text,
   check ((cleared_at is null) = (clear_note is null))
 );
+create index client_flags_client on client_flags(client_id);
 
 create table appointment_services (
   id uuid primary key default gen_random_uuid(),
