@@ -1,0 +1,42 @@
+{
+  "_about": "Default booking & cancellation policy settings. All editable in Settings > Policies. See docs/SPEC.md section 4 for behavior.",
+  "cardOnFileRequired": true,
+  "lateCancelWindowHours": 24,
+  "deposits": {
+    "newClient": {
+      "enabledFor": { "color": true, "standard": false },
+      "defaultAmount": { "color": 50, "standard": 0 },
+      "minimumAmount": { "color": 50, "standard": 0 },
+      "allowFullPrice": true
+    },
+    "flaggedClient": {
+      "enabled": true,
+      "appliesTo": "all_services",
+      "defaultAmount": 50,
+      "minimumAmount": 50,
+      "allowFullPrice": true
+    },
+    "appliedToFinalBill": true,
+    "refundIfCancelledOutsideWindow": true
+  },
+  "flags": {
+    "createOn": ["late_cancel", "no_show"],
+    "activeForDays": 180,
+    "autoClearAfterOnTimeVisits": null,
+    "stylistCanClearManually": true
+  },
+  "fees": {
+    "lateCancel": { "defaultCharge": "full", "autoCharge": true },
+    "noShow": { "defaultCharge": "full", "autoCharge": false, "_note": "No-show is marked by the stylist, so the charge sheet always opens with Full preselected." },
+    "percentPresets": [25, 50, 75, 100]
+  },
+  "stylistInitiatedCancel": {
+    "promptForCharge": true,
+    "reasons": [
+      { "key": "client_requested", "label": "Client asked to cancel", "defaultCharge": "full_if_inside_window_else_none" },
+      { "key": "client_no_contact", "label": "Client unreachable / didn't confirm", "defaultCharge": "full_if_inside_window_else_none" },
+      { "key": "stylist_unavailable", "label": "I can't make it (sick, emergency)", "defaultCharge": "none", "refundDeposit": true },
+      { "key": "other", "label": "Other", "defaultCharge": "none" }
+    ]
+  }
+}
