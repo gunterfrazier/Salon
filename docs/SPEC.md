@@ -1,6 +1,6 @@
-# SalonOS (working title) — Phase 0 / Phase 1 Specification
+# Chairvana — Phase 0 / Phase 1 Specification
 
-_Status: draft v0.4 · 2026-11-25_
+_Status: draft v0.5 · 2026-11-25_
 
 ## 1. Goals
 
@@ -278,6 +278,8 @@ Double-booking prevention: a Postgres exclusion constraint on each staff member'
 
 - Package discount: 5% off the whole appointment for color + cut and/or style. *(v0.4)*
 - Payment methods: all available, off by default except cash, linked and switched on in the app after launch. *(v0.4)*
+
+- App name: **Chairvana** (tagline "Calm days behind the chair"). chairvana.app was unregistered on 2026-11-25; chairvana.com is taken. *(v0.5)*
 
 ## 11. Open questions
 1. **Color-only prices.** They still equal the old StyleSeat prices, which included a cut and style. Booking color + cut + style now costs more than on StyleSeat until those are lowered.

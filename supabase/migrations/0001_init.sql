@@ -1,4 +1,4 @@
--- SalonOS (working title) initial schema. See docs/SPEC.md §7.
+-- Chairvana initial schema. See docs/SPEC.md §7.
 -- Every business-owned row carries business_id; RLS limits staff to their business.
 -- Money is stored as integer cents.
 

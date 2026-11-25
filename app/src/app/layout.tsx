@@ -2,8 +2,9 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SalonOS",
-  description: "Salon booking and management (working title)",
+  title: { default: "Chairvana", template: "%s · Chairvana" },
+  description: "Calm days behind the chair: booking, clients and payments for stylists.",
+  applicationName: "Chairvana",
 };
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1 };
