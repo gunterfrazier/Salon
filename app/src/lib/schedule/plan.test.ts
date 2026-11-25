@@ -7,37 +7,41 @@ const hhmm = (d: Date) => d.toISOString().slice(11, 16);
 
 describe("stacked appointments", () => {
   it("cut + style: times and prices add up, each billed separately", () => {
-    const p = planAppointment(start, [s.womens_youth_cut, s.style]);
+    const p = planAppointment(start, [s.womens_cut, s.style]);
     expect(p.totalMinutes).toBe(90);
     expect(hhmm(p.end)).toBe("16:30");
     expect(p.lines.map((l) => [l.name, l.price])).toEqual([
-      ["Women's or Youth Female's Cut", 2500],
+      ["Women's Cut", 3500],
       ["Style", 2500],
     ]);
-    expect(p.estimatedTotal).toBe(5000);
+    expect(p.estimatedTotal).toBe(6000);
     expect(p.priceMayVary).toBe(true);
     expect(p.warnings).toEqual([]);
   });
 
   it("color + treatment + wax: processing gaps stay open for other clients", () => {
     const p = planAppointment(start, [s.all_over_color, s.olaplex, s.brow_wax]);
-    expect(p.totalMinutes).toBe(150 + 45 + 15);
+    expect(p.totalMinutes).toBe(80 + 45 + 15);
     expect(p.estimatedTotal).toBe(9500 + 5500 + 1500);
     expect(p.openGaps.map((g) => [hhmm(g.start), hhmm(g.end)])).toEqual([
       ["15:30", "16:05"], // color processing
-      ["17:40", "18:00"], // olaplex processing
+      ["16:30", "16:50"], // olaplex processing
     ]);
     // Busy blocks are everything else, merged.
     expect(p.busy.map((g) => [hhmm(g.start), hhmm(g.end)])).toEqual([
       ["15:00", "15:30"],
-      ["16:05", "17:40"], // color finish + olaplex application
-      ["18:00", "18:30"], // olaplex finish + brow wax
+      ["16:05", "16:30"], // color rinse + olaplex application
+      ["16:50", "17:20"], // olaplex finish + brow wax
     ]);
   });
 
-  it("warns when a stacked service is already included", () => {
-    const p = planAppointment(start, [s.full_highlights, s.womens_cut, s.style]);
-    expect(p.warnings.map((w) => w.serviceKey)).toEqual(["womens_cut", "style"]);
+  it("color + cut + style after the split: no overlap warning", () => {
+    expect(planAppointment(start, [s.full_highlights, s.womens_cut, s.style]).warnings).toEqual([]);
+  });
+
+  it("warns when a stacked service duplicates another", () => {
+    const p = planAppointment(start, [s.womens_cut, s.mens_boys_cut]);
+    expect(p.warnings.map((w) => w.serviceKey)).toEqual(["mens_boys_cut"]);
     expect(p.warnings[0].message).toMatch(/already included/);
   });
 

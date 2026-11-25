@@ -4,6 +4,12 @@
 
 create extension if not exists btree_gist;
 
+create type payment_method as enum (
+  'card', 'google_pay', 'apple_pay', 'cash_app_pay',       -- Stripe (can be saved)
+  'paypal', 'venmo',                                       -- PayPal checkout
+  'venmo_direct', 'cash_app_direct', 'paypal_me', 'zelle', 'apple_cash', 'cash', 'other'  -- recorded by stylist
+);
+
 -- ---------------------------------------------------------------- tenancy ---
 create table businesses (
   id uuid primary key default gen_random_uuid(),
@@ -86,7 +92,8 @@ create table clients (
   email text,
   notes text,
   stripe_customer_id text,
-  has_card_on_file boolean not null default false,
+  has_saved_payment_method boolean not null default false,
+  preferred_payment_method payment_method,
   deposit_override deposit_override not null default 'none',
   deposit_override_cents int,
   -- Visits completed before import (e.g. StyleSeat) so imported regulars aren't "new".
@@ -100,8 +107,9 @@ create index clients_business_phone on clients(business_id, phone);
 create type flag_type as enum ('late_cancel', 'no_show');
 
 -- ----------------------------------------------------------- appointments ---
+-- pending = waiting for a prepaid deposit (Zelle, Venmo, etc.) before it's confirmed.
 create type appointment_status as enum
-  ('booked', 'confirmed', 'checked_in', 'in_service', 'completed', 'cancelled', 'no_show');
+  ('pending', 'booked', 'confirmed', 'checked_in', 'in_service', 'completed', 'cancelled', 'no_show');
 
 create table policy_consents (
   id uuid primary key default gen_random_uuid(),
@@ -161,7 +169,9 @@ create table appointment_services (
   id uuid primary key default gen_random_uuid(),
   appointment_id uuid not null references appointments(id) on delete cascade,
   service_id uuid not null references services(id),
-  price_quoted_cents int not null,
+  list_price_cents int not null,          -- menu price or stylist's custom price
+  discounts jsonb not null default '[]',   -- [{source: bundle|manual, label, amount_cents}]
+  price_quoted_cents int not null,         -- after discounts
   length_modifier text,
   sort int not null default 0
 );
@@ -182,7 +192,6 @@ create table staff_busy_blocks (
 -- --------------------------------------------------------------- payments ---
 create type payment_kind as enum
   ('deposit', 'service', 'retail', 'tip', 'cancel_fee', 'no_show_fee', 'balance', 'refund');
-create type payment_method as enum ('card_on_file', 'tap_to_pay', 'cash', 'other');
 
 create table payments (
   id uuid primary key default gen_random_uuid(),
@@ -192,8 +201,11 @@ create table payments (
   kind payment_kind not null,
   method payment_method not null,
   amount_cents int not null,
-  status text not null default 'pending' check (status in ('pending', 'succeeded', 'failed', 'refunded')),
+  -- requested = payment request sent (Zelle/Venmo/...), waiting for the stylist to mark it received
+  status text not null default 'pending' check (status in ('requested', 'pending', 'succeeded', 'failed', 'refunded')),
   stripe_payment_intent_id text,
+  paypal_order_id text,
+  external_reference text,                 -- e.g. Zelle confirmation # or Venmo note
   note text,
   created_at timestamptz not null default now()
 );

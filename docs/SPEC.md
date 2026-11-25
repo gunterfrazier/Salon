@@ -1,6 +1,6 @@
 # SalonOS (working title) — Phase 0 / Phase 1 Specification
 
-_Status: draft v0.2 · 2026-11-25_
+_Status: draft v0.3 · 2026-11-25_
 
 ## 1. Goals
 
@@ -21,9 +21,7 @@ Replace StyleSeat for a **solo stylist** working from an **Android phone and And
 
 - **Next.js + TypeScript**, delivered as an installable **PWA** on the Android tablet and phone. The client booking page lives in the same codebase.
 - **Supabase**: Postgres, logins, photo storage. Every table has a `business_id`, and row-level security keeps each business's data separate.
-- **Stripe** for payments:
-  - Phase 1: **card on file**. Clients save a card when they book, with consent to the policy. Deposits are charged at booking. Checkout charges the saved card, or records cash, Venmo/Zelle, etc. as a manual payment. **No card reader is needed for Phase 1.**
-  - Phase 2: **Tap to Pay on Android** inside a thin native Android app. Stripe supports this through its native and React Native Terminal SDKs, not from a web app. This lets the phone accept tapped cards and phones in person.
+- **Payments:** see §5.5. Stripe handles cards, **Google Pay, Apple Pay and Cash App Pay**, all of which can be saved for later charges. PayPal and Venmo come in Phase 2. Zelle, Apple Cash, and Venmo / Cash App sent to your own handle are recorded manually. **No card reader or in-person card processing is needed.**
 - **Twilio** for texts (requires US 10DLC registration; start this in Phase 0, it takes weeks). **Resend** for email.
 - **Vercel** hosting, with a preview link for every change.
 
@@ -31,10 +29,14 @@ Replace StyleSeat for a **solo stylist** working from an **Android phone and And
 
 All values below are defaults stored in settings (`seed/policies.json`) and editable by the stylist.
 
-### 4.1 Card on file
-- Every online booking requires a saved card, and the client must check a box accepting the policy.
-- The app stores the exact policy text the client saw, a timestamp and their IP address, so there's evidence if a charge is ever disputed.
-- Bookings the stylist creates (from a call or text) send the client a link to add a card. The appointment shows **"Card needed"** until they do.
+### 4.1 Saved payment method (optional)
+- Clients choose how to pay when booking (§5.5).
+- **Saved method** (card, Google Pay, Apple Pay, Cash App Pay): any deposit is charged at booking, and late-cancel / no-show fees can be charged automatically.
+- **Send-to-me apps or cash** (Zelle, Venmo, Cash App, PayPal.Me, Apple Cash, cash):
+  - If a deposit is required, the booking stays **Pending** until you mark the deposit received.
+  - If no deposit is required, the booking is confirmed. Any later fee becomes a **balance owed**, and the client is sent a payment request.
+- The setting `savedPaymentMethod` can be switched to `required` to make every booking save a card or wallet.
+- Either way, the client checks a box accepting the policy. The app stores the exact text, a timestamp and their IP address.
 
 ### 4.2 Who must pay a deposit
 A deposit is required when **any** of these is true:
@@ -117,23 +119,14 @@ Calendar phases: hands-on time (solid), **processing (striped, open for another 
 
 ## 5. Service menu
 
-- `seed/service-menu.json` is **your StyleSeat menu**: 19 services with your names, prices, total times and descriptions, plus your hours (America/Chicago time).
-  - StyleSeat has no processing-time field, so the split of each color service into hands-on, processing and finish time is an **estimate** for you to adjust.
+- `seed/service-menu.json` is **your StyleSeat menu**: 18 services with your hours (America/Chicago time).
+  - **Changes from StyleSeat:**
+    - Removed the $25 "Women's or Youth Female's Cut".
+    - Split color services from cut & style. Each color service is now color only, ending with a 15-minute rinse.
+    - Color prices are **unchanged for now** and marked for review (see §5.4).
+  - The hands-on / processing / finish split for color services is an estimate you've approved. It can be adjusted any time.
 - `seed/service-menu-generic.json` is a 36-service general template for adding new services.
-- **Each service has:**
-  - name and description
-  - price type: fixed, starting at, hourly, or free
-  - price
-  - **active / processing / finish minutes**
-  - deposit category
-  - optional length surcharge
-  - whether a consultation is required first
-  - whether clients can book it online
-  - add-on rules
-- **Fully editable:**
-  - add, remove, reorder and rename categories and services
-  - hide a service from online booking
-  - optional per-client price overrides
+- **Fully editable:** add, remove, reorder and rename categories and services; hide a service from online booking.
 
 ### Stacking services
 A client can book several services in one appointment, e.g. haircut + color + style.
@@ -143,6 +136,39 @@ A client can book several services in one appointment, e.g. haircut + color + st
 - **Deposits:** calculated on the combined total.
 - **Overlap warning:** your chemical services already include a cut and style. If a separate cut or style is stacked on top, the app warns that it's already included.
 - **Add-ons:** the Travel Fee can't be booked alone.
+
+### 5.4 Discounts & custom pricing for stacked services
+`seed/pricing-rules.json`. Applied per line, in this order:
+1. **Custom price:** the stylist can type a price for any service on any appointment.
+2. **Package discounts:** apply automatically when the trigger matches. Each package can be turned off for a single appointment.
+   - **Cut & Style with color** (on): cut and style booked with a color service are **100% off**. That keeps color + cut + style at your old StyleSeat price until you set color-only prices. You can change it to a smaller % or a dollar amount.
+   - **3+ services** (off, example): 10% off everything.
+   - Packages can take a percent, a dollar amount, or a set price.
+3. **Manual discounts** with a reason (Loyal client, Friends & family, Promotion, Service adjustment, Other):
+   - **Per service:** % off, dollars off, or a set price.
+   - **Whole appointment:** % or dollars off, split across the services in proportion to their prices.
+- No line goes below $0.
+- Every discount is saved on the appointment for reports.
+- Deposits and fees use the discounted total.
+
+### 5.5 Payment methods
+`seed/payment-methods.json`. Each method can be turned on or off.
+
+| Method | How | Can charge later (no-show fees) | Phase |
+|---|---|---|---|
+| Card, **Google Pay**, **Apple Pay**, **Cash App Pay** | Stripe checkout | Yes | 1 |
+| **PayPal**, **Venmo** (checkout) | PayPal | Likely, via PayPal's saved-payment feature; to be confirmed during setup | 2 |
+| **Venmo** / **Cash App** / **PayPal.Me** to your handle | Link with the amount prefilled; you mark it received | No | 1 |
+| **Zelle** | Shows your Zelle phone or email; you mark it received | No | 1 |
+| **Apple Cash** | Shows your number (sent from iPhone Messages/Wallet); you mark it received | No | 1 |
+| Cash | You record it | No | 1 |
+| ~~Meta Pay~~ | Not offered. Meta has been winding down Meta Pay checkout for merchants (Shopify removed it). | — | — |
+
+**Notes:**
+- Use a **Venmo business profile** and **Cash App for Business**. Personal accounts aren't meant for business payments.
+- Some banks limit business use of Zelle on personal accounts.
+- Google Pay and Apple Pay go through Stripe. Google charges no extra fee; Stripe's normal fee applies.
+- The Google Wallet business page you shared is for **Wallet passes** (loyalty punch cards, gift cards, offers, appointment passes), not payments. Those fit Phase 3 (loyalty and gift cards).
 
 ### Processing-time scheduling
 The calendar marks the **processing** phase as open time, so the stylist can book a short service (cut, gloss, blowout) inside another client's processing gap. The booking page offers those slots only when the service fits entirely inside the gap. This can be turned off per service.
@@ -239,8 +265,31 @@ Double-booking prevention: a Postgres exclusion constraint on each staff member'
 - Business type: **sole proprietor**. *(v0.2)*
   - **Stripe:** register as an individual / sole proprietorship, using an SSN (or an EIN if you have one).
   - **Twilio texting:** register as a "Sole Proprietor" brand. That allows one phone number and lower sending limits, which is plenty for a solo stylist. Registration includes a one-time code sent to your mobile phone.
+- Color services split from cut & style. Cut & style are free with color by default, so prices match StyleSeat until changed. *(v0.3)*
+- Removed the $25 women's/youth cut. Processing-time estimates approved. *(v0.3)*
+- Payments: Stripe for card, Google Pay, Apple Pay and Cash App Pay; manual Zelle, Venmo, Cash App, PayPal.Me, Apple Cash and cash; PayPal/Venmo checkout in Phase 2. Meta Pay dropped. A saved method is optional. *(v0.3)*
 
 ## 11. Open questions
-1. Should your chemical services stay "with cut & style" (one price)? Or split them into color-only services, with a cut and style stacked on as separate lines?
-2. You have both "Women's Cut" ($35) and "Women's or Youth Female's Cut" ($25+). Keep both?
-3. Check the estimated processing times on your color services.
+1. Set **color-only prices** and decide how much the cut & style package should save. Until then, today's prices are kept.
+2. Which payment methods to turn on at launch? Please send your Venmo, Cash App and PayPal.Me handles and your Zelle phone or email.
+
+## 12. Reuse from Our Faithful Church App (`gunterfrazier/Apps`)
+Reviewed 2026-11-25. The church app's screens are about 30,000 lines of plain JavaScript stitched into one page, and its data lives mostly in a single catch-all table. Neither fits this app's Next.js + TypeScript setup or its proper tables. Its **server code (Supabase Edge Functions, TypeScript)** is clean and directly useful. Plan: **copy and adapt specific server modules** when each feature is built. Use the rest as reference. No shared package.
+
+| Church app module | Use in salon app | When |
+|---|---|---|
+| `supabase/functions/_shared/messaging.ts`, `texting`, `sms` (Twilio, STOP opt-out, phone formatting) | Copy & adapt: confirmations, reminders, payment requests | Phase 1 messaging |
+| `_shared/email.ts` + `sendEmail` (Resend, branded HTML) | Copy & adapt | Phase 1 messaging |
+| `reminders` + `cron.sql` (hourly job, each reminder sent only once) | Adapt for 48h / 2h reminders with a confirm link | Phase 1 |
+| `_shared/util.ts` (`caller`, `can`, `fromCron`, `handle`, HMAC) | Copy & adapt as server helpers | Phase 1 setup |
+| Stripe webhook check, recording payments once, refunds (`payments.ts`, `pay-webhook`, `settle.ts`, `refund`) | Adapt. **Saved cards and later charges are new work**: the church code only does one-time checkout. | Phase 1 payments |
+| `push` (web push, quiet hours) | Optional phone notifications for booking alerts | Phase 1–2 |
+| Roles + `can()` permission checks in the database | Reference for owner / stylist / renter / front desk | Later |
+| `test/payments.ts` (fake processor test harness) | Copy the approach | Phase 1 payments |
+| Calendar, volunteers, kiosk, forms, veritas-logos | Not used | — |
+
+**Cautions:**
+- The church app's `media` storage bucket is **public**. Client and color-formula photos here must use a **private** bucket with time-limited links.
+- The Stripe SDK there is several major versions old. Use the current one.
+- Don't copy from `veritas-logos`: part of it is GPL-licensed.
+

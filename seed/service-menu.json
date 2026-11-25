@@ -1,5 +1,5 @@
 {
-  "_about": "Your service menu, imported from your StyleSeat profile on 2026-11-25 (names, prices, total times, descriptions). Everything is editable in Settings > Services. StyleSeat doesn't record processing time, so the active / processing / finish split for chemical services is an ESTIMATE; adjust it to match how you actually work. Total time per service matches StyleSeat.",
+  "_about": "Your service menu, imported from your StyleSeat profile on 2026-11-25 (names, prices, total times, descriptions). Everything is editable in Settings > Services. Color services were split from cut & style (see the Color Services note). StyleSeat doesn't record processing time, so the active / processing / finish split for chemical services is an ESTIMATE; adjust it to match how you actually work.",
   "currency": "USD",
   "timezone": "America/Chicago",
   "hours": {
@@ -65,22 +65,6 @@
           ]
         },
         {
-          "key": "womens_youth_cut",
-          "name": "Women's or Youth Female's Cut",
-          "priceType": "starting_at",
-          "price": 25,
-          "active": 45,
-          "processing": 0,
-          "finish": 0,
-          "depositCategory": "standard",
-          "stage": "cut",
-          "bookableOnline": true,
-          "description": "Women's cut, detail and price may vary depending on thickness or length.",
-          "includes": [
-            "cut"
-          ]
-        },
-        {
           "key": "mens_boys_cut",
           "name": "Men's or Boy's Cut",
           "priceType": "fixed",
@@ -114,9 +98,9 @@
       ]
     },
     {
-      "key": "chemical",
-      "name": "Chemical Services with Cut & Style",
-      "_note": "Prices and times on StyleSeat include a cut and style. If a client stacks a separate cut or style on top, the app warns that it's already included.",
+      "key": "color",
+      "name": "Color Services",
+      "_note": "Split from StyleSeat's 'Chemical Services with Cut & Style' on 2026-11-25. These are now color-only: time = StyleSeat time minus cut & style (finish is now a 15-min rinse). Prices are UNCHANGED from StyleSeat and marked priceNeedsReview; the 'Cut & Style with color' package (seed/pricing-rules.json) keeps color + cut + style at the old StyleSeat price until you set new prices.",
       "services": [
         {
           "key": "all_over_color",
@@ -125,16 +109,16 @@
           "price": 95,
           "active": 30,
           "processing": 35,
-          "finish": 85,
+          "finish": 15,
           "depositCategory": "color",
           "stage": "chemical",
           "bookableOnline": true,
           "description": "Give your color a full reset with all over color change.",
           "includes": [
-            "color",
-            "cut",
-            "style"
-          ]
+            "color"
+          ],
+          "priceNeedsReview": true,
+          "styleSeatPrice": 95
         },
         {
           "key": "full_highlights",
@@ -143,16 +127,16 @@
           "price": 125,
           "active": 75,
           "processing": 35,
-          "finish": 70,
+          "finish": 15,
           "depositCategory": "color",
           "stage": "chemical",
           "bookableOnline": true,
           "description": "Add brightness and body throughout with full highlights.",
           "includes": [
-            "color",
-            "cut",
-            "style"
-          ]
+            "color"
+          ],
+          "priceNeedsReview": true,
+          "styleSeatPrice": 125
         },
         {
           "key": "partial_highlights",
@@ -161,16 +145,16 @@
           "price": 95,
           "active": 50,
           "processing": 35,
-          "finish": 65,
+          "finish": 15,
           "depositCategory": "color",
           "stage": "chemical",
           "bookableOnline": true,
           "description": "Bring some strands to light with a partial highlight. Focus on one area or spread some brightness throughout.",
           "includes": [
-            "color",
-            "cut",
-            "style"
-          ]
+            "color"
+          ],
+          "priceNeedsReview": true,
+          "styleSeatPrice": 95
         },
         {
           "key": "full_highlight_lowlight",
@@ -179,15 +163,15 @@
           "price": 125,
           "active": 70,
           "processing": 30,
-          "finish": 50,
+          "finish": 15,
           "depositCategory": "color",
           "stage": "chemical",
           "bookableOnline": true,
           "includes": [
-            "color",
-            "cut",
-            "style"
-          ]
+            "color"
+          ],
+          "priceNeedsReview": true,
+          "styleSeatPrice": 125
         },
         {
           "key": "full_lowlights",
@@ -196,15 +180,15 @@
           "price": 95,
           "active": 55,
           "processing": 30,
-          "finish": 50,
+          "finish": 15,
           "depositCategory": "color",
           "stage": "chemical",
           "bookableOnline": true,
           "includes": [
-            "color",
-            "cut",
-            "style"
-          ]
+            "color"
+          ],
+          "priceNeedsReview": true,
+          "styleSeatPrice": 95
         },
         {
           "key": "partial_lowlights",
@@ -213,15 +197,15 @@
           "price": 95,
           "active": 50,
           "processing": 35,
-          "finish": 65,
+          "finish": 15,
           "depositCategory": "color",
           "stage": "chemical",
           "bookableOnline": true,
           "includes": [
-            "color",
-            "cut",
-            "style"
-          ]
+            "color"
+          ],
+          "priceNeedsReview": true,
+          "styleSeatPrice": 95
         },
         {
           "key": "balayage",
@@ -230,16 +214,16 @@
           "price": 95,
           "active": 75,
           "processing": 40,
-          "finish": 65,
+          "finish": 15,
           "depositCategory": "color",
           "stage": "chemical",
           "bookableOnline": true,
           "description": "Lightening technique where highlights are hand painted to the hair starting at the tips and working up.",
           "includes": [
-            "color",
-            "cut",
-            "style"
-          ]
+            "color"
+          ],
+          "priceNeedsReview": true,
+          "styleSeatPrice": 95
         },
         {
           "key": "ombre",
@@ -248,16 +232,16 @@
           "price": 95,
           "active": 60,
           "processing": 35,
-          "finish": 55,
+          "finish": 15,
           "depositCategory": "color",
           "stage": "chemical",
           "bookableOnline": true,
-          "description": "A dramatic, two-toned color effect that starts darker at your roots and lighter at your ends for full body and color dimension. Price includes cut and style.",
+          "description": "A dramatic, two-toned color effect that starts darker at your roots and lighter at your ends for full body and color dimension.",
           "includes": [
-            "color",
-            "cut",
-            "style"
-          ]
+            "color"
+          ],
+          "priceNeedsReview": true,
+          "styleSeatPrice": 95
         },
         {
           "key": "toner",
@@ -266,15 +250,16 @@
           "price": 40,
           "active": 10,
           "processing": 20,
-          "finish": 30,
+          "finish": 10,
           "depositCategory": "color",
           "stage": "chemical",
           "bookableOnline": true,
-          "description": "Neutralize brassy color-treated hair with an all-over toner. Blowout and simple style included.",
+          "description": "Neutralize brassy color-treated hair with an all-over toner. Add a Style for a blowout.",
           "includes": [
-            "toner",
-            "style"
-          ]
+            "toner"
+          ],
+          "priceNeedsReview": true,
+          "styleSeatPrice": 40
         }
       ]
     },

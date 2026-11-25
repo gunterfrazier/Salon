@@ -7,7 +7,7 @@ export type FlagType = "late_cancel" | "no_show";
 
 /** Mirrors seed/policies.json (dollar values there). */
 export interface PolicySettings {
-  cardOnFileRequired: boolean;
+  savedPaymentMethod: "optional" | "required";
   lateCancelWindowHours: number;
   deposits: {
     newClient: {

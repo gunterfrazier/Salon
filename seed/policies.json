@@ -1,6 +1,7 @@
 {
   "_about": "Default booking & cancellation policy settings. All editable in Settings > Policies. See docs/SPEC.md section 4 for behavior.",
-  "cardOnFileRequired": true,
+  "savedPaymentMethod": "optional",
+  "_savedPaymentMethodNote": "optional = clients may pay with Zelle, Venmo, Cash App, Apple Cash, PayPal.Me or cash instead of saving a card/wallet. Without a saved method, any required deposit must be received before the booking is confirmed, and late-cancel/no-show fees become a balance owed (payment request sent). required = every booking needs a saved card, Google Pay, Apple Pay or Cash App Pay.",
   "lateCancelWindowHours": 24,
   "deposits": {
     "newClient": {
