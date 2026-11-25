@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { supabasePublicKeyOrNull, supabaseUrlOrNull } from "@/lib/supabase/env";
 
 /**
  * Health check: confirms the Supabase connection and that each table from
@@ -14,8 +15,8 @@ const TABLES = [
 ];
 
 export async function GET() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const url = supabaseUrlOrNull();
+  const key = supabasePublicKeyOrNull();
   if (!url || !key) {
     return NextResponse.json({ ok: false, supabase: "not configured" }, { status: 503 });
   }

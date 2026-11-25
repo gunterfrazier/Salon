@@ -23,11 +23,11 @@ Replace StyleSeat for a **solo stylist** working from an **Android phone and And
 - **Supabase**: Postgres, logins, photo storage. Every table has a `business_id`, and row-level security keeps each business's data separate.
 - **Payments:** see §5.5. Stripe handles cards, **Google Pay, Apple Pay and Cash App Pay**, all of which can be saved for later charges. PayPal and Venmo come in Phase 2. Zelle, Apple Cash, and Venmo / Cash App sent to your own handle are recorded manually. **No card reader or in-person card processing is needed.**
 - **Twilio** for texts (requires US 10DLC registration; start this in Phase 0, it takes weeks). **Resend** for email.
-- **Vercel** hosting, with a preview link for every change.
+- **Cloudflare Workers** hosting (Workers Paid, $5/mo; business use allowed), built with the OpenNext adapter (`npm run build:cf`). Domain **chairvana.app** registered at Cloudflare. The app also still builds on Vercel, but Vercel's free plan is non-commercial only. Sign-in gate uses Edge `middleware.ts` because OpenNext's Node `proxy.ts` support is experimental and failed to build.
 
 ## 4. Booking & cancellation policy engine (core requirement)
 
-All values below are defaults stored in settings (`seed/policies.json`) and editable by the stylist.
+All values below are defaults stored in settings (`app/seed/policies.json`) and editable by the stylist.
 
 ### 4.1 Saved payment method (optional)
 - Clients choose how to pay when booking (§5.5).
@@ -119,13 +119,13 @@ Calendar phases: hands-on time (solid), **processing (striped, open for another 
 
 ## 5. Service menu
 
-- `seed/service-menu.json` is **your StyleSeat menu**: 18 services with your hours (America/Chicago time).
+- `app/seed/service-menu.json` is **your StyleSeat menu**: 18 services with your hours (America/Chicago time).
   - **Changes from StyleSeat:**
     - Removed the $25 "Women's or Youth Female's Cut".
     - Split color services from cut & style. Each color service is now color only, ending with a 15-minute rinse.
     - Color prices are **unchanged for now** and marked for review (see §5.4).
   - The hands-on / processing / finish split for color services is an estimate you've approved. It can be adjusted any time.
-- `seed/service-menu-generic.json` is a 36-service general template for adding new services.
+- `app/seed/service-menu-generic.json` is a 36-service general template for adding new services.
 - **Fully editable:** add, remove, reorder and rename categories and services; hide a service from online booking.
 
 ### Stacking services
@@ -138,7 +138,7 @@ A client can book several services in one appointment, e.g. haircut + color + st
 - **Add-ons:** the Travel Fee can't be booked alone.
 
 ### 5.4 Discounts & custom pricing for stacked services
-`seed/pricing-rules.json`. Applied per line, in this order:
+`app/seed/pricing-rules.json`. Applied per line, in this order:
 1. **Custom price:** the stylist can type a price for any service on any appointment.
 2. **Package discounts:** apply automatically when the trigger matches. Each package can be turned off for a single appointment.
    - **Color + Cut/Style 5% off** (on): **5% off the whole appointment** when a color service is booked with a cut and/or a style. The percent can be changed, switched to a dollar amount, or turned off.
@@ -152,7 +152,7 @@ A client can book several services in one appointment, e.g. haircut + color + st
 - Deposits and fees use the discounted total.
 
 ### 5.5 Payment methods
-`seed/payment-methods.json`. **Every method is available. All start off except cash.** The stylist links and switches each one on or off from **Settings → Payments** in the app, any time after launch, to find what works best for her clients. Reports will show payments by method to help compare.
+`app/seed/payment-methods.json`. **Every method is available. All start off except cash.** The stylist links and switches each one on or off from **Settings → Payments** in the app, any time after launch, to find what works best for her clients. Reports will show payments by method to help compare.
 
 | Linking | What it takes |
 |---|---|
@@ -254,7 +254,7 @@ Double-booking prevention: a Postgres exclusion constraint on each staff member'
 - [ ] Create a GitHub account and an empty private repo
 - [ ] Create accounts: Supabase, Vercel, Stripe (complete business verification), Twilio
 - [ ] Export the StyleSeat client CSV; ask StyleSeat support for an appointments export
-- [ ] Review/edit `seed/service-menu.json` prices and times (or just send me your StyleSeat menu)
+- [ ] Review/edit `app/seed/service-menu.json` prices and times (or just send me your StyleSeat menu)
 - [ ] Write or approve the policy wording clients will see
 
 **Claude:**

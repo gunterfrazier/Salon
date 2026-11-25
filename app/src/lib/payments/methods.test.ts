@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import methodsJson from "../../../../seed/payment-methods.json";
+import methodsJson from "../../../seed/payment-methods.json";
 import { bookingGuarantee, paymentRequest, validateHandle, type PaymentMethod } from "./methods";
 
 const all = methodsJson.methods as PaymentMethod[];

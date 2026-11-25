@@ -1,7 +1,7 @@
-import menuJson from "../../../../seed/service-menu.json";
-import paymentJson from "../../../../seed/payment-methods.json";
-import policyJson from "../../../../seed/policies.json";
-import pricingJson from "../../../../seed/pricing-rules.json";
+import menuJson from "../../../seed/service-menu.json";
+import paymentJson from "../../../seed/payment-methods.json";
+import policyJson from "../../../seed/policies.json";
+import pricingJson from "../../../seed/pricing-rules.json";
 
 /** Drop "_note"-style comment keys from seed JSON before storing it. */
 export function stripNotes<T>(v: T): T {

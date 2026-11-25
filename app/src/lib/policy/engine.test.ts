@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import policyJson from "../../../../seed/policies.json";
+import policyJson from "../../../seed/policies.json";
 import { cancelDefaults, depositRequirement, dollars, resolveCharge, validateDepositAmount } from "./engine";
 import { bookingAlert, clientStanding, flagStatus } from "./flags";
 import type { BookedService, ClientFlag, ClientPolicyState, PolicySettings } from "./types";

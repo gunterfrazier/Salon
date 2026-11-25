@@ -1,4 +1,4 @@
-import policyJson from "../../../../seed/policies.json";
+import policyJson from "../../../seed/policies.json";
 import { StatusChip, statusVars } from "@/components/StatusChip";
 import { bookingAlert, type BookingAlert } from "@/lib/policy/flags";
 import type { PolicySettings } from "@/lib/policy/types";

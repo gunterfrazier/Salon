@@ -1,4 +1,4 @@
-import menuJson from "../../../seed/service-menu.json";
+import menuJson from "../../seed/service-menu.json";
 import type { MenuService } from "./schedule/plan";
 
 export interface Menu {

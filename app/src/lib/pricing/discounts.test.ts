@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import rulesJson from "../../../../seed/pricing-rules.json";
+import rulesJson from "../../../seed/pricing-rules.json";
 import { menu, servicesByKey as s } from "../menu";
 import type { MenuService } from "../schedule/plan";
 import { priceAppointment, type BundleRule, type PriceLine } from "./discounts";

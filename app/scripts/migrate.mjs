@@ -16,9 +16,16 @@ import pg from "pg";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const dir = path.resolve(here, "../../supabase/migrations");
 
+// Production builds only: Vercel production, or a Cloudflare Workers Build of
+// the production branch (MIGRATE_BRANCH, default "main").
 const force = process.env.MIGRATE === "1";
-if (!force && process.env.VERCEL_ENV !== "production") {
-  console.log(`[migrate] skipped (VERCEL_ENV=${process.env.VERCEL_ENV ?? "unset"})`);
+const vercelProd = process.env.VERCEL_ENV === "production";
+const cloudflareProd =
+  process.env.WORKERS_CI === "1" && process.env.WORKERS_CI_BRANCH === (process.env.MIGRATE_BRANCH ?? "main");
+if (!force && !vercelProd && !cloudflareProd) {
+  console.log(
+    `[migrate] skipped (not a production build: VERCEL_ENV=${process.env.VERCEL_ENV ?? "unset"}, WORKERS_CI_BRANCH=${process.env.WORKERS_CI_BRANCH ?? "unset"})`,
+  );
   process.exit(0);
 }
 

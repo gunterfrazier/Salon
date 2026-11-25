@@ -1,10 +1,10 @@
-import path from "node:path";
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  // seed/ lives at the repository root, shared with database seeding.
-  turbopack: { root: path.join(__dirname, "..") },
-  outputFileTracingRoot: path.join(__dirname, ".."),
-};
+// Everything the app needs lives inside app/ (including seed/), so the
+// default project root works for both Vercel and Cloudflare (OpenNext).
+const nextConfig: NextConfig = {};
 
 export default nextConfig;
+
+// Lets `next dev` use Cloudflare bindings locally; no-op otherwise.
+import("@opennextjs/cloudflare").then((m) => m.initOpenNextCloudflareForDev()).catch(() => {});

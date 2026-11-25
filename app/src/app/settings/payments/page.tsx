@@ -1,4 +1,4 @@
-import methodsJson from "../../../../../seed/payment-methods.json";
+import methodsJson from "../../../../seed/payment-methods.json";
 import type { PaymentMethod } from "@/lib/payments/methods";
 import PaymentSettings from "./PaymentSettings";
 

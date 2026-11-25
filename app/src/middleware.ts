@@ -1,16 +1,20 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { supabasePublicKeyOrNull, supabaseUrlOrNull } from "@/lib/supabase/env";
 
 /** Pages anyone can open without signing in. */
 const PUBLIC = [/^\/login(\/|$)/, /^\/auth\//, /^\/api\/health$/];
 
 /**
+ * Edge middleware (not proxy.ts): the Cloudflare/OpenNext build supports Edge
+ * middleware reliably, while Node "proxy" support is still experimental there.
+ *
  * Keeps the Supabase session cookie fresh and sends signed-out visitors to
  * /login. Pages still check the user themselves; this is the first gate.
  */
-export async function proxy(request: NextRequest) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+export async function middleware(request: NextRequest) {
+  const url = supabaseUrlOrNull();
+  const key = supabasePublicKeyOrNull();
   const isPublic = PUBLIC.some((p) => p.test(request.nextUrl.pathname));
 
   // Before Supabase is configured (local preview), leave pages open.

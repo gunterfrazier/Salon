@@ -1,0 +1,22 @@
+// Cloudflare Workers settings for Chairvana (built with OpenNext).
+// Variables and secrets are set in the Cloudflare dashboard, not here.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "chairvana",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "chairvana"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}
