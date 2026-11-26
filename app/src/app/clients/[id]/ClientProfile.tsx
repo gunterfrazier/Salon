@@ -72,12 +72,12 @@ export default function ClientProfile({ data }: { data: ClientProfileData }) {
         <p className="mt-1 text-xs text-muted">Times in {zoneLabel(tz)}</p>
       </div>
 
-      {(openBalances.length > 0 || data.refundsOwed.length > 0) && <Money data={data} date={date} />}
-      <Contact data={data} />
-      <FavoritesCard data={data} />
-      <DepositRule data={data} />
-      {standing.history.length > 0 && <Flags data={data} history={standing.history} date={date} />}
-      <Formulas data={data} date={date} />
+      {(openBalances.length > 0 || data.refundsOwed.length > 0) && (data.can.checkout || data.can.policy) && <Money data={data} date={date} />}
+      {data.can.edit ? <Contact data={data} /> : data.client.notes && <section className={card}><h2 className="font-semibold">Notes</h2><p className="mt-2 whitespace-pre-wrap text-sm">{data.client.notes}</p></section>}
+      {data.can.edit && <FavoritesCard data={data} />}
+      {data.can.policy && <DepositRule data={data} />}
+      {standing.history.length > 0 && data.can.policy && <Flags data={data} history={standing.history} date={date} />}
+      {data.can.formulas && <Formulas data={data} date={date} />}
       <Visits data={data} date={date} />
     </main>
   );

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { buildBooking, toBookable, type ServiceRow } from "@/lib/booking/build";
 import { checkoutTotals, settleCancel } from "@/lib/checkout/settle";
 import { cancelDefaults, type ChargeOption } from "@/lib/policy/engine";
-import { getContext } from "@/lib/context";
+import { denied, getContext } from "@/lib/context";
 import { loadClientStates, reviveClientState, type ClientStateJSON } from "@/lib/data/clients";
 import { addDays, isDateStr, parseHHMM, todayIn, toHHMM, zonedToUtc } from "@/lib/time/zone";
 import { NEW_CLIENT_STATE } from "@/lib/ui/standing";
@@ -61,6 +61,8 @@ const clean = (s?: string) => (s ?? "").trim() || null;
  */
 export async function createAppointment(req: BookingRequest): Promise<BookingResponse> {
   const ctx = await getContext();
+  const no = denied(ctx, "booking.manage");
+  if (no) return no;
   const { supabase, business, staff } = ctx;
 
   if (!isDateStr(req.date)) return { ok: false, error: "Pick a date." };
@@ -189,6 +191,8 @@ export interface CloseRequest {
 
 export async function closeAppointment(req: CloseRequest): Promise<{ ok: true } | { ok: false; error: string }> {
   const ctx = await getContext();
+  const no = denied(ctx, "booking.manage");
+  if (no) return no;
   const policy = ctx.business.policy_settings;
   const a = await loadForClose(ctx, req.appointmentId);
   if (!a) return { ok: false, error: "Appointment not found." };
@@ -274,6 +278,8 @@ export interface CheckoutRequest {
 
 export async function checkoutAppointment(req: CheckoutRequest): Promise<{ ok: true } | { ok: false; error: string }> {
   const ctx = await getContext();
+  const no = denied(ctx, "checkout");
+  if (no) return no;
   const a = await loadForClose(ctx, req.appointmentId);
   if (!a) return { ok: false, error: "Appointment not found." };
   if (!OPEN.has(a.status)) return { ok: false, error: "This appointment is already closed." };
@@ -321,6 +327,8 @@ export async function markDepositReceived(appointmentId: string, amountCents: nu
   if (!Number.isInteger(amountCents) || amountCents <= 0) return { ok: false, error: "Enter the deposit amount." };
   if (!METHODS.has(method)) return { ok: false, error: "Pick how the client paid." };
   const ctx = await getContext();
+  const no = denied(ctx, "checkout");
+  if (no) return no;
   const a = await loadForClose(ctx, appointmentId);
   if (!a) return { ok: false, error: "Appointment not found." };
   if (!OPEN.has(a.status)) return { ok: false, error: "This appointment is closed." };
@@ -335,6 +343,8 @@ export async function markDepositReceived(appointmentId: string, amountCents: nu
 export async function findTimes(serviceIds: string[], criteria: SearchCriteria): Promise<{ ok: true; openings: Opening[] } | { ok: false; error: string }> {
   if (!Array.isArray(serviceIds) || serviceIds.length === 0 || serviceIds.length > 8) return { ok: false, error: "Pick at least one service." };
   const ctx = await getContext();
+  const no = denied(ctx, "booking.manage");
+  if (no) return no;
   const { supabase, business, staff } = ctx;
   const { data: rows, error } = await supabase
     .from("services")
@@ -402,6 +412,8 @@ async function movableTimes(ctx: Ctx, appt: NonNullable<Awaited<ReturnType<typeo
 export async function moveTimes(appointmentId: string, date: string): Promise<{ ok: true; times: string[]; closed: string | null } | { ok: false; error: string }> {
   if (!isDateStr(date)) return { ok: false, error: "Pick a date." };
   const ctx = await getContext();
+  const no = denied(ctx, "booking.manage");
+  if (no) return no;
   const appt = await loadForMove(ctx, appointmentId);
   if (!appt) return { ok: false, error: "Appointment not found." };
   if (!MOVABLE.has(appt.status)) return { ok: false, error: "Only upcoming appointments can be moved." };
@@ -428,6 +440,8 @@ export async function moveAppointment(req: MoveRequest): Promise<BookingResponse
     return { ok: false, error: "Pick a start time." };
   }
   const ctx = await getContext();
+  const no = denied(ctx, "booking.manage");
+  if (no) return no;
   const tz = ctx.business.timezone;
   const appt = await loadForMove(ctx, req.appointmentId);
   if (!appt) return { ok: false, error: "Appointment not found." };

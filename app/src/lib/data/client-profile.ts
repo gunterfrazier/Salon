@@ -65,6 +65,7 @@ export async function loadClientProfile(ctx: Ctx, clientId: string): Promise<Cli
   };
 
   return {
+    can: { edit: ctx.can("clients.edit"), policy: ctx.can("clients.policy"), formulas: ctx.can("formulas"), checkout: ctx.can("checkout") },
     timezone: business.timezone,
     policy: business.policy_settings,
     paymentMethods: MANUAL_METHODS,

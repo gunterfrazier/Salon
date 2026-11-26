@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getContext } from "@/lib/context";
+import { denied, getContext } from "@/lib/context";
 import { holidayDate, mergeHolidays, PRESET_HOLIDAYS, type HolidayDate, type HolidayRule } from "@/lib/schedule/holidays";
 import { addDays, isDateStr, parseHHMM, zonedToUtc } from "@/lib/time/zone";
 
@@ -25,6 +25,8 @@ async function saveRules(rules: HolidayRule[]): Promise<Result> {
 
 export async function setHolidayClosed(key: string, closed: boolean): Promise<Result> {
   const ctx = await getContext();
+  const no = denied(ctx, "settings.schedule");
+  if (no) return no;
   const rules = mergeHolidays(ctx.business.holidays);
   if (!rules.some((r) => r.key === key)) return { ok: false, error: "Unknown holiday." };
   return saveRules(rules.map((r) => (r.key === key ? { ...r, closed } : r)));
@@ -41,12 +43,16 @@ export async function addCustomHoliday(name: string, date: HolidayDate): Promise
   const y = new Date().getUTCFullYear();
   if (!holidayDate(rule, y) && !holidayDate(rule, y + 1)) return { ok: false, error: "That date doesn't exist." };
   const ctx = await getContext();
+  const no = denied(ctx, "settings.schedule");
+  if (no) return no;
   return saveRules([...mergeHolidays(ctx.business.holidays), rule]);
 }
 
 export async function deleteCustomHoliday(key: string): Promise<Result> {
   if (PRESET_HOLIDAYS.some((p) => p.key === key)) return { ok: false, error: "Built-in holidays can be switched off but not deleted." };
   const ctx = await getContext();
+  const no = denied(ctx, "settings.schedule");
+  if (no) return no;
   return saveRules(mergeHolidays(ctx.business.holidays).filter((r) => r.key !== key));
 }
 
@@ -61,6 +67,8 @@ export interface TimeOffInput {
 
 export async function addTimeOff(i: TimeOffInput): Promise<Result> {
   const ctx = await getContext();
+  const no = denied(ctx, "settings.schedule");
+  if (no) return no;
   const tz = ctx.business.timezone;
   if (!isDateStr(i.startDate)) return { ok: false, error: "Pick a date." };
   let start: Date;
@@ -95,6 +103,8 @@ export async function addTimeOff(i: TimeOffInput): Promise<Result> {
 
 export async function deleteTimeOff(id: string): Promise<Result> {
   const ctx = await getContext();
+  const no = denied(ctx, "settings.schedule");
+  if (no) return no;
   const { data, error } = await ctx.supabase.from("time_off").delete().eq("id", id).eq("business_id", ctx.business.id).select("id");
   if (error) return { ok: false, error: error.message };
   if (!data?.length) return { ok: false, error: "Not found." };

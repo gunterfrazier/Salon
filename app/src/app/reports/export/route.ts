@@ -1,5 +1,5 @@
 import { type NextRequest } from "next/server";
-import { getContext } from "@/lib/context";
+import { requirePermission } from "@/lib/context";
 import { loadReportRows } from "@/lib/data/reports";
 import { HOLD_RELEASED, toCsv } from "@/lib/reports/build";
 import { todayIn, tzAbbrev, wallParts } from "@/lib/time/zone";
@@ -14,7 +14,7 @@ const dollars = (c: number) => (c / 100).toFixed(2);
 
 /** CSV downloads for a date range: appointments, payments, or services sold. */
 export async function GET(req: NextRequest) {
-  const ctx = await getContext();
+  const ctx = await requirePermission("reports.view");
   const tz = ctx.business.timezone;
   const sp = Object.fromEntries(req.nextUrl.searchParams);
   const r = parseRange({ range: "custom", from: sp.from, to: sp.to }, todayIn(tz));

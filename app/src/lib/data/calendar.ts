@@ -125,6 +125,7 @@ export async function loadCalendar(ctx: Ctx, opts: { from: string; view: "day" |
   }));
 
   return {
+    can: { book: ctx.can("booking.manage"), checkout: ctx.can("checkout") },
     businessName: business.name,
     timezone: tz,
     hours: business.business_hours,

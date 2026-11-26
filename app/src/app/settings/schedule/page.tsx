@@ -1,5 +1,5 @@
 import { AppNav } from "@/components/AppNav";
-import { getContext } from "@/lib/context";
+import { requirePermission } from "@/lib/context";
 import { loadDaysOff } from "@/lib/data/schedule";
 import { mergeHolidays } from "@/lib/schedule/holidays";
 import { todayIn } from "@/lib/time/zone";
@@ -9,7 +9,7 @@ export const metadata = { title: "Schedule" };
 export const dynamic = "force-dynamic";
 
 export default async function SchedulePage() {
-  const ctx = await getContext();
+  const ctx = await requirePermission("settings.schedule");
   const now = new Date();
   const daysOff = await loadDaysOff(ctx.supabase, ctx.business.id, now, new Date(now.getTime() + 2 * 366 * 86_400_000));
   return (

@@ -40,6 +40,7 @@ export default async function DevCalendar({ searchParams }: { searchParams: Prom
   const flagDate = "2026-10-20T20:30:00.000Z";
 
   const data: CalendarData = {
+    can: { book: true, checkout: true },
     businessName: "Intensity Salon (sample data)",
     timezone: TZ,
     hours: menuJson.hours as unknown as CalendarData["hours"],

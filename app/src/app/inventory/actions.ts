@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getContext } from "@/lib/context";
+import { denied, getContext } from "@/lib/context";
 import { catalogLines, productsFromCatalog, type Unit, type Vendor } from "@/lib/inventory/stock";
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string };
@@ -39,6 +39,10 @@ export async function addFromCatalog(req: CatalogAdd): Promise<Result<{ added: n
   const rows = productsFromCatalog(line, req.picks.slice(0, 300), { size: req.size, unit: req.unit, vendor: req.vendor && VENDORS.has(req.vendor) ? req.vendor : null, minQty: req.minQty, maxQty: req.maxQty, costCents: req.costCents });
 
   const ctx = await getContext();
+
+  const no = denied(ctx, "inventory.manage");
+
+  if (no) return no;
   const { data: existing, error: e1 } = await ctx.supabase.from("products").select("brand,line,shade,name,size").eq("business_id", ctx.business.id);
   if (e1) return { ok: false, error: e1.message };
   const key = (r: { brand: string; line: string | null; shade: string | null; name: string; size: number | null }) => [r.brand, r.line ?? "", r.shade ?? r.name, Number(r.size ?? 0)].join("|").toLowerCase();
@@ -111,6 +115,8 @@ export async function saveProduct(id: string | null, f: ProductFields): Promise<
   const r = productRow(f);
   if ("error" in r) return { ok: false, error: r.error };
   const ctx = await getContext();
+  const no = denied(ctx, "inventory.manage");
+  if (no) return no;
   const q = id
     ? ctx.supabase.from("products").update(r.row).eq("business_id", ctx.business.id).eq("id", id).select("id").single()
     : ctx.supabase.from("products").insert({ ...r.row, business_id: ctx.business.id }).select("id").single();
@@ -122,6 +128,8 @@ export async function saveProduct(id: string | null, f: ProductFields): Promise<
 
 export async function archiveProduct(id: string, archived: boolean): Promise<Result> {
   const ctx = await getContext();
+  const no = denied(ctx, "inventory.manage");
+  if (no) return no;
   const { error } = await ctx.supabase.from("products").update({ archived }).eq("business_id", ctx.business.id).eq("id", id);
   if (error) return { ok: false, error: error.message };
   done();
@@ -134,6 +142,8 @@ export async function changeStock(productId: string, reason: "count" | "received
   if (reason === "count" && value < 0) return { ok: false, error: "Count can't be negative." };
   if ((reason === "received" || reason === "sold") && value <= 0) return { ok: false, error: "Enter how many." };
   const ctx = await getContext();
+  const no = denied(ctx, "inventory.manage");
+  if (no) return no;
   const { data, error } = await ctx.supabase.rpc("stock_move", {
     p: { product_id: productId, reason, ...(reason === "count" ? { count: value } : { change: reason === "sold" ? -value : value }), note: clean(note, 200) },
   });

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getContext } from "@/lib/context";
+import { denied, getContext } from "@/lib/context";
 import { validateHandle } from "@/lib/payments/methods";
 import { mergeMethods, NOT_YET_AVAILABLE, SEED_METHODS } from "@/lib/payments/settings";
 
@@ -11,6 +11,10 @@ export async function savePaymentMethod(key: string, patch: { enabled?: boolean;
   if (NOT_YET_AVAILABLE.has(key) && patch.enabled) return { ok: false, error: `${seed.label} isn't connected yet.` };
 
   const ctx = await getContext();
+
+  const no = denied(ctx, "settings.payments");
+
+  if (no) return no;
   const methods = mergeMethods(ctx.business.payment_methods);
   const current = methods.find((m) => m.key === key)!;
   let handle = current.handle ?? "";

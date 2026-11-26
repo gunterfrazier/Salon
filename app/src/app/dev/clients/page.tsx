@@ -19,6 +19,7 @@ const list: ClientSummary[] = [
 
 const flagAt = "2026-10-20T20:30:00.000Z";
 const profile: ClientProfileData = {
+  can: { edit: true, policy: true, formulas: true, checkout: true },
   timezone: "America/Chicago",
   policy: policyJson as unknown as PolicySettings,
   paymentMethods: [{ key: "cash", label: "Cash" }, { key: "venmo_direct", label: "Venmo" }, { key: "zelle", label: "Zelle" }],

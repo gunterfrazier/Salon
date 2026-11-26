@@ -1,5 +1,5 @@
 import { AppNav } from "@/components/AppNav";
-import { getContext } from "@/lib/context";
+import { requirePermission } from "@/lib/context";
 import { mergeMethods } from "@/lib/payments/settings";
 import PaymentSettings from "./PaymentSettings";
 
@@ -7,7 +7,7 @@ export const metadata = { title: "Payments" };
 export const dynamic = "force-dynamic";
 
 export default async function PaymentsPage() {
-  const ctx = await getContext();
+  const ctx = await requirePermission("settings.payments");
   return (
     <>
       <AppNav current="/settings/payments" businessName={ctx.business.name} />

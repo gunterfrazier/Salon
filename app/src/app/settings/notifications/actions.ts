@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getContext } from "@/lib/context";
+import { denied, getContext } from "@/lib/context";
 import { pushToStaff, vapidKeys } from "@/lib/push/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { mergeNotificationSettings, validateNotificationSettings, type NotificationSettings } from "@/lib/notify/settings";
@@ -18,6 +18,8 @@ export async function saveNotificationSettings(input: NotificationSettings): Pro
   const problem = validateNotificationSettings(merged);
   if (problem) return { ok: false, error: problem };
   const ctx = await getContext();
+  const no = denied(ctx, "settings.messages");
+  if (no) return no;
   const { error } = await ctx.supabase.from("businesses").update({ notification_settings: merged }).eq("id", ctx.business.id);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/settings/notifications");

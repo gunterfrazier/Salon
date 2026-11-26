@@ -137,13 +137,15 @@ export default function CalendarView({ data, focusDate }: { data: CalendarData; 
           <button type="button" onClick={() => setFinding({})} className="rounded-lg border border-line bg-surface px-3 py-2 text-sm font-semibold">
             Find a time
           </button>
-          <button
-            type="button"
-            onClick={() => setBooking({ date: data.view === "day" ? data.from : focusDate, time: "" })}
-            className="rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-on-accent"
-          >
-            + New appointment
-          </button>
+          {data.can.book && (
+            <button
+              type="button"
+              onClick={() => setBooking({ date: data.view === "day" ? data.from : focusDate, time: "" })}
+              className="rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-on-accent"
+            >
+              + New appointment
+            </button>
+          )}
         </div>
       </div>
 
@@ -472,17 +474,17 @@ function AppointmentDetails({
         {a.notes && <p className="mt-3 whitespace-pre-wrap rounded-lg bg-background p-3 text-sm">{a.notes}</p>}
         {OPEN_STATUSES.has(a.status) ? (
           <div className="mt-5 flex flex-wrap gap-2">
-            <button onClick={() => onAction("checkout")} className="flex-1 rounded-lg bg-accent px-4 py-2.5 font-semibold text-on-accent">Check out</button>
-            {["pending", "booked", "confirmed"].includes(a.status) && <button onClick={() => onAction("move")} className="rounded-lg border border-line px-4 py-2.5">Move</button>}
-            <button onClick={() => onAction("cancel")} className="rounded-lg border border-line px-4 py-2.5">Cancel</button>
-            <button
+            {data.can.checkout && <button onClick={() => onAction("checkout")} className="flex-1 rounded-lg bg-accent px-4 py-2.5 font-semibold text-on-accent">Check out</button>}
+            {data.can.book && ["pending", "booked", "confirmed"].includes(a.status) && <button onClick={() => onAction("move")} className="rounded-lg border border-line px-4 py-2.5">Move</button>}
+            {data.can.book && <button onClick={() => onAction("cancel")} className="rounded-lg border border-line px-4 py-2.5">Cancel</button>}
+            {data.can.book && <button
               onClick={() => onAction("no_show")}
               disabled={!!now && now < new Date(a.start)}
               title={now && now < new Date(a.start) ? "Available once the appointment has started" : undefined}
               className="rounded-lg border border-line px-4 py-2.5 disabled:opacity-40"
             >
               No-show
-            </button>
+            </button>}
           </div>
         ) : (
           <div className="mt-4 flex items-center justify-between gap-2 rounded-lg bg-background px-3 py-2 text-sm">

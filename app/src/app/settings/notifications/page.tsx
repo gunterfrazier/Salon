@@ -1,5 +1,5 @@
 import { AppNav } from "@/components/AppNav";
-import { getContext } from "@/lib/context";
+import { requirePermission } from "@/lib/context";
 import { configuredSender } from "@/lib/notify/provider";
 import { mergeNotificationSettings } from "@/lib/notify/settings";
 import AlertContact from "./AlertContact";
@@ -11,7 +11,7 @@ export const metadata = { title: "Messages" };
 export const dynamic = "force-dynamic";
 
 export default async function NotificationsPage() {
-  const ctx = await getContext();
+  const ctx = await requirePermission("settings.messages");
   const { data } = await ctx.supabase
     .from("messages")
     .select("id,created_at,sent_at,audience,channel,template,status,error,body,clients(first_name,last_name)")

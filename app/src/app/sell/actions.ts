@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getContext } from "@/lib/context";
+import { denied, getContext } from "@/lib/context";
 
 const METHODS = new Set(["cash", "venmo_direct", "cash_app_direct", "zelle", "paypal_me", "apple_cash", "other"]);
 
@@ -22,6 +22,8 @@ export async function quickSale(req: SaleRequest): Promise<{ ok: true; saleId: s
   }
   if (req.clientId && !/^[0-9a-f-]{36}$/.test(req.clientId)) return { ok: false, error: "Pick the client again." };
   const ctx = await getContext();
+  const no = denied(ctx, "sell");
+  if (no) return no;
   const { data, error } = await ctx.supabase.rpc("quick_sale", {
     p: {
       business_id: ctx.business.id,

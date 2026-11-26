@@ -1,5 +1,5 @@
 import { AppNav } from "@/components/AppNav";
-import { getContext } from "@/lib/context";
+import { requirePermission } from "@/lib/context";
 import { MANUAL_METHODS } from "@/lib/data/calendar";
 import { loadProducts } from "@/lib/data/inventory";
 import { lineTitle } from "@/lib/inventory/stock";
@@ -10,7 +10,7 @@ export const metadata = { title: "Sell" };
 export const dynamic = "force-dynamic";
 
 export default async function SellPage() {
-  const ctx = await getContext();
+  const ctx = await requirePermission("sell");
   const [products, { data: clients }] = await Promise.all([
     loadProducts(ctx.supabase, ctx.business.id),
     ctx.supabase.from("clients").select("id,first_name,last_name,phone").eq("business_id", ctx.business.id).order("first_name").limit(5000),

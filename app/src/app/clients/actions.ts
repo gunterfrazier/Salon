@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { cleanFavorites } from "@/lib/booking/search";
-import { getContext } from "@/lib/context";
+import { denied, getContext } from "@/lib/context";
 import { containersUsed, type Unit } from "@/lib/inventory/stock";
 
 /** Products used, sent from the formula form as JSON: [{ productId, amount, unit }]. */
@@ -70,6 +70,8 @@ export async function createClientRecord(f: ClientFields): Promise<Result<{ id: 
   const problem = validate(f);
   if (problem) return { ok: false, error: problem };
   const ctx = await getContext();
+  const no = denied(ctx, "clients.edit");
+  if (no) return no;
   const { data, error } = await ctx.supabase.from("clients").insert({ business_id: ctx.business.id, source: "manual", ...row(f) }).select("id").single();
   if (error) return { ok: false, error: error.message };
   done();
@@ -81,6 +83,8 @@ export async function updateClientRecord(clientId: string, f: ClientFields): Pro
   if (problem) return { ok: false, error: problem };
   const ctx = await ownClient(clientId);
   if (!ctx) return { ok: false, error: "Client not found." };
+  const no = denied(ctx, "clients.edit");
+  if (no) return no;
   const { error } = await ctx.supabase.from("clients").update(row(f)).eq("id", clientId);
   if (error) return { ok: false, error: error.message };
   done(clientId);
@@ -91,6 +95,8 @@ export async function setDepositRule(clientId: string, rule: { kind: "none" } | 
   if (rule.kind === "amount" && (!Number.isInteger(rule.cents) || rule.cents <= 0)) return { ok: false, error: "Enter a deposit amount." };
   const ctx = await ownClient(clientId);
   if (!ctx) return { ok: false, error: "Client not found." };
+  const no = denied(ctx, "clients.policy");
+  if (no) return no;
   const { error } = await ctx.supabase
     .from("clients")
     .update({ deposit_override: rule.kind, deposit_override_cents: rule.kind === "amount" ? rule.cents : null })
@@ -103,6 +109,8 @@ export async function setDepositRule(clientId: string, rule: { kind: "none" } | 
 export async function updateFlag(clientId: string, flagId: string, action: "clear" | "permanent" | "unpermanent", note?: string): Promise<Result> {
   const ctx = await ownClient(clientId);
   if (!ctx) return { ok: false, error: "Client not found." };
+  const no = denied(ctx, "clients.policy");
+  if (no) return no;
   const policy = ctx.business.policy_settings;
   let patch: Record<string, unknown>;
   if (action === "clear") {
@@ -126,6 +134,8 @@ export async function settleBalance(clientId: string, balanceId: string, method:
   if (!METHODS.has(method)) return { ok: false, error: "Pick how the client paid." };
   const ctx = await ownClient(clientId);
   if (!ctx) return { ok: false, error: "Client not found." };
+  const no = denied(ctx, "checkout");
+  if (no) return no;
   const { error } = await ctx.supabase.rpc("settle_balance", { p: { balance_id: balanceId, method, reference: clean(reference) } });
   if (error) return { ok: false, error: error.code === "P0002" ? "This balance is already paid." : error.message };
   done(clientId);
@@ -136,6 +146,8 @@ export async function markRefundReturned(clientId: string, paymentId: string, me
   if (!METHODS.has(method)) return { ok: false, error: "Pick how you returned it." };
   const ctx = await ownClient(clientId);
   if (!ctx) return { ok: false, error: "Client not found." };
+  const no = denied(ctx, "clients.policy");
+  if (no) return no;
   const { data, error } = await ctx.supabase
     .from("payments")
     .update({ status: "succeeded", method, external_reference: clean(reference) })
@@ -170,6 +182,10 @@ export async function addFormula(clientId: string, form: FormData): Promise<Resu
 
   const ctx = await ownClient(clientId);
   if (!ctx) return { ok: false, error: "Client not found." };
+
+  const no = denied(ctx, "formulas");
+
+  if (no) return no;
 
   const paths: string[] = [];
   for (const p of photos) {
@@ -234,6 +250,8 @@ export async function addFormula(clientId: string, form: FormData): Promise<Resu
 export async function deleteFormula(clientId: string, formulaId: string): Promise<Result> {
   const ctx = await ownClient(clientId);
   if (!ctx) return { ok: false, error: "Client not found." };
+  const no = denied(ctx, "formulas");
+  if (no) return no;
   // Put what this formula used back into inventory.
   const { data: used } = await ctx.supabase.from("stock_moves").select("product_id,change").eq("formula_id", formulaId).eq("reason", "used");
   for (const m of used ?? []) {
@@ -262,6 +280,8 @@ export async function importClients(rows: ImportClientInput[], source: "stylesea
   if (!Array.isArray(rows) || rows.length === 0) return { ok: false, error: "Nothing to import." };
   if (rows.length > 5000) return { ok: false, error: "Import up to 5,000 clients at a time." };
   const ctx = await getContext();
+  const no = denied(ctx, "clients.edit");
+  if (no) return no;
   const { data: existing, error: exErr } = await ctx.supabase.from("clients").select("phone,email").eq("business_id", ctx.business.id).limit(10000);
   if (exErr) return { ok: false, error: exErr.message };
 
@@ -310,6 +330,8 @@ export async function saveFavorites(clientId: string, favorites: unknown): Promi
   const fav = cleanFavorites(favorites);
   const ctx = await ownClient(clientId);
   if (!ctx) return { ok: false, error: "Client not found." };
+  const no = denied(ctx, "clients.edit");
+  if (no) return no;
   const { error } = await ctx.supabase.from("clients").update({ preferences: fav ?? {} }).eq("id", clientId);
   if (error) return { ok: false, error: error.message };
   done(clientId);

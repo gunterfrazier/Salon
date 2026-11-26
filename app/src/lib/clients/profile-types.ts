@@ -4,6 +4,8 @@ import type { Favorites } from "../booking/search";
 
 /** Everything the client profile page shows (JSON-safe). */
 export interface ClientProfileData {
+  /** What the signed-in team member may do here. */
+  can: { edit: boolean; policy: boolean; formulas: boolean; checkout: boolean };
   timezone: string;
   policy: PolicySettings;
   paymentMethods: { key: string; label: string }[];

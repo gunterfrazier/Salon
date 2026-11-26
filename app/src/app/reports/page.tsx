@@ -1,5 +1,5 @@
 import { AppNav } from "@/components/AppNav";
-import { getContext } from "@/lib/context";
+import { requirePermission } from "@/lib/context";
 import { loadReport } from "@/lib/data/reports";
 import { previousRange } from "@/lib/reports/build";
 import { todayIn, zoneLabel } from "@/lib/time/zone";
@@ -10,7 +10,7 @@ export const metadata = { title: "Reports" };
 export const dynamic = "force-dynamic";
 
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ range?: string; from?: string; to?: string }> }) {
-  const ctx = await getContext();
+  const ctx = await requirePermission("reports.view");
   const tz = ctx.business.timezone;
   const r = parseRange(await searchParams, todayIn(tz));
   const before = previousRange(r);

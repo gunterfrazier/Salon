@@ -1,7 +1,5 @@
 import { AppNav } from "@/components/AppNav";
-import { redirect } from "next/navigation";
-import { ensureBusinessFor } from "@/lib/setup/bootstrap";
-import { createClient } from "@/lib/supabase/server";
+import { requirePermission } from "@/lib/context";
 
 export const metadata = { title: "Dashboard" };
 export const dynamic = "force-dynamic";
@@ -23,24 +21,9 @@ const money = (c: number) => `$${(c / 100).toFixed(c % 100 ? 2 : 0)}`;
 const mins = (m: number) => (m >= 60 ? `${Math.floor(m / 60)} hr${m % 60 ? ` ${m % 60} min` : ""}` : `${m} min`);
 
 export default async function Dashboard() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const businessId = await ensureBusinessFor(user);
-  if (!businessId) {
-    return (
-      <main className="mx-auto max-w-md px-4 py-16 text-center">
-        <h1 className="text-xl font-bold">This account isn&rsquo;t set up yet</h1>
-        <p className="mt-2 text-muted">{user.email} isn&rsquo;t on the owner list.</p>
-        <div className="mt-6 flex justify-center">
-          <SignOut />
-        </div>
-      </main>
-    );
-  }
+  const ctx = await requirePermission("settings.services");
+  const { supabase } = ctx;
+  const businessId = ctx.business.id;
 
   // Read back through row-level security, exactly as the app will.
   const [{ data: biz }, { data: cats, error }] = await Promise.all([
@@ -59,7 +42,6 @@ export default async function Dashboard() {
     <AppNav current="/dashboard" businessName={biz?.name ?? "Your salon"} />
     <main className="mx-auto max-w-3xl px-4 py-8">
       <h1 className="text-2xl font-bold">Services</h1>
-      <p className="text-sm text-muted">Signed in as {user.email}</p>
 
       <section className="mt-6">
         <h2 className="text-lg font-semibold">{count} services</h2>
@@ -97,10 +79,3 @@ export default async function Dashboard() {
   );
 }
 
-function SignOut() {
-  return (
-    <form action="/auth/signout" method="post">
-      <button className="rounded-lg border-2 border-foreground px-3 py-1.5 text-sm font-semibold">Sign out</button>
-    </form>
-  );
-}

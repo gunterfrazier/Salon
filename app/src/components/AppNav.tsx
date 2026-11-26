@@ -1,29 +1,22 @@
 import Link from "next/link";
+import { navFor, roleLabel } from "@/lib/auth/permissions";
+import { getContext } from "@/lib/context";
 
-const LINKS = [
-  { href: "/today", label: "Today" },
-  { href: "/calendar", label: "Calendar" },
-  { href: "/clients", label: "Clients" },
-  { href: "/reports", label: "Reports" },
-  { href: "/inventory", label: "Inventory" },
-  { href: "/sell", label: "Sell" },
-  { href: "/dashboard", label: "Services" },
-  { href: "/settings/schedule", label: "Schedule" },
-  { href: "/settings/payments", label: "Payments" },
-  { href: "/settings/notifications", label: "Messages" },
-  { href: "/legend", label: "Color chart" },
-] as const;
-
-export function AppNav({ current, businessName }: { current: (typeof LINKS)[number]["href"] | "/account"; businessName: string }) {
+/** Main menu: shows only what the signed-in team member's role allows. */
+export async function AppNav({ current, businessName }: { current: string; businessName: string }) {
+  const ctx = await getContext();
+  const links = navFor(ctx.perms);
   return (
     <header className="border-b border-line bg-surface">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-2">
         <div className="min-w-0">
-          <p className="text-xs text-muted">Chairvana</p>
+          <p className="text-xs text-muted">
+            Chairvana{ctx.staff.role !== "owner" ? ` · ${ctx.staff.display_name} (${roleLabel(ctx.staff.role)})` : ""}
+          </p>
           <p className="truncate font-semibold">{businessName}</p>
         </div>
         <nav aria-label="Main" className="flex flex-wrap items-center gap-1 text-sm">
-          {LINKS.map((l) => (
+          {links.map((l) => (
             <Link
               key={l.href}
               href={l.href}

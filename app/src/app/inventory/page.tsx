@@ -1,5 +1,5 @@
 import { AppNav } from "@/components/AppNav";
-import { getContext } from "@/lib/context";
+import { requirePermission } from "@/lib/context";
 import { loadProducts } from "@/lib/data/inventory";
 import InventoryView from "./InventoryView";
 
@@ -7,7 +7,7 @@ export const metadata = { title: "Inventory" };
 export const dynamic = "force-dynamic";
 
 export default async function InventoryPage() {
-  const ctx = await getContext();
+  const ctx = await requirePermission("inventory.view");
   const products = await loadProducts(ctx.supabase, ctx.business.id);
   return (
     <>

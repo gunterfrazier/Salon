@@ -10,7 +10,7 @@ import TodayView from "./TodayView";
 export const metadata = { title: "Today" };
 export const dynamic = "force-dynamic";
 
-export default async function TodayPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
+export default async function TodayPage({ searchParams }: { searchParams: Promise<{ date?: string; denied?: string }> }) {
   const sp = await searchParams;
   const ctx = await getContext();
   const tz = ctx.business.timezone;
@@ -33,6 +33,11 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   return (
     <>
       <AppNav current="/today" businessName={ctx.business.name} />
+      {sp.denied && (
+        <p role="alert" className="mx-auto mt-4 max-w-3xl rounded-xl border border-line bg-surface px-4 py-3 text-sm">
+          That page isn&apos;t available for your role. Ask the salon owner if you need it.
+        </p>
+      )}
       <TodayView agenda={agenda} today={today} timezone={tz} closureLabel={closed ? closure!.label : null} supply={supply} />
     </>
   );

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { phoneKey } from "@/lib/clients/import";
-import { getContext } from "@/lib/context";
+import { denied, getContext } from "@/lib/context";
 import { notifyAppointment } from "@/lib/notify/events";
 import { addDays, formatTime, todayIn, zonedToUtc } from "@/lib/time/zone";
 
@@ -20,6 +20,8 @@ export async function kioskLookup(phone: string): Promise<{ ok: true; matches: K
   const key = phoneKey(phone);
   if (key.length !== 10) return { ok: false, error: "Enter your 10-digit mobile number." };
   const ctx = await getContext();
+  const no = denied(ctx, "booking.manage");
+  if (no) return no;
   const tz = ctx.business.timezone;
   const today = todayIn(tz);
   const { data: clients, error } = await ctx.supabase.from("clients").select("id,phone").eq("business_id", ctx.business.id).ilike("phone", `%${key.slice(-4)}%`).limit(200);

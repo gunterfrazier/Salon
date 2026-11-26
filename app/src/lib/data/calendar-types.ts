@@ -40,6 +40,8 @@ export interface CalClient {
 }
 
 export interface CalendarData {
+  /** What the signed-in team member may do on the calendar. */
+  can: { book: boolean; checkout: boolean };
   businessName: string;
   timezone: string;
   hours: Hours;
