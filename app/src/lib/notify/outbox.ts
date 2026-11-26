@@ -31,6 +31,8 @@ export interface Recipient {
 
 export interface SalonInfo {
   id: string;
+  /** Web address of the salon's pages (/s/<slug>). */
+  slug?: string | null;
   name: string;
   timezone: string;
   paymentMethods: StoredMethods | null;
@@ -71,7 +73,7 @@ export function messageVars(salon: SalonInfo, s: NotificationSettings, who: { fi
     deposit: appt?.depositDue ? money(appt.depositDue) : "",
     pay_link: appt?.depositDue ? payLine(salon.paymentMethods, appt.depositDue, `Deposit ${date} ${who?.firstName ?? ""}`.trim()) : "",
     hold_hours: s.depositHold.releaseAfterHours,
-    book_link: `${salon.siteUrl}/book`,
+    book_link: salon.slug ? `${salon.siteUrl}/s/${salon.slug}/book` : `${salon.siteUrl}/book`,
     manage_link: `${salon.siteUrl}/me`,
     review_link: s.client.reviewRequest.url,
     ...extra,

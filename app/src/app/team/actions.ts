@@ -104,6 +104,7 @@ const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
 export interface StylistSettings {
   bookable: boolean;
   title: string;
+  bio?: string;
   color: string | null;
   /** null = the salon's hours. */
   hours: Partial<Record<(typeof DAYS)[number], [string, string] | null>> | null;
@@ -138,7 +139,7 @@ export async function saveStylistSettings(id: string, s: StylistSettings): Promi
   }
   const { error } = await ctx.supabase
     .from("staff")
-    .update({ bookable: !!s.bookable, title: s.title.trim().slice(0, 60) || null, color: s.color, hours, service_ids: serviceIds })
+    .update({ bookable: !!s.bookable, title: s.title.trim().slice(0, 60) || null, bio: (s.bio ?? "").trim().slice(0, 500) || null, color: s.color, hours, service_ids: serviceIds })
     .eq("business_id", ctx.business.id)
     .eq("id", id);
   if (error) return { ok: false, error: error.message };

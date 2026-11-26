@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function TeamPage() {
   const ctx = await requirePermission("team.manage");
   const [{ data }, { data: services }] = await Promise.all([
-    ctx.supabase.from("staff").select("id,display_name,email,phone,role,active,auth_user_id,invited_at,created_at,bookable,title,color,hours,service_ids,sort").eq("business_id", ctx.business.id).order("created_at"),
+    ctx.supabase.from("staff").select("id,display_name,email,phone,role,active,auth_user_id,invited_at,created_at,bookable,title,bio,color,hours,service_ids,sort").eq("business_id", ctx.business.id).order("created_at"),
     ctx.supabase.from("services").select("id,name,sort,service_categories(name,sort)").eq("business_id", ctx.business.id).eq("archived", false),
   ]);
   type Svc = { id: string; name: string; sort: number; service_categories: { name: string; sort: number } | null };
@@ -32,7 +32,7 @@ export default async function TeamPage() {
           const st = stylists.find((x) => x.id === m.id);
           return {
             id: m.id, name: m.display_name, email: m.email, phone: m.phone, role: m.role, active: m.active, joined: !!m.auth_user_id,
-            stylist: { bookable: m.bookable, title: m.title ?? "", color: st?.color ?? null, ownColor: m.color, hours: m.hours, serviceIds: m.service_ids?.length ? m.service_ids : null },
+            stylist: { bookable: m.bookable, title: m.title ?? "", bio: m.bio ?? "", color: st?.color ?? null, ownColor: m.color, hours: m.hours, serviceIds: m.service_ids?.length ? m.service_ids : null },
           };
         })}
       />

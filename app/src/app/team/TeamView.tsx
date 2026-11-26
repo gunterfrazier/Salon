@@ -15,7 +15,7 @@ interface Member {
   active: boolean;
   /** Has signed in at least once. */
   joined: boolean;
-  stylist: { bookable: boolean; title: string; color: string | null; ownColor: string | null; hours: Hours | null; serviceIds: string[] | null };
+  stylist: { bookable: boolean; title: string; bio?: string; color: string | null; ownColor: string | null; hours: Hours | null; serviceIds: string[] | null };
 }
 
 type Svc = { id: string; name: string; category: string };
@@ -270,6 +270,7 @@ const DAYS = [["sun", "Sun"], ["mon", "Mon"], ["tue", "Tue"], ["wed", "Wed"], ["
 function StylistSheet({ m, services, salonHours, onClose, onSaved }: { m: Member; services: Svc[]; salonHours: Hours; onClose: () => void; onSaved: (text: string) => void }) {
   const [bookable, setBookable] = useState(m.stylist.bookable);
   const [title, setTitle] = useState(m.stylist.title);
+  const [bio, setBio] = useState(m.stylist.bio ?? "");
   const [color, setColor] = useState<string | null>(m.stylist.ownColor);
   const [ownHours, setOwnHours] = useState(!!m.stylist.hours);
   const [hours, setHours] = useState<Hours>(m.stylist.hours ?? salonHours);
@@ -281,7 +282,7 @@ function StylistSheet({ m, services, salonHours, onClose, onSaved }: { m: Member
 
   const save = () =>
     start(async () => {
-      const r = await saveStylistSettings(m.id, { bookable, title, color, hours: ownHours ? hours : null, serviceIds: allServices ? null : [...picked] });
+      const r = await saveStylistSettings(m.id, { bookable, title, bio, color, hours: ownHours ? hours : null, serviceIds: allServices ? null : [...picked] });
       if (r.ok) onSaved(`Saved ${m.name}'s schedule and services.`);
       else setError(r.error);
     });
@@ -302,6 +303,10 @@ function StylistSheet({ m, services, salonHours, onClose, onSaved }: { m: Member
             <label className="block text-sm">
               Title (shown to clients)
               <input className={`${input} mt-1 w-full`} placeholder="e.g. Color specialist" value={title} onChange={(e) => setTitle(e.target.value)} />
+            </label>
+            <label className="block text-sm">
+              Short bio (shown on the salon page)
+              <textarea className={`${input} mt-1 w-full`} rows={3} maxLength={500} value={bio} onChange={(e) => setBio(e.target.value)} />
             </label>
             <div>
               <p className="text-sm">Calendar color</p>

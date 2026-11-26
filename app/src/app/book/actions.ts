@@ -46,8 +46,8 @@ async function stylistStarts(b: PublicBusiness, s: Stylist, date: string, servic
 }
 
 /** Open start times ("HH:MM", salon time) for the chosen services on a date, with one stylist or anyone. */
-export async function getTimes(date: string, serviceIds: string[], staffId?: string | null): Promise<{ ok: true; times: string[] } | { ok: false; error: string }> {
-  const b = await loadPublicBusiness();
+export async function getTimes(salon: string, date: string, serviceIds: string[], staffId?: string | null): Promise<{ ok: true; times: string[] } | { ok: false; error: string }> {
+  const b = await loadPublicBusiness({ slug: salon });
   if (!b) return { ok: false, error: "Online booking isn't open yet." };
   if (!isDateStr(date) || !bookableDates(todayIn(b.timezone), b.hours, b.settings, await loadClosedChecker(b)).includes(date)) return { ok: false, error: "The salon is closed that day. Pick another day." };
   const services = await servicesFor(b.id, serviceIds);
@@ -60,6 +60,8 @@ export async function getTimes(date: string, serviceIds: string[], staffId?: str
 }
 
 export interface OnlineBookingRequest {
+  /** The salon's web address (slug). */
+  salon: string;
   serviceIds: string[];
   /** A stylist's id, or "any" / empty for whoever is free. */
   staffId?: string | null;
@@ -92,7 +94,7 @@ export type OnlineBookingResult =
 
 export async function submitOnlineBooking(req: OnlineBookingRequest): Promise<OnlineBookingResult> {
   if (req.website) return { ok: false, error: "Something went wrong. Please try again." };
-  const b = await loadPublicBusiness();
+  const b = await loadPublicBusiness({ slug: req.salon });
   if (!b) return { ok: false, error: "Online booking isn't open yet." };
 
   const firstName = clean(req.firstName, 100);
@@ -218,8 +220,8 @@ export async function submitOnlineBooking(req: OnlineBookingRequest): Promise<On
 
 
 /** Public "Find a time": openings matching days / time of day / when. */
-export async function findPublicOpenings(serviceIds: string[], criteria: SearchCriteria, staffId?: string | null): Promise<{ ok: true; openings: Opening[] } | { ok: false; error: string }> {
-  const b = await loadPublicBusiness();
+export async function findPublicOpenings(salon: string, serviceIds: string[], criteria: SearchCriteria, staffId?: string | null): Promise<{ ok: true; openings: Opening[] } | { ok: false; error: string }> {
+  const b = await loadPublicBusiness({ slug: salon });
   if (!b) return { ok: false, error: "Online booking isn't open yet." };
   const services = await servicesFor(b.id, serviceIds);
   if (!services) return { ok: false, error: "Pick your services again." };

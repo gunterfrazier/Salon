@@ -106,7 +106,7 @@ export function contactFor(b: Business, staffId: string | null | undefined): Con
 }
 
 export async function loadBusinesses(db: SupabaseClient, siteUrl: string, onlyId?: string): Promise<Business[]> {
-  let q = db.from("businesses").select("id,name,timezone,notification_settings,payment_methods,policy_settings");
+  let q = db.from("businesses").select("id,slug,name,timezone,notification_settings,payment_methods,policy_settings");
   if (onlyId) q = q.eq("id", onlyId);
   const { data, error } = await q;
   if (error) throw new Error(error.message);
@@ -117,7 +117,7 @@ export async function loadBusinesses(db: SupabaseClient, siteUrl: string, onlyId
     const team = new Map<string, Contact & { name: string; bookable: boolean }>();
     for (const m of staff ?? []) team.set(m.id, { id: m.id, name: m.display_name, phone: m.phone, email: m.email, bookable: m.bookable, push: await hasPushDevice(db, m.id) });
     out.push({
-      salon: { id: b.id, name: b.name, timezone: b.timezone, paymentMethods: b.payment_methods, siteUrl },
+      salon: { id: b.id, slug: b.slug, name: b.name, timezone: b.timezone, paymentMethods: b.payment_methods, siteUrl },
       settings: mergeNotificationSettings(b.notification_settings),
       policy: b.policy_settings,
       staff: owner ? team.get(owner.id)! : { phone: null, email: null },

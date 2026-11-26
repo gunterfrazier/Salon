@@ -16,6 +16,7 @@ import { addDays, zonedToUtc } from "../time/zone";
  */
 export interface PublicBusiness {
   id: string;
+  slug: string;
   name: string;
   timezone: string;
   hours: Hours;
@@ -30,20 +31,27 @@ export interface PublicBusiness {
 
 export type PublicService = ServiceRow & { category: string; categorySort: number; sort: number; description: string | null };
 
-export async function loadPublicBusiness(): Promise<PublicBusiness | null> {
+/**
+ * A salon that takes online bookings, by its web address (slug) or id. Only
+ * approved salons. With neither, the only approved salon (single-salon setups).
+ */
+export async function loadPublicBusiness(sel: { slug?: string | null; id?: string | null } = {}): Promise<PublicBusiness | null> {
   const admin = createAdminClient();
-  const { data: b } = await admin
+  let q = admin
     .from("businesses")
-    .select("id,name,timezone,business_hours,policy_settings,pricing_rules,booking_settings,payment_methods,holidays")
-    .order("created_at")
-    .limit(1)
-    .maybeSingle();
-  if (!b) return null;
+    .select("id,slug,name,timezone,business_hours,policy_settings,pricing_rules,booking_settings,payment_methods,holidays")
+    .eq("status", "approved");
+  if (sel.id) q = q.eq("id", sel.id);
+  else if (sel.slug) q = q.eq("slug", sel.slug.toLowerCase());
+  const { data: rows } = await q.order("created_at").limit(2);
+  if (!rows?.length || (!sel.id && !sel.slug && rows.length > 1)) return null;
+  const b = rows[0];
   const { data: staff } = await admin.from("staff").select(STAFF_COLS).eq("business_id", b.id).order("created_at");
   const stylists = toStylists((staff ?? []) as StaffRow[]);
   if (!stylists.length) return null;
   return {
     id: b.id,
+    slug: b.slug,
     name: b.name,
     timezone: b.timezone,
     hours: b.business_hours as Hours,

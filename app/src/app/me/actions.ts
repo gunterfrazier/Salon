@@ -71,8 +71,8 @@ export async function portalCancel(appointmentId: string): Promise<Result> {
 }
 
 async function movableTimes(own: NonNullable<Awaited<ReturnType<typeof ownAppointment>>>, date: string) {
-  const b = await loadPublicBusiness();
-  if (!b || b.id !== own.a.business_id) return null;
+  const b = await loadPublicBusiness({ id: own.a.business_id });
+  if (!b) return null;
   const tz = b.timezone;
   if (!bookableDates(todayIn(tz), b.hours, b.settings, await loadClosedChecker(b)).includes(date)) return { b, times: [] as number[] };
   const busyMine = ((own.a.appointment_services ?? []) as unknown as { staff_busy_blocks: { during: string }[] }[])
@@ -91,7 +91,7 @@ async function movableTimes(own: NonNullable<Awaited<ReturnType<typeof ownAppoin
 export async function portalMoveOptions(appointmentId: string, date?: string): Promise<{ ok: true; dates: string[]; times: string[] } | { ok: false; error: string }> {
   const own = await ownAppointment(appointmentId);
   if (!own) return { ok: false, error: "Appointment not found." };
-  const b = await loadPublicBusiness();
+  const b = await loadPublicBusiness({ id: own.a.business_id });
   if (!b) return { ok: false, error: "Online changes aren't available right now." };
   const dates = bookableDates(todayIn(b.timezone), b.hours, b.settings, await loadClosedChecker(b));
   if (!date) return { ok: true, dates, times: [] };

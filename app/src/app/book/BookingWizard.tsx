@@ -36,8 +36,10 @@ const input = "w-full rounded-xl border border-line bg-surface px-4 py-3 text-ba
 const STAGES = { consult: 0, chemical: 1, treatment: 2, cut: 3, style: 4, wax: 5, fee: 9 };
 
 export default function BookingWizard({
-  business, services, dates, policyLines, initialPicked = [], prefill, stylists = [], initialStaff = null,
+  salon, business, services, dates, policyLines, initialPicked = [], prefill, stylists = [], initialStaff = null,
 }: {
+  /** The salon's web address (slug). */
+  salon: string;
   business: { name: string; timezone: string; hours: Hours; policy: PolicySettings; rules: BundleRule[] };
   services: PublicService[];
   dates: string[];
@@ -110,7 +112,7 @@ export default function BookingWizard({
       return;
     }
     startSearching(async () => {
-      const r = await findPublicOpenings(ordered.map((s) => s.id), criteria, staffId);
+      const r = await findPublicOpenings(salon, ordered.map((s) => s.id), criteria, staffId);
       setOpenings(r.ok ? r.openings : []);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -157,7 +159,7 @@ export default function BookingWizard({
     setTimes(null);
     setError(null);
     startLoading(async () => {
-      const r = await getTimes(d, ordered.map((s) => s.id), staffId);
+      const r = await getTimes(salon, d, ordered.map((s) => s.id), staffId);
       if (r.ok) setTimes(r.times);
       else setError(r.error);
     });
@@ -167,7 +169,7 @@ export default function BookingWizard({
     setError(null);
     startSaving(async () => {
       const fav: Favorites | null = remember ? cleanFavorites({ serviceIds: ordered.map((s) => s.id), weekdays: criteria.weekdays, block: criteria.block }) : null;
-      const r = await submitOnlineBooking({ serviceIds: ordered.map((s) => s.id), staffId, date: date!, time: time!, ...f, agreed, favorites: fav ?? undefined });
+      const r = await submitOnlineBooking({ salon, serviceIds: ordered.map((s) => s.id), staffId, date: date!, time: time!, ...f, agreed, favorites: fav ?? undefined });
       if (r.ok) {
         writeFavorites(fav);
         setDone(r);
