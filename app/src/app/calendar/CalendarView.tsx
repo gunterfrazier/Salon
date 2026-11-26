@@ -297,7 +297,11 @@ function AppointmentDetails({
             <p className="text-sm text-muted">
               {formatDay(wallParts(new Date(a.start), tz).date, { weekday: "long", month: "long", day: "numeric" })} · {formatTime(new Date(a.start), tz)} – {formatTime(new Date(a.end), tz)} ({duration(mins)})
             </p>
-            {a.clientPhone && <a className="text-sm underline" href={`tel:${a.clientPhone}`}>{a.clientPhone}</a>}
+            <p className="text-sm">
+              {a.clientPhone && <a className="underline" href={`tel:${a.clientPhone}`}>{a.clientPhone}</a>}
+              {a.clientPhone && " · "}
+              <Link className="underline" href={`/clients/${a.clientId}`}>View client</Link>
+            </p>
           </div>
           <button onClick={onClose} className="rounded-lg px-2 py-1 text-xl" aria-label="Close">×</button>
         </div>

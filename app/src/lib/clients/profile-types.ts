@@ -1,0 +1,45 @@
+import type { ClientStateJSON } from "../data/clients-shared";
+import type { PolicySettings } from "../policy/types";
+
+/** Everything the client profile page shows (JSON-safe). */
+export interface ClientProfileData {
+  timezone: string;
+  policy: PolicySettings;
+  paymentMethods: { key: string; label: string }[];
+  client: {
+    id: string;
+    firstName: string;
+    lastName: string | null;
+    phone: string | null;
+    email: string | null;
+    notes: string | null;
+    priorVisitCount: number;
+    source: string;
+    createdAt: string;
+    depositOverride: "none" | "amount" | "full";
+    depositOverrideCents: number | null;
+  };
+  state: ClientStateJSON;
+  /** Extra details for each flag in state.flags, by id. */
+  flagNotes: Record<string, { clearNote: string | null; madePermanentAt: string | null }>;
+  balances: { id: string; amount: number; reason: string; createdAt: string; settled: boolean }[];
+  refundsOwed: { id: string; amount: number; note: string | null; createdAt: string }[];
+  visits: {
+    id: string;
+    start: string;
+    status: string;
+    services: string[];
+    total: number;
+    paid: number;
+    cancelReason: string | null;
+  }[];
+  formulas: {
+    id: string;
+    createdAt: string;
+    formula: string;
+    developer: string | null;
+    processingMin: number | null;
+    notes: string | null;
+    photos: { path: string; url: string | null }[];
+  }[];
+}
