@@ -7,7 +7,7 @@ import { clientRows, receiptDetails, stylistRow, type MessageRow, type ReceiptIn
 import { configuredSender } from "./provider";
 import { deliverQueued, loadBusinesses } from "./run";
 
-export type AppointmentEvent = "booked_online" | "booked_by_stylist" | "cancelled" | "moved" | "checked_out";
+export type AppointmentEvent = "booked_online" | "booked_by_stylist" | "cancelled" | "moved" | "checked_out" | "checked_in";
 
 
 const siteUrl = () => process.env.SITE_URL ?? "https://chairvana.app";
@@ -67,6 +67,10 @@ export async function notifyAppointment(businessId: string, appointmentId: strin
 
     if (event === "moved" && s.client.change.enabled) {
       client("change", s.client.change.channels, `change:${a.id}:${appt.start.toISOString()}`, afterQuiet(now, salon.timezone, s.quietHours));
+    }
+
+    if (event === "checked_in" && s.stylist.checkIn.enabled) {
+      rows.push(stylistRow({ salon, staff: b.staff, template: "stylistCheckIn", body: `${name} is here for ${formatTime(appt.start, salon.timezone)}: ${appt.services.join(", ")}.`, apptId: a.id, key: `checkin:${a.id}`, sendAfter: now }));
     }
 
     if (event === "checked_out") {

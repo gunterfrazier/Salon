@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { checkoutTotals, tipPresets } from "@/lib/checkout/settle";
 import type { CalAppointment, CalendarData } from "@/lib/data/calendar-types";
 import { money } from "@/lib/format";
-import { checkoutAppointment } from "./actions";
+import { checkoutAppointment, sellableProducts } from "./actions";
 import { Row, Sheet, toCents } from "./CloseSheet";
 
 const input = "w-full rounded-lg border border-line bg-background px-3 py-2.5 text-base";
@@ -17,18 +17,25 @@ export default function CheckoutSheet({ a, data, onClose, onDone }: { a: CalAppo
   const [reference, setReference] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, start] = useTransition();
+  const [catalog, setCatalog] = useState<Awaited<ReturnType<typeof sellableProducts>>>([]);
+  const [retail, setRetail] = useState<{ productId: string; qty: string; price: string }[]>([]);
+  useEffect(() => {
+    sellableProducts().then(setCatalog).catch(() => setCatalog([]));
+  }, []);
+  const retailCents = retail.reduce((n, r) => n + Math.round(Number(r.qty || 0) * toCents(r.price || "0")), 0);
 
   const priceCents = a.services.map((s) => toCents(prices[s.id] ?? ""));
   const tipCents = toCents(tip || "0");
   const services = priceCents.reduce((x, y) => x + (Number.isFinite(y) ? y : 0), 0);
-  const dueEstimate = Math.max(0, services + (Number.isFinite(tipCents) ? tipCents : 0) - a.depositPaid);
+  const dueEstimate = Math.max(0, services + (Number.isFinite(retailCents) ? retailCents : 0) + (Number.isFinite(tipCents) ? tipCents : 0) - a.depositPaid);
   const paidCents = paid === null ? dueEstimate : toCents(paid || "0");
 
   let totals: ReturnType<typeof checkoutTotals> | null = null;
   let problem: string | null = null;
   try {
-    if ([...priceCents, tipCents, paidCents].some((n) => !Number.isFinite(n))) throw new Error("Enter every amount.");
-    totals = checkoutTotals({ prices: priceCents, tip: tipCents, depositPaid: a.depositPaid, paid: paidCents });
+    if ([...priceCents, tipCents, paidCents, retailCents].some((n) => !Number.isFinite(n))) throw new Error("Enter every amount.");
+    if (retail.some((r) => !r.productId || !(Number(r.qty) > 0))) throw new Error("Pick each product and how many.");
+    totals = checkoutTotals({ prices: priceCents, retail: retailCents, tip: tipCents, depositPaid: a.depositPaid, paid: paidCents });
   } catch (e) {
     problem = (e as Error).message;
   }
@@ -40,6 +47,7 @@ export default function CheckoutSheet({ a, data, onClose, onDone }: { a: CalAppo
       const res = await checkoutAppointment({
         appointmentId: a.id,
         prices: a.services.map((s, i) => ({ id: s.id, cents: priceCents[i] })),
+        retail: retail.map((r) => ({ productId: r.productId, qty: Number(r.qty), priceCents: toCents(r.price || "0") })),
         tipCents,
         paidCents,
         method,
@@ -83,6 +91,40 @@ export default function CheckoutSheet({ a, data, onClose, onDone }: { a: CalAppo
       </section>
 
       <section className="space-y-2">
+        <h3 className="text-sm font-semibold">Retail</h3>
+        {retail.map((r, i) => {
+          const p = catalog.find((x) => x.id === r.productId);
+          return (
+            <div key={i} className="space-y-1 rounded-lg border border-line p-2">
+              <select
+                className={input}
+                value={r.productId}
+                aria-label="Product"
+                onChange={(e) => {
+                  const pick = catalog.find((x) => x.id === e.target.value);
+                  setRetail(retail.map((x, j) => (j === i ? { ...x, productId: e.target.value, price: pick?.priceCents != null ? (pick.priceCents / 100).toFixed(2) : x.price } : x)));
+                }}
+              >
+                <option value="">Pick a product…</option>
+                {catalog.map((x) => <option key={x.id} value={x.id}>{x.label}{x.priceCents != null ? ` · ${money(x.priceCents)}` : ""}</option>)}
+              </select>
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <label className="flex items-center gap-1">Qty <input type="number" inputMode="numeric" min={1} step={1} value={r.qty} onChange={(e) => setRetail(retail.map((x, j) => (j === i ? { ...x, qty: e.target.value } : x)))} className="w-16 rounded-lg border border-line bg-background px-2 py-1.5 text-right" aria-label="Quantity" /></label>
+                <label className="flex items-center gap-1">$<input type="number" inputMode="decimal" step="0.01" min={0} value={r.price} onChange={(e) => setRetail(retail.map((x, j) => (j === i ? { ...x, price: e.target.value } : x)))} className="w-24 rounded-lg border border-line bg-background px-2 py-1.5 text-right" aria-label="Price each" /></label>
+                {p && p.onHand < Number(r.qty || 0) && <span className="text-xs text-muted">Only {p.onHand} in stock</span>}
+                <button type="button" className="ml-auto text-xs underline" onClick={() => setRetail(retail.filter((_, j) => j !== i))}>Remove</button>
+              </div>
+            </div>
+          );
+        })}
+        {catalog.length > 0 ? (
+          <button type="button" className="rounded-lg border border-line px-3 py-2 text-sm" onClick={() => setRetail([...retail, { productId: "", qty: "1", price: "" }])}>+ Add product</button>
+        ) : (
+          <p className="text-xs text-muted">Add retail products (with a price) in Inventory to sell them here.</p>
+        )}
+      </section>
+
+      <section className="space-y-2">
         <h3 className="text-sm font-semibold">Tip</h3>
         <div className="flex flex-wrap items-center gap-1.5">
           <button type="button" onClick={() => setTip("0")} className={`rounded-full border px-3 py-1.5 text-sm ${tipCents === 0 ? "border-accent bg-accent text-on-accent" : "border-line"}`}>None</button>
@@ -100,6 +142,7 @@ export default function CheckoutSheet({ a, data, onClose, onDone }: { a: CalAppo
       {totals && (
         <section className="space-y-1 rounded-xl border border-line p-3 text-sm">
           <Row label="Services" value={money(totals.services)} />
+          {totals.retail > 0 && <Row label="Retail" value={money(totals.retail)} />}
           {totals.tip > 0 && <Row label="Tip" value={money(totals.tip)} />}
           {totals.depositApplied > 0 && <Row label="Deposit already paid" value={`−${money(totals.depositApplied)}`} />}
           <Row label="Due now" value={money(totals.due)} bold />

@@ -233,6 +233,7 @@ export default function NotificationSettingsForm({ initial, salon, timezone, con
             ["newOnlineBooking", "New online booking"],
             ["changeOrCancel", "Client changes or cancels"],
             ["depositReceived", "Deposit marked received"],
+            ["checkIn", "Client checks in at the kiosk"],
           ] as const
         ).map(([k, label]) => (
           <Row key={k} label={label}>

@@ -485,7 +485,10 @@ function AppointmentDetails({
             </button>
           </div>
         ) : (
-          <p className="mt-4 rounded-lg bg-background px-3 py-2 text-sm font-semibold">{STATUS_LABEL[a.status] ?? a.status}</p>
+          <div className="mt-4 flex items-center justify-between gap-2 rounded-lg bg-background px-3 py-2 text-sm">
+            <span className="font-semibold">{STATUS_LABEL[a.status] ?? a.status}</span>
+            {a.status === "completed" && <Link href={`/receipt?appointment=${a.id}`} className="underline">Receipt</Link>}
+          </div>
         )}
       </div>
     </div>

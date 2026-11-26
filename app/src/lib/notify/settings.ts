@@ -43,6 +43,7 @@ export interface NotificationSettings {
     newOnlineBooking: Toggle;
     changeOrCancel: Toggle;
     depositReceived: Toggle;
+    checkIn: Toggle;
     dayPreview: Toggle & { at: string; day: "today" | "tomorrow" };
     beforeEach: Toggle & { minutes: number };
   };

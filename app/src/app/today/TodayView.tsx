@@ -45,6 +45,9 @@ export default function TodayView({ agenda, today, timezone, closureLabel, baseP
           <Link href={`/calendar?date=${date}`} className="rounded-lg border border-line px-3 py-2 text-sm hover:bg-background">
             Open in calendar
           </Link>
+          <Link href="/kiosk" className="rounded-lg border border-line px-3 py-2 text-sm hover:bg-background">
+            Check-in kiosk
+          </Link>
         </nav>
       </div>
 

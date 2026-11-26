@@ -17,7 +17,8 @@ import { suggestOrder } from "@/lib/schedule/plan";
 import { notifyAppointment } from "@/lib/notify/events";
 import { moveStarts } from "@/lib/booking/move";
 import { parseRange } from "@/lib/data/calendar";
-import { supplyWarnings } from "@/lib/data/inventory";
+import { loadProducts, supplyWarnings } from "@/lib/data/inventory";
+import { lineTitle } from "@/lib/inventory/stock";
 
 export async function fetchClientState(clientId: string): Promise<ClientStateJSON | null> {
   const ctx = await getContext();
@@ -226,9 +227,45 @@ export async function closeAppointment(req: CloseRequest): Promise<{ ok: true } 
   return { ok: true };
 }
 
+export interface RetailLine {
+  productId: string;
+  qty: number;
+  priceCents: number;
+}
+
+/** Products that can be sold: retail first, then anything with a price. */
+export async function sellableProducts(): Promise<{ id: string; label: string; priceCents: number | null; onHand: number; kind: string; barcode: string | null }[]> {
+  const ctx = await getContext();
+  const all = await loadProducts(ctx.supabase, ctx.business.id);
+  return all
+    .filter((p) => p.kind === "retail" || p.kind === "care" || p.priceCents !== null)
+    .sort((a, b) => Number(b.kind === "retail") - Number(a.kind === "retail"))
+    .map((p) => ({ id: p.id, label: `${lineTitle(p)} ${p.name}`, priceCents: p.priceCents, onHand: p.onHand, kind: p.kind, barcode: p.barcode }));
+}
+
+/** Checks retail lines against the salon's products; returns the rows for the database or an error. */
+async function retailRows(ctx: Ctx, lines: RetailLine[] | undefined): Promise<{ rows: { product_id: string; qty: number; price_cents: number }[]; cents: number; names: { name: string; cents: number }[] } | { error: string }> {
+  const list = (lines ?? []).filter((l) => l.qty > 0);
+  if (list.length > 30) return { error: "Too many products." };
+  if (list.some((l) => !/^[0-9a-f-]{36}$/.test(l.productId) || !Number.isFinite(l.qty) || l.qty > 100 || !Number.isInteger(l.priceCents) || l.priceCents < 0 || l.priceCents > 1_000_000)) return { error: "Check the products: each needs a quantity and price." };
+  if (!list.length) return { rows: [], cents: 0, names: [] };
+  const { data, error } = await ctx.supabase.from("products").select("id,brand,line,name").eq("business_id", ctx.business.id).in("id", list.map((l) => l.productId));
+  if (error) return { error: error.message };
+  const byId = new Map((data ?? []).map((p) => [p.id as string, p]));
+  if (list.some((l) => !byId.has(l.productId))) return { error: "A product is no longer in inventory. Refresh and try again." };
+  const rows = list.map((l) => ({ product_id: l.productId, qty: l.qty, price_cents: l.priceCents }));
+  const names = list.map((l) => {
+    const p = byId.get(l.productId)!;
+    return { name: `${l.qty === 1 ? "" : `${l.qty} × `}${lineTitle({ brand: p.brand, line: p.line })} ${p.name}`, cents: Math.round(l.qty * l.priceCents) };
+  });
+  return { rows, cents: names.reduce((n, x) => n + x.cents, 0), names };
+}
+
 export interface CheckoutRequest {
   appointmentId: string;
   prices: { id: string; cents: number }[];
+  /** Retail products sold with the visit. */
+  retail?: RetailLine[];
   tipCents: number;
   paidCents: number;
   method: string;
@@ -246,9 +283,12 @@ export async function checkoutAppointment(req: CheckoutRequest): Promise<{ ok: t
   if (a.lines.some((l) => !byId.has(l.id)) || req.prices.length !== a.lines.length) return { ok: false, error: "Services changed. Refresh and try again." };
   const prices = a.lines.map((l) => byId.get(l.id)!);
 
+  const retail = await retailRows(ctx, req.retail);
+  if ("error" in retail) return { ok: false, error: retail.error };
+
   let t;
   try {
-    t = checkoutTotals({ prices, tip: req.tipCents, depositPaid: a.depositPaid, paid: req.paidCents });
+    t = checkoutTotals({ prices, retail: retail.cents, tip: req.tipCents, depositPaid: a.depositPaid, paid: req.paidCents });
   } catch (e) {
     return { ok: false, error: (e as Error).message };
   }
@@ -258,14 +298,15 @@ export async function checkoutAppointment(req: CheckoutRequest): Promise<{ ok: t
       appointment_id: req.appointmentId,
       lines: a.lines.map((l, i) => ({ id: l.id, price_cents: prices[i] })),
       tip_cents: t.tip,
-      payment: t.paid > 0 ? { method: req.method, amount_cents: t.paid, tip_cents: t.tipPaid, reference: clean(req.reference) } : null,
+      retail: retail.rows,
+      payment: t.paid > 0 ? { method: req.method, amount_cents: t.paid, tip_cents: t.tipPaid, retail_cents: t.retailPaid, reference: clean(req.reference) } : null,
       balance_cents: t.balance,
       refund_cents: t.refund,
     },
   });
   if (error) return { ok: false, error: error.code === "P0002" ? "This appointment is already closed." : `Couldn't save: ${error.message}` };
   await notifyAppointment(ctx.business.id, req.appointmentId, "checked_out", {
-    lines: a.lines.map((l, i) => ({ name: l.name, cents: prices[i] })),
+    lines: [...a.lines.map((l, i) => ({ name: l.name, cents: prices[i] })), ...retail.names],
     tip: t.tip,
     depositApplied: t.depositApplied,
     paid: t.paid,

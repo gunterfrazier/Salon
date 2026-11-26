@@ -49,6 +49,15 @@ describe("checkoutTotals", () => {
     expect(() => checkoutTotals({ prices: [-1], tip: 0, depositPaid: 0, paid: 0 })).toThrow();
   });
 
+  it("retail: deposit covers services first, payment covers tip then retail", () => {
+    const t = checkoutTotals({ prices: [3000], retail: 2400, tip: 1000, depositPaid: 5000, paid: 1400 });
+    expect(t).toMatchObject({ services: 3000, retail: 2400, total: 6400, depositApplied: 5000, due: 1400, tipPaid: 1000, retailPaid: 400, balance: 0 });
+    // Deposit only covers part of services: today's payment pays tip, retail, then services.
+    expect(checkoutTotals({ prices: [9000], retail: 2400, tip: 1500, depositPaid: 5000, paid: 7900 })).toMatchObject({ tipPaid: 1500, retailPaid: 2400, balance: 0 });
+    // Short payment: tip and retail first, the rest of services goes to balance.
+    expect(checkoutTotals({ prices: [9000], retail: 2400, tip: 1500, depositPaid: 0, paid: 5000 })).toMatchObject({ tipPaid: 1500, retailPaid: 2400, balance: 7900 });
+  });
+
   it("tip presets", () => {
     expect(tipPresets(10000)).toEqual([{ percent: 15, amount: 1500 }, { percent: 20, amount: 2000 }, { percent: 25, amount: 2500 }]);
   });

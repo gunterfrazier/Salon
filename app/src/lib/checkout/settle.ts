@@ -38,6 +38,8 @@ export function settleCancel(
 export interface CheckoutInput {
   /** Final price per service (stylist may adjust "starting at" prices). */
   prices: Cents[];
+  /** Retail products sold with the visit. */
+  retail?: Cents;
   tip: Cents;
   depositPaid: Cents;
   /** Amount the client pays now. */
@@ -46,6 +48,7 @@ export interface CheckoutInput {
 
 export interface CheckoutTotals {
   services: Cents;
+  retail: Cents;
   tip: Cents;
   total: Cents;
   depositApplied: Cents;
@@ -54,25 +57,32 @@ export interface CheckoutTotals {
   paid: Cents;
   /** Unpaid remainder, added to the client's balance. */
   balance: Cents;
-  /** Of the amount paid now, how much is the tip (rest is services). */
+  /** Of the amount paid now, how much is the tip, and how much retail (the rest is services). */
   tipPaid: Cents;
+  retailPaid: Cents;
   /** Deposit larger than the bill, owed back to the client. */
   refund: Cents;
 }
 
 export function checkoutTotals(i: CheckoutInput): CheckoutTotals {
-  const bad = [...i.prices, i.tip, i.depositPaid, i.paid].find((n) => !Number.isInteger(n) || n < 0);
+  const retail = i.retail ?? 0;
+  const bad = [...i.prices, retail, i.tip, i.depositPaid, i.paid].find((n) => !Number.isInteger(n) || n < 0);
   if (bad !== undefined) throw new Error("Amounts must be zero or more.");
   const services = i.prices.reduce((a, b) => a + b, 0);
-  const total = services + i.tip;
+  const total = services + retail + i.tip;
   const depositApplied = Math.min(i.depositPaid, total);
   const due = total - depositApplied;
   if (i.paid > due) throw new Error(`Payment is more than the $${(due / 100).toFixed(2)} due.`);
-  // Deposit covers services first, so any tip is paid from today's payment.
-  const tipFromDeposit = Math.max(0, depositApplied - services);
-  const tipPaid = Math.min(i.tip - tipFromDeposit, i.paid);
+  // The deposit covers services first, then retail, then the tip.
+  const depLeftAfterServices = Math.max(0, depositApplied - services);
+  const retailDue = retail - Math.min(depLeftAfterServices, retail);
+  const tipDue = i.tip - Math.min(Math.max(0, depLeftAfterServices - retail), i.tip);
+  // Today's payment goes to the tip first, then retail, then services.
+  const tipPaid = Math.min(tipDue, i.paid);
+  const retailPaid = Math.min(retailDue, i.paid - tipPaid);
   return {
     services,
+    retail,
     tip: i.tip,
     total,
     depositApplied,
@@ -80,6 +90,7 @@ export function checkoutTotals(i: CheckoutInput): CheckoutTotals {
     paid: i.paid,
     balance: due - i.paid,
     tipPaid,
+    retailPaid,
     refund: i.depositPaid - depositApplied,
   };
 }

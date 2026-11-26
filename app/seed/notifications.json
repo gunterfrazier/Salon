@@ -17,6 +17,7 @@
     "newOnlineBooking": { "enabled": true },
     "changeOrCancel": { "enabled": true },
     "depositReceived": { "enabled": true },
+    "checkIn": { "enabled": true },
     "dayPreview": { "enabled": true, "at": "19:30", "day": "tomorrow" },
     "beforeEach": { "enabled": false, "minutes": 15 }
   },
