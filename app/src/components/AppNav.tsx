@@ -14,7 +14,7 @@ const LINKS = [
   { href: "/legend", label: "Color chart" },
 ] as const;
 
-export function AppNav({ current, businessName }: { current: (typeof LINKS)[number]["href"]; businessName: string }) {
+export function AppNav({ current, businessName }: { current: (typeof LINKS)[number]["href"] | "/account"; businessName: string }) {
   return (
     <header className="border-b border-line bg-surface">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-2">
@@ -33,9 +33,9 @@ export function AppNav({ current, businessName }: { current: (typeof LINKS)[numb
               {l.label}
             </Link>
           ))}
-          <form action="/auth/signout" method="post">
-            <button className="rounded-lg px-3 py-2 text-muted hover:bg-background">Sign out</button>
-          </form>
+          <Link href="/account" aria-current={current === "/account" ? "page" : undefined} className={`rounded-lg px-3 py-2 ${current === "/account" ? "bg-foreground font-semibold text-background" : "text-muted hover:bg-background"}`}>
+            Account
+          </Link>
         </nav>
       </div>
     </header>

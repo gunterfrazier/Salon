@@ -17,6 +17,15 @@ export async function ensureBusinessFor(user: { id: string; email?: string | nul
   const { data: existing, error: lookupErr } = await admin.from("staff").select("business_id").eq("auth_user_id", user.id).eq("active", true).limit(1);
   if (lookupErr) throw new Error(`staff lookup failed: ${lookupErr.message}`);
   if (existing?.length) return existing[0].business_id as string;
+
+  // Invited team member signing in for the first time: link their login by email.
+  if (user.email) {
+    const { data: invited } = await admin.from("staff").select("id,business_id").ilike("email", user.email).is("auth_user_id", null).eq("active", true).limit(1);
+    if (invited?.length) {
+      await admin.from("staff").update({ auth_user_id: user.id }).eq("id", invited[0].id);
+      return invited[0].business_id as string;
+    }
+  }
   if (!user.email || !isOwnerEmail(user.email)) return null;
 
   // Single-salon mode: join the existing business if there is one.
