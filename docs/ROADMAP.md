@@ -39,7 +39,7 @@ Reviewed Meevo, Zenoti, Vagaro (salon page + pricing), Booksy's buyer's guide, a
 - **Email sender:** `bookings@chairvana.app` with the salon's name as the display name and the salon's email as reply-to.
 
 **Features others have that we don't (candidate order):**
-1. Waitlist: auto-notify when a slot opens (Meevo, Vagaro, Zenoti). Reuses the openings engine and messaging. Small.
+1. **Done (Nov 26):** Waitlist: auto-notify when a slot opens (Meevo, Vagaro, Zenoti). Team Waitlist page, "Join the waitlist" in online booking, offers by text/email at most once a day with a link to book.
 2. Card on file, no-show/late fees charged automatically (Booksy's top point). With Stripe.
 3. Digital forms: intake, color consultation, patch-test/consent, signed on a phone or the kiosk (Vagaro, Zenoti, Meevo).
 4. Gift cards, packages/memberships (all four).

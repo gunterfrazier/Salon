@@ -76,6 +76,14 @@ Use a second email address (a Gmail you control) as a pretend client, and a thir
 - [ ] **Openings for you**: try each level (stylist → salon → nearby).
 - [ ] chairvana.app/find: search "women's cut" near your ZIP. Tapping a time opens booking at that time.
 
+### Waitlist
+- [ ] Online booking (pretend client): pick services, choose days/times with no openings, tap **Join the waitlist**, tick "Text me", join.
+- [ ] As owner: a "joined the waitlist" alert arrives, and the client shows on **Waitlist**.
+- [ ] Cancel an appointment that matches; within about 5 minutes a waitlist offer appears in **Messages → Recent messages** (texts send after Twilio). Its link opens booking at that time.
+- [ ] Book that time as the client: the waitlist entry moves to "Booked" (closed list) within 5 minutes.
+- [ ] Client home page shows the waitlist spot; **Leave the waitlist** removes it.
+- [ ] Add someone from a client's profile (**Add to waitlist**) and remove them.
+
 ### Check-in kiosk (tablet)
 - [ ] On the tablet, sign in, Today → **Check-in kiosk**. Enter the pretend client's phone and tap **I'm here** on a same-day appointment.
 - [ ] You get a check-in alert; the calendar shows "Checked in".
