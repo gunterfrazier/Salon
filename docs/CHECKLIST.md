@@ -19,6 +19,9 @@ _Updated Nov 26, 2026. Check items off as you go. The app is now at **chairvana.
 - [ ] **Team → Schedule & services** for Karissa: title (e.g. "Color specialist"), short bio, calendar color, her hours if different from the salon's.
 - [ ] **Team**: if you (Gunter) don't do hair, open your Schedule & services and turn off **Takes appointments**.
 
+### Forms
+- [ ] **Settings → Forms**: add the starter forms you want (New client form, Color consultation, Patch test & color consent). Read the consent wording and change anything that doesn't fit; it isn't legal advice.
+
 ### Messages and alerts
 - [ ] **Account** (each person): enter your mobile under "Send my alerts to", then on your Android phone tap **Turn on alerts on this device** and **Send a test**.
 - [ ] **Messages**: read the reminder and notice wording; change anything that doesn't sound like you.
@@ -83,6 +86,14 @@ Use a second email address (a Gmail you control) as a pretend client, and a thir
 - [ ] Book that time as the client: the waitlist entry moves to "Booked" (closed list) within 5 minutes.
 - [ ] Client home page shows the waitlist spot; **Leave the waitlist** removes it.
 - [ ] Add someone from a client's profile (**Add to waitlist**) and remove them.
+
+### Forms
+- [ ] Book a color service for the pretend client: the confirmation includes a forms link (see **Messages → Recent messages**).
+- [ ] Open the link on a phone: answer, sign with your finger, send. "Next form" appears if there's another.
+- [ ] Client profile → **Forms**: answers, signature and any allergy/reaction warning show; **Print** works.
+- [ ] Client profile → **Fill in on this device** opens a form on the tablet.
+- [ ] Kiosk: check in a client with a waiting form; **Fill it in now** appears, and "Back to check-in" returns.
+- [ ] Book the same color service again within 6 months: the consent form isn't asked again.
 
 ### Check-in kiosk (tablet)
 - [ ] On the tablet, sign in, Today → **Check-in kiosk**. Enter the pretend client's phone and tap **I'm here** on a same-day appointment.
