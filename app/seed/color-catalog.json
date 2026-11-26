@@ -1,0 +1,1986 @@
+{
+ "version": 1,
+ "updated": "2026-11-26",
+ "about": "Starting color catalog for Intensity Salon's lines (Kenra, Redken). Transcribed from the brands' published shade charts. Sizes and item numbers are filled in at the first stock count or by scanning barcodes.",
+ "sources": {
+  "kenra": "Kenra Color Shade Chart (cdn.shopify.com/.../Kenra-Color-Shade-Chart.pdf)",
+  "redken": "Redken US Product Guide 2026 (redkenpro.com), Shades EQ chart pp. 134-135 and mixing tables"
+ },
+ "brands": [
+  {
+   "brand": "Kenra Professional",
+   "lines": [
+    {
+     "line": "Kenra Color",
+     "kind": "permanent+demi",
+     "note": "One shade list; each shade is made as Permanent, Demi-permanent, or both (P/D on the chart). Ultra Ash shows no P/D marking on the chart.",
+     "shades": [
+      {
+       "code": "1N",
+       "family": "Natural",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "3N",
+       "family": "Natural",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "4N",
+       "family": "Natural",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "5N",
+       "family": "Natural",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "6N",
+       "family": "Natural",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "7N",
+       "family": "Natural",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "8N",
+       "family": "Natural",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "9N",
+       "family": "Natural",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "10N",
+       "family": "Natural",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "5NA",
+       "family": "Natural Ash",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "6NA",
+       "family": "Natural Ash",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "7NA",
+       "family": "Natural Ash",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "8NA",
+       "family": "Natural Ash",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "5NB",
+       "family": "Natural Brown",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "6NB",
+       "family": "Natural Brown",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "7NB",
+       "family": "Natural Brown",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "4A",
+       "family": "Ash",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "5A",
+       "family": "Ash",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "6A",
+       "family": "Ash",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "7A",
+       "family": "Ash",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "8A",
+       "family": "Ash",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "9A",
+       "family": "Ash",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "10A",
+       "family": "Ash",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "6AA",
+       "family": "Ash Ash",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "7AA",
+       "family": "Ash Ash",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "8AA",
+       "family": "Ash Ash",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "4B",
+       "family": "Brown/Beige",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "5B",
+       "family": "Brown/Beige",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "6B",
+       "family": "Brown/Beige",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "7B",
+       "family": "Brown/Beige",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "8B",
+       "family": "Brown/Beige",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "10B",
+       "family": "Brown/Beige",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "3NUA",
+       "family": "Natural Ultra Ash",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "4NUA",
+       "family": "Natural Ultra Ash",
+       "types": [
+        "demi"
+       ]
+      },
+      {
+       "code": "5NUA",
+       "family": "Natural Ultra Ash",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "6NUA",
+       "family": "Natural Ultra Ash",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "8NUA",
+       "family": "Natural Ultra Ash",
+       "types": [
+        "demi"
+       ]
+      },
+      {
+       "code": "5UA",
+       "family": "Ultra Ash",
+       "types": []
+      },
+      {
+       "code": "7UA",
+       "family": "Ultra Ash",
+       "types": []
+      },
+      {
+       "code": "9UA",
+       "family": "Ultra Ash",
+       "types": []
+      },
+      {
+       "code": "5G",
+       "family": "Gold",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "6G",
+       "family": "Gold",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "7G",
+       "family": "Gold",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "8G",
+       "family": "Gold",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "5GB",
+       "family": "Gold Brown/Beige",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "8GB",
+       "family": "Gold Brown/Beige",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "9GB",
+       "family": "Gold Brown/Beige",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "4BC",
+       "family": "Brown Copper",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "6BC",
+       "family": "Brown Copper",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "7BC",
+       "family": "Brown Copper",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "5C",
+       "family": "Copper",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "6C",
+       "family": "Copper",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "8C",
+       "family": "Copper",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "6CN",
+       "family": "Copper Natural",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "7CN",
+       "family": "Copper Natural",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "7SM",
+       "family": "Silver Metallic",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "8SM",
+       "family": "Silver Metallic",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "10SM",
+       "family": "Silver Metallic",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "7VM",
+       "family": "Violet Metallic",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "8VM",
+       "family": "Violet Metallic",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "9VM",
+       "family": "Violet Metallic",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "8RoM",
+       "family": "Rose Metallic",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "5R",
+       "family": "Red",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "6R",
+       "family": "Red",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "4RR",
+       "family": "Red Red",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "6RR",
+       "family": "Red Red",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "7RR",
+       "family": "Red Red",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "4RB",
+       "family": "Red Brown",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "5RB",
+       "family": "Red Brown",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "6RB",
+       "family": "Red Brown",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "7RB",
+       "family": "Red Brown",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "5RC",
+       "family": "Red Copper",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "6RC",
+       "family": "Red Copper",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "5RV",
+       "family": "Red Violet",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "6RV",
+       "family": "Red Violet",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "3VR",
+       "family": "Violet Red",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "5VR",
+       "family": "Violet Red",
+       "types": [
+        "permanent",
+        "demi"
+       ]
+      },
+      {
+       "code": "4VV",
+       "family": "Violet Violet",
+       "types": [
+        "demi"
+       ]
+      },
+      {
+       "code": "6VV",
+       "family": "Violet Violet",
+       "types": [
+        "demi"
+       ]
+      },
+      {
+       "code": "8VV",
+       "family": "Violet Violet",
+       "types": [
+        "demi"
+       ]
+      },
+      {
+       "code": "9PV",
+       "family": "Pearl Violet",
+       "types": [
+        "demi"
+       ]
+      },
+      {
+       "code": "Gloss",
+       "family": "Clear",
+       "types": [
+        "demi"
+       ]
+      },
+      {
+       "code": "DF",
+       "family": "Diamond Frost",
+       "types": [
+        "demi"
+       ]
+      }
+     ]
+    },
+    {
+     "line": "Kenra Color Monochrome",
+     "kind": "permanent",
+     "shades": [
+      {
+       "code": "4N+",
+       "family": "Monochrome",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "5N+",
+       "family": "Monochrome",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "6N+",
+       "family": "Monochrome",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "7N+",
+       "family": "Monochrome",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "8N+",
+       "family": "Monochrome",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "6B+",
+       "family": "Monochrome",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "1Bl+",
+       "family": "Monochrome",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "4B+",
+       "family": "Monochrome",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "5MB+",
+       "family": "Monochrome",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "7MB+",
+       "family": "Monochrome",
+       "types": [
+        "permanent"
+       ]
+      }
+     ]
+    },
+    {
+     "line": "Kenra Color Rapid Toner",
+     "kind": "demi",
+     "shades": [
+      {
+       "code": "SA",
+       "name": null,
+       "family": "Rapid Toner",
+       "types": [
+        "demi"
+       ]
+      },
+      {
+       "code": "GV",
+       "name": null,
+       "family": "Rapid Toner",
+       "types": [
+        "demi"
+       ]
+      },
+      {
+       "code": "RoV",
+       "name": null,
+       "family": "Rapid Toner",
+       "types": [
+        "demi"
+       ]
+      },
+      {
+       "code": "SV",
+       "name": null,
+       "family": "Rapid Toner",
+       "types": [
+        "demi"
+       ]
+      },
+      {
+       "code": "VP",
+       "name": null,
+       "family": "Rapid Toner",
+       "types": [
+        "demi"
+       ]
+      },
+      {
+       "code": "B",
+       "name": null,
+       "family": "Rapid Toner",
+       "types": [
+        "demi"
+       ]
+      },
+      {
+       "code": "GrBl",
+       "name": null,
+       "family": "Rapid Toner",
+       "types": [
+        "demi"
+       ]
+      }
+     ]
+    },
+    {
+     "line": "Kenra Color Booster",
+     "kind": "additive",
+     "shades": [
+      {
+       "code": "Red",
+       "family": "Booster",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "Violet",
+       "family": "Booster",
+       "types": [
+        "permanent"
+       ]
+      },
+      {
+       "code": "Blue",
+       "family": "Booster",
+       "types": [
+        "permanent"
+       ]
+      }
+     ]
+    },
+    {
+     "line": "Kenra Studio Stylist Express",
+     "kind": "permanent",
+     "shades": [
+      {
+       "code": "3N",
+       "family": "Neutral"
+      },
+      {
+       "code": "4N",
+       "family": "Neutral"
+      },
+      {
+       "code": "5N",
+       "family": "Neutral"
+      },
+      {
+       "code": "6N",
+       "family": "Neutral"
+      },
+      {
+       "code": "7N",
+       "family": "Neutral"
+      },
+      {
+       "code": "8N",
+       "family": "Neutral"
+      },
+      {
+       "code": "10N",
+       "family": "Neutral"
+      },
+      {
+       "code": "6NB",
+       "family": "Neutral Brown/Beige"
+      },
+      {
+       "code": "8NB",
+       "family": "Neutral Brown/Beige"
+      },
+      {
+       "code": "4B",
+       "family": "Brown"
+      },
+      {
+       "code": "6B",
+       "family": "Brown"
+      },
+      {
+       "code": "5A",
+       "family": "Ash"
+      },
+      {
+       "code": "7A",
+       "family": "Ash"
+      },
+      {
+       "code": "9A",
+       "family": "Ash"
+      },
+      {
+       "code": "5G",
+       "family": "Gold"
+      },
+      {
+       "code": "7G",
+       "family": "Gold"
+      },
+      {
+       "code": "9G",
+       "family": "Gold"
+      }
+     ]
+    },
+    {
+     "line": "Kenra Simply Blonde",
+     "kind": "lightener",
+     "note": "Result depends on the starting base.",
+     "shades": [
+      {
+       "code": "Cool",
+       "family": "Base Breaker"
+      },
+      {
+       "code": "Extra Cool",
+       "family": "Base Breaker"
+      },
+      {
+       "code": "Ice",
+       "family": "Ultra Lift"
+      },
+      {
+       "code": "Natural",
+       "family": "Ultra Lift"
+      },
+      {
+       "code": "Pearl",
+       "family": "Ultra Lift"
+      }
+     ]
+    }
+   ],
+   "mixing": [
+    {
+     "line": "Kenra Color (permanent)",
+     "ratio": null,
+     "verified": false,
+     "note": "Confirm from Kenra's Product Knowledge PDF before use."
+    },
+    {
+     "line": "Kenra Color (demi)",
+     "ratio": null,
+     "verified": false,
+     "note": "Confirm from Kenra's Product Knowledge PDF before use."
+    }
+   ]
+  },
+  {
+   "brand": "Redken",
+   "lines": [
+    {
+     "line": "Shades EQ",
+     "kind": "demi (acidic)",
+     "note": "types: gloss = Shades EQ Gloss; bonder_inside = Shades EQ Bonder Inside.",
+     "shades": [
+      {
+       "code": "010T",
+       "name": "Platinum",
+       "family": "Titanium",
+       "types": [
+        "gloss",
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "09T",
+       "name": "Chrome",
+       "family": "Titanium",
+       "types": [
+        "gloss",
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "08T",
+       "name": "Silver",
+       "family": "Titanium",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "07T",
+       "name": "Steel",
+       "family": "Titanium",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "06T",
+       "name": "Iron",
+       "family": "Titanium",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "08GN",
+       "name": "Ivy",
+       "family": "Green Natural",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "06GN",
+       "name": "Moss",
+       "family": "Green Natural",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "09B",
+       "name": "Sterling",
+       "family": "Blue",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "01B",
+       "name": "Onyx",
+       "family": "Blue",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "06ABn",
+       "name": "Brown Smoke",
+       "family": "Ash Brown",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "04ABn",
+       "name": "Dark Roast",
+       "family": "Ash Brown",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "02ABn",
+       "name": "Cool Ebony",
+       "family": "Ash Brown",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "08VB",
+       "name": "Violet Frost",
+       "family": "Violet Blue",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "07VB",
+       "name": "Violet Star",
+       "family": "Violet Blue",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "06VB",
+       "name": "Violet Lagoon",
+       "family": "Violet Blue",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "010NA",
+       "name": "Marble",
+       "family": "Natural Ash",
+       "types": [
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "09NA",
+       "name": "Mist",
+       "family": "Natural Ash",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "08NA",
+       "name": "Volcanic",
+       "family": "Natural Ash",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "07NA",
+       "name": "Pewter",
+       "family": "Natural Ash",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "06NA",
+       "name": "Granite",
+       "family": "Natural Ash",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "05NA",
+       "name": "Smoke",
+       "family": "Natural Ash",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "04NA",
+       "name": "Storm Cloud",
+       "family": "Natural Ash",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "010P",
+       "name": "Ivory Pearl",
+       "family": "Pearl",
+       "types": [
+        "gloss",
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "09P",
+       "name": "Opal Glow",
+       "family": "Pearl",
+       "types": [
+        "gloss",
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "07P",
+       "name": "Mother of Pearl",
+       "family": "Pearl",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "010NP",
+       "name": "Pearlescent Luster",
+       "family": "Natural Pearl",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "08NP",
+       "name": "Opal Shimmer",
+       "family": "Natural Pearl",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "09M",
+       "name": "Sand Dunes",
+       "family": "Matte",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "07M",
+       "name": "Driftwood",
+       "family": "Matte",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "04M",
+       "name": "Smoked Cedar",
+       "family": "Matte",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "02M",
+       "name": "Midnight Ash",
+       "family": "Matte",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "010NV",
+       "name": "Iconic Lilac",
+       "family": "Natural Violet",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "08NV",
+       "name": "Lavender Jewel",
+       "family": "Natural Violet",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "07NCh",
+       "name": "Fondue",
+       "family": "Natural Chocolate",
+       "types": [
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "06NCh",
+       "name": "Ganache",
+       "family": "Natural Chocolate",
+       "types": [
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "04NCh",
+       "name": "Dark Chocolate",
+       "family": "Natural Chocolate",
+       "types": [
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "010N",
+       "name": "Delicate Natural",
+       "family": "Natural",
+       "types": [
+        "gloss",
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "09N",
+       "name": "Cafe au Lait",
+       "family": "Natural",
+       "types": [
+        "gloss",
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "08N",
+       "name": "Mojave",
+       "family": "Natural",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "07N",
+       "name": "Mirage",
+       "family": "Natural",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "06N",
+       "name": "Moroccan Sand",
+       "family": "Natural",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "05N",
+       "name": "Walnut",
+       "family": "Natural",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "04N",
+       "name": "Chicory",
+       "family": "Natural",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "03N",
+       "name": "Espresso",
+       "family": "Natural",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "010AG",
+       "name": "Misty Beige",
+       "family": "Ash Gold",
+       "types": [
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "09AG",
+       "name": "Glossy Greige",
+       "family": "Ash Gold",
+       "types": [
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "07AG",
+       "name": "Smokey Beige",
+       "family": "Ash Gold",
+       "types": [
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "010NB",
+       "name": "Caramel Cloud",
+       "family": "Neutral Brown Blonde",
+       "types": [
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "09NB",
+       "name": "Irish Creme",
+       "family": "Neutral Brown Blonde",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "07NB",
+       "name": "Chestnut",
+       "family": "Neutral Brown Blonde",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "06NB",
+       "name": "Brandy",
+       "family": "Neutral Brown Blonde",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "04NB",
+       "name": "Maple",
+       "family": "Neutral Brown Blonde",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "03NB",
+       "name": "Mocha Java",
+       "family": "Neutral Brown Blonde",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "010VG",
+       "name": "Baby",
+       "family": "Violet Gold",
+       "types": [
+        "gloss",
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "09VG",
+       "name": "Iridescence",
+       "family": "Violet Gold",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "08VG",
+       "name": "Gilded Taupe",
+       "family": "Violet Gold",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "010NW",
+       "name": "Iced Pina",
+       "family": "Natural Warm",
+       "types": [
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "09NW",
+       "name": "Cream Soda",
+       "family": "Natural Warm",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "07NW",
+       "name": "Milk Tea",
+       "family": "Natural Warm",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "05NW",
+       "name": "Macchiato",
+       "family": "Natural Warm",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "03NW",
+       "name": "Cocoa Bean",
+       "family": "Natural Warm",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "010GI",
+       "name": "Tahitian Sand",
+       "family": "Gold Iridescent",
+       "types": [
+        "gloss",
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "09GI",
+       "name": "Hamptons",
+       "family": "Gold Iridescent",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "08GI",
+       "name": "St. Barths",
+       "family": "Gold Iridescent",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "06GI",
+       "name": "Tenerife",
+       "family": "Gold Iridescent",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "09GB",
+       "name": "Butter Cream",
+       "family": "Gold Beige",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "07GB",
+       "name": "Butterscotch",
+       "family": "Gold Beige",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "06GB",
+       "name": "Toffee",
+       "family": "Gold Beige",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "010G",
+       "name": "Lemon Icing",
+       "family": "Gold",
+       "types": [
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "09G",
+       "name": "Vanilla Creme",
+       "family": "Gold",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "07G",
+       "name": "Saffron",
+       "family": "Gold",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "06G",
+       "name": "St. Tropez",
+       "family": "Gold",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "05G",
+       "name": "Caramel",
+       "family": "Gold",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "03G",
+       "name": "Cinnamon",
+       "family": "Gold",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "08GG",
+       "name": "Gold Dip",
+       "family": "Gold Gold",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "06GG",
+       "name": "Midas Touch",
+       "family": "Gold Gold",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "010WG",
+       "name": "Honey Gold",
+       "family": "Warm Gold",
+       "types": [
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "08WG",
+       "name": "Golden Apricot",
+       "family": "Warm Gold",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "06WG",
+       "name": "Mango",
+       "family": "Warm Gold",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "04WG",
+       "name": "Sun Tea",
+       "family": "Warm Gold",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "08C",
+       "name": "Cayenne",
+       "family": "Copper",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "07C",
+       "name": "Curry",
+       "family": "Copper",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "05C",
+       "name": "Chili",
+       "family": "Copper",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "010AA",
+       "name": "Butternut",
+       "family": "Auburn Accent",
+       "types": [
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "09AA",
+       "name": "Papaya",
+       "family": "Auburn Accent",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "07AA",
+       "name": "Turmeric",
+       "family": "Auburn Accent",
+       "types": [
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "06AA",
+       "name": "Bonfire",
+       "family": "Auburn Accent",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "03AA",
+       "name": "Terra Cotta",
+       "family": "Auburn Accent",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "07CB",
+       "name": "Spicestone",
+       "family": "Copper Brown",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "06CB",
+       "name": "Amber Glaze",
+       "family": "Copper Brown",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "04CB",
+       "name": "Clove",
+       "family": "Copper Brown",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "09RB",
+       "name": "Blush",
+       "family": "Red Brown",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "06RB",
+       "name": "Cherry Cola",
+       "family": "Red Brown",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "05RB",
+       "name": "Manzanita",
+       "family": "Red Brown",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "03RB",
+       "name": "Mahogany",
+       "family": "Red Brown",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "010GRo",
+       "name": "Sparkling Wine",
+       "family": "Gold Rose",
+       "types": [
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "09GRo",
+       "name": "Blush Spritz",
+       "family": "Gold Rose",
+       "types": [
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "07GRo",
+       "name": "Golden Fizz",
+       "family": "Gold Rose",
+       "types": [
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "07CC",
+       "name": "Urban Fever",
+       "family": "Copper Copper",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "05CC",
+       "name": "Electric Shock",
+       "family": "Copper Copper",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "09CR",
+       "name": "Summer Sunshine",
+       "family": "Copper Red",
+       "types": [
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "08CR",
+       "name": "Sunrise",
+       "family": "Copper Red",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "06CR",
+       "name": "Sunset",
+       "family": "Copper Red",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "06R",
+       "name": "Rocket Fire",
+       "family": "Red",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "03R",
+       "name": "Roxy Red",
+       "family": "Red",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "07RR",
+       "name": "Flame",
+       "family": "Red Red",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "06RR",
+       "name": "Blaze",
+       "family": "Red Red",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "05RV",
+       "name": "Sangria",
+       "family": "Red Violet",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "04RV",
+       "name": "Cabernet",
+       "family": "Red Violet",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "03RV",
+       "name": "Merlot",
+       "family": "Red Violet",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "09VRo",
+       "name": "Rose",
+       "family": "Violet Rose",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "08VRo",
+       "name": "Rose Quartz",
+       "family": "Violet Rose",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "06VRo",
+       "name": "Mauve Rose",
+       "family": "Violet Rose",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "09V",
+       "name": "Platinum Ice",
+       "family": "Violet",
+       "types": [
+        "gloss",
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "08V",
+       "name": "Iridescent Quartz",
+       "family": "Violet",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "07V",
+       "name": "Crushed Amethyst",
+       "family": "Violet",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "05V",
+       "name": "Cosmic Violet",
+       "family": "Violet",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "03V",
+       "name": "Orchid",
+       "family": "Violet",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "010VV",
+       "name": "Lavender Ice",
+       "family": "Violet Violet",
+       "types": [
+        "gloss",
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "09VV",
+       "name": "Lilac Ice",
+       "family": "Violet Violet",
+       "types": [
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "000",
+       "name": "Crystal Clear",
+       "family": "Clear",
+       "types": [
+        "gloss",
+        "bonder_inside"
+       ]
+      },
+      {
+       "code": "Pastel Pink",
+       "name": "Pastel Pink",
+       "family": "Pastels/Kickers",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "Yellow Kicker",
+       "name": "Yellow Kicker",
+       "family": "Pastels/Kickers",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "Orange Kicker",
+       "name": "Orange Kicker",
+       "family": "Pastels/Kickers",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "Red Kicker",
+       "name": "Red Kicker",
+       "family": "Pastels/Kickers",
+       "types": [
+        "gloss"
+       ]
+      },
+      {
+       "code": "Violet Kicker",
+       "name": "Violet Kicker",
+       "family": "Pastels/Kickers",
+       "types": [
+        "gloss"
+       ]
+      }
+     ]
+    }
+   ],
+   "mixing": [
+    {
+     "line": "Shades EQ",
+     "ratio": "1:1",
+     "developer": "Shades EQ Processing Solution (bottle) or Gloss to Gel Processing Solution (bowl/brush)",
+     "minutes": "20",
+     "verified": true
+    },
+    {
+     "line": "Shades ALK",
+     "ratio": "1:1.5",
+     "developer": "10 vol Pro-Oxide Cream Developer",
+     "verified": true,
+     "note": "½ oz color + ¾ oz developer"
+    },
+    {
+     "line": "Color Gels Oils",
+     "ratio": "1:1",
+     "developer": "10/20/30/40 vol Pro-Oxide Cream Developer",
+     "verified": true
+    },
+    {
+     "line": "Color Gels Lacquers",
+     "ratio": "1:1",
+     "developer": "10 vol 20 min / 20 vol 30 min / 30 vol 40 min / 40 vol 45 min",
+     "verified": true
+    },
+    {
+     "line": "Color Gels 10 Min",
+     "ratio": "1:1",
+     "developer": "20 vol (up to 1 level) or 30 vol (1+), 10-15 min",
+     "verified": true
+    },
+    {
+     "line": "Color Fusion",
+     "ratio": "1:1",
+     "developer": "20 vol Pro-Oxide Cream Developer, 35-45 min",
+     "verified": true
+    }
+   ]
+  }
+ ]
+}

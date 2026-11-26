@@ -34,6 +34,7 @@ No brand publishes a machine-readable catalog; shade charts are PDFs (often behi
 - **Joico:** technical charts (color intensity, LumiShine swatch chart) and Salon Toolkit.
 - **Goldwell:** education PDFs; no public shade chart found. **L'ANZA:** L'ANZA Pro portal (certification); no public chart found.
 - **Kenra:** 8 PDFs (shade chart, wall chart, product knowledge) on the salon-material page, no login shown.
+- **Started (Nov 26):** `app/seed/color-catalog.json` holds the salon's lines, Kenra and Redken: **Kenra Color** (83 shades, each marked Permanent / Demi / both), Monochrome, Rapid Toner, Boosters, Studio Stylist Express, Simply Blonde; **Redken Shades EQ** (126 shades with names, marked Gloss / Bonder Inside / both, plus pastels and kickers), and Redken mixing ratios for Shades EQ, Shades ALK, Color Gels (Oils, Lacquers, 10 Min) and Color Fusion. Still to fill in: Kenra mixing ratios (not on the shade chart; confirm from Kenra's Product Knowledge PDF), tube/bottle sizes and item numbers (at the first stock count or by barcode), and any other Redken lines Karissa uses (their charts are in the same Product Guide).
 - **Plan:** start inventory with the lines the salon actually uses: enter shades from the charts (Claude can transcribe PDFs), sizes and mixing ratios, then add anything else by **scanning the barcode**. Mixing ratios let usage be logged as "1 tube + developer 1:1".
 
 ### Marketing assets
