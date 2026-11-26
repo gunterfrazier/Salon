@@ -19,6 +19,6 @@ describe("color catalog seed", () => {
 
   it("marks every Shades EQ shade as Gloss and/or Bonder Inside", () => {
     const eq = lines.find((l) => l.line === "Shades EQ")!;
-    for (const s of eq.shades) expect(s.types.length, s.code).toBeGreaterThan(0);
+    for (const s of eq.shades) expect("types" in s ? s.types.length : 0, s.code).toBeGreaterThan(0);
   });
 });

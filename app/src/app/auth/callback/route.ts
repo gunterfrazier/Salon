@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 /** The emailed sign-in link lands here and is swapped for a session. */
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
-  const home = new URL("/calendar", request.url);
+  const home = new URL("/today", request.url);
   const fail = new URL("/login?error=link", request.url);
   if (!code) return NextResponse.redirect(fail);
 
