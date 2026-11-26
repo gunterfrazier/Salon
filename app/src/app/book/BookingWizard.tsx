@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import SearchControls from "@/components/SearchControls";
+import { cleanFavorites, type Favorites, type Opening, type SearchCriteria } from "@/lib/booking/search";
 import type { Hours } from "@/lib/booking/availability";
 import { buildBooking, toBookable } from "@/lib/booking/build";
 import type { PublicService } from "@/lib/data/public-booking";
@@ -8,9 +10,26 @@ import { duration, money } from "@/lib/format";
 import type { PolicySettings } from "@/lib/policy/types";
 import type { BundleRule } from "@/lib/pricing/discounts";
 import { suggestOrder } from "@/lib/schedule/plan";
-import { formatDay, formatSlot, parseHHMM, zonedToUtc, zoneLabel } from "@/lib/time/zone";
+import { formatDay, formatSlot, parseHHMM, toHHMM, tzAbbrev, WEEKDAY_KEYS, zonedToUtc, zoneLabel } from "@/lib/time/zone";
 import { NEW_CLIENT_STATE } from "@/lib/ui/standing";
-import { getTimes, submitOnlineBooking, type OnlineBookingResult } from "./actions";
+import { findPublicOpenings, getTimes, submitOnlineBooking, type OnlineBookingResult } from "./actions";
+
+const FAV_KEY = "chairvana.favorites.v1";
+function readFavorites(): Favorites | null {
+  try {
+    return cleanFavorites(JSON.parse(localStorage.getItem(FAV_KEY) ?? "null"));
+  } catch {
+    return null;
+  }
+}
+function writeFavorites(f: Favorites | null) {
+  try {
+    if (f) localStorage.setItem(FAV_KEY, JSON.stringify(f));
+    else localStorage.removeItem(FAV_KEY);
+  } catch {
+    /* storage unavailable */
+  }
+}
 
 type Step = "services" | "when" | "details";
 const input = "w-full rounded-xl border border-line bg-surface px-4 py-3 text-base";
@@ -31,6 +50,12 @@ export default function BookingWizard({
   const [time, setTime] = useState<string | null>(null);
   const [f, setF] = useState({ firstName: "", lastName: "", phone: "", email: "", notes: "", website: "" });
   const [agreed, setAgreed] = useState(false);
+  const [criteria, setCriteria] = useState<SearchCriteria>({ weekdays: [], block: "any", start: { kind: "next" } });
+  const [openings, setOpenings] = useState<Opening[] | null>(null);
+  const [searching, startSearching] = useTransition();
+  /** Favorites remembered on this device (shown as instant openings). */
+  const [savedFav, setSavedFav] = useState<Favorites | null>(null);
+  const [remember, setRemember] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<Extract<OnlineBookingResult, { ok: true }> | null>(null);
   const [loading, startLoading] = useTransition();
@@ -54,6 +79,63 @@ export default function BookingWizard({
     }
   }, [ordered, business.rules, business.policy]);
   const addOnOnly = ordered.length > 0 && ordered.every((s) => s.isAddOn);
+  const openDays = WEEKDAY_KEYS.map((k, i) => (business.hours[k] ? i : -1)).filter((i) => i >= 0);
+
+  // Returning visitor with saved favorites: pre-select and show openings right away.
+  useEffect(() => {
+    const fav = readFavorites();
+    if (!fav) return;
+    const ids = fav.serviceIds.filter((id) => byId.has(id));
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSavedFav(fav);
+    if (ids.length) setPicked(ids);
+    setCriteria({ weekdays: fav.weekdays.filter((d) => openDays.includes(d)), block: fav.block, start: { kind: "next" } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Search whenever services or criteria change.
+  const searchKey = JSON.stringify([ordered.map((s) => s.id), criteria]);
+  useEffect(() => {
+    if (!ordered.length || addOnOnly) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setOpenings(null);
+      return;
+    }
+    startSearching(async () => {
+      const r = await findPublicOpenings(ordered.map((s) => s.id), criteria);
+      setOpenings(r.ok ? r.openings : []);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchKey]);
+
+  const pickOpening = (o: Opening) => {
+    setDate(o.date);
+    setTime(toHHMM(o.minutes));
+    setTimes(null);
+    setError(null);
+    setStep("details");
+  };
+
+  const openingsList = (list: Opening[], max = 24) => {
+    const byDate = new Map<string, Opening[]>();
+    for (const o of list.slice(0, max)) byDate.set(o.date, [...(byDate.get(o.date) ?? []), o]);
+    return (
+      <ul className="space-y-3">
+        {[...byDate.entries()].map(([d, os]) => (
+          <li key={d}>
+            <p className="text-sm font-semibold">{formatDay(d, { weekday: "long", month: "short", day: "numeric" })}</p>
+            <div className="mt-1 grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {os.map((o) => (
+                <button key={o.minutes} onClick={() => pickOpening(o)} className="rounded-xl border border-line bg-surface py-2.5 text-sm font-semibold hover:border-accent">
+                  {formatSlot(o.date, o.minutes, business.timezone)}
+                </button>
+              ))}
+            </div>
+          </li>
+        ))}
+      </ul>
+    );
+  };
 
   function toggle(id: string) {
     setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
@@ -76,8 +158,12 @@ export default function BookingWizard({
   function submit() {
     setError(null);
     startSaving(async () => {
-      const r = await submitOnlineBooking({ serviceIds: ordered.map((s) => s.id), date: date!, time: time!, ...f, agreed });
-      if (r.ok) setDone(r);
+      const fav: Favorites | null = remember ? cleanFavorites({ serviceIds: ordered.map((s) => s.id), weekdays: criteria.weekdays, block: criteria.block }) : null;
+      const r = await submitOnlineBooking({ serviceIds: ordered.map((s) => s.id), date: date!, time: time!, ...f, agreed, favorites: fav ?? undefined });
+      if (r.ok) {
+        writeFavorites(fav);
+        setDone(r);
+      }
       else {
         setError(r.error);
         if (/time was just taken/.test(r.error) && date) {
@@ -144,6 +230,22 @@ export default function BookingWizard({
         ))}
       </ol>
 
+      {step === "services" && savedFav && ordered.length > 0 && (
+        <section className="mb-6 rounded-2xl border-2 border-accent bg-surface p-4" aria-live="polite">
+          <h2 className="font-semibold">Openings that match your favorites</h2>
+          <p className="text-sm text-muted">
+            {ordered.map((s) => s.name).join(" + ")}
+            {criteria.weekdays.length ? ` · ${criteria.weekdays.map((d) => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d]).join(", ")}` : ""}
+            {criteria.block !== "any" ? ` · ${typeof criteria.block === "string" ? criteria.block : "your times"}` : ""}
+          </p>
+          <div className="mt-3">
+            {searching && <p className="text-sm text-muted">Finding openings…</p>}
+            {!searching && openings && openings.length === 0 && <p className="text-sm text-muted">No openings match right now. Tap Next to search other days and times.</p>}
+            {!searching && openings && openings.length > 0 && openingsList(openings, 8)}
+          </div>
+        </section>
+      )}
+
       {step === "services" && (
         <section className="space-y-5">
           {groups.map(([cat, list]) => (
@@ -180,9 +282,21 @@ export default function BookingWizard({
       )}
 
       {step === "when" && (
+        <section className="mb-6 space-y-4 rounded-2xl border border-line bg-surface p-4" aria-live="polite">
+          <h2 className="font-semibold">Find a time</h2>
+          <SearchControls criteria={criteria} onChange={setCriteria} openDays={openDays} zone={tzAbbrev(new Date(), business.timezone)} />
+          <div>
+            {searching && <p className="text-sm text-muted">Finding openings…</p>}
+            {!searching && openings && openings.length === 0 && <p className="text-sm text-muted">No openings match. Try more days or a wider time.</p>}
+            {!searching && openings && openings.length > 0 && openingsList(openings)}
+          </div>
+        </section>
+      )}
+
+      {step === "when" && (
         <section className="space-y-4">
           <div>
-            <h2 className="font-semibold">Pick a day</h2>
+            <h2 className="font-semibold">Or pick a day</h2>
             <p className="text-sm text-muted">All times are {zoneLabel(business.timezone, date ? zonedToUtc(date, 12 * 60, business.timezone) : new Date())}, the salon&rsquo;s local time.</p>
             <div className="mt-2 flex gap-2 overflow-x-auto pb-2">
               {dates.map((d) => (
@@ -245,6 +359,15 @@ export default function BookingWizard({
             <label className="mt-3 flex items-start gap-3">
               <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-1 size-5 accent-[var(--accent)]" />
               <span className="text-sm font-semibold">I agree to the booking policy</span>
+            </label>
+          </div>
+          <div className="rounded-xl border border-line bg-surface p-4">
+            <label className="flex items-start gap-3">
+              <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="mt-1 size-5 accent-[var(--accent)]" />
+              <span className="text-sm">
+                <span className="font-semibold">Remember my favorites</span>
+                <span className="block text-muted">Next time, see openings for these services{criteria.weekdays.length || criteria.block !== "any" ? " on your favorite days and times" : ""} as soon as you open this page.</span>
+              </span>
             </label>
           </div>
         </section>

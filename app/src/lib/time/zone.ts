@@ -95,6 +95,14 @@ export function addDays(date: DateStr, n: number): DateStr {
   return `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`;
 }
 
+/** First-of-month arithmetic: addMonths("2026-12-01", 1) = "2027-01-01" (day kept when valid, else clamped). */
+export function addMonths(date: DateStr, n: number): DateStr {
+  const [y, m, d] = date.split("-").map(Number);
+  const first = new Date(Date.UTC(y, m - 1 + n, 1));
+  const last = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).getUTCDate();
+  return `${first.getUTCFullYear()}-${pad(first.getUTCMonth() + 1)}-${pad(Math.min(d, last))}`;
+}
+
 /** 0 = Sunday … 6 = Saturday. */
 export function weekday(date: DateStr): number {
   const [y, m, d] = date.split("-").map(Number);

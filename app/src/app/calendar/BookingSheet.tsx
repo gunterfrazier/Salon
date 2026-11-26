@@ -16,17 +16,18 @@ const input = "w-full rounded-lg border border-line bg-background px-3 py-2.5 te
 const label = "block text-sm font-semibold";
 
 export default function BookingSheet({
-  data, initialDate, initialTime, onClose, onSaved,
+  data, initialDate, initialTime, initialServiceIds, initialClientId, onClose, onSaved,
 }: {
-  data: CalendarData; initialDate: string; initialTime: string; onClose: () => void; onSaved: () => void;
+  data: CalendarData; initialDate: string; initialTime: string; initialServiceIds?: string[]; initialClientId?: string | null;
+  onClose: () => void; onSaved: () => void;
 }) {
   const tz = data.timezone;
   const [mode, setMode] = useState<"existing" | "new">(data.clients.length ? "existing" : "new");
   const [query, setQuery] = useState("");
-  const [clientId, setClientId] = useState<string | null>(null);
-  const [clientState, setClientState] = useState<ClientStateJSON | null>(null);
+  const [clientId, setClientId] = useState<string | null>(initialClientId ?? null);
+  const [clientState, setClientState] = useState<ClientStateJSON | null>(initialClientId ? data.clientStates[initialClientId] ?? null : null);
   const [nc, setNc] = useState({ firstName: "", lastName: "", phone: "", email: "" });
-  const [serviceIds, setServiceIds] = useState<string[]>([]);
+  const [serviceIds, setServiceIds] = useState<string[]>(initialServiceIds ?? []);
   const [date, setDate] = useState(initialDate);
   const [time, setTime] = useState(initialTime);
   const [deposit, setDeposit] = useState("");
@@ -59,6 +60,12 @@ export default function BookingSheet({
       .slice(0, 8);
   }, [query, data.clients]);
   const chosen = data.clients.find((c) => c.id === clientId) ?? null;
+
+  // Pre-filled client (from Find a time / rebooking): load their standing.
+  useEffect(() => {
+    if (initialClientId && !data.clientStates[initialClientId]) fetchClientState(initialClientId).then(setClientState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function pickClient(id: string) {
     setClientId(id);

@@ -26,7 +26,9 @@ const profile: ClientProfileData = {
     id: "00000000-0000-0000-0000-000000000001", firstName: "Jamie", lastName: "Rivers", phone: "(256) 555-0101", email: "jamie@example.com",
     notes: "Prefers cooler tones. Sensitive scalp: use barrier cream.", priorVisitCount: 6, source: "styleseat_import", createdAt: "2024-03-02T15:00:00Z",
     depositOverride: "none", depositOverrideCents: null,
+    favorites: { serviceIds: ["s1"], weekdays: [5], block: "morning" },
   },
+  services: [{ id: "s1", name: "All Over Color", category: "Color Services" }, { id: "s2", name: "Women's Cut", category: "Cut & Style" }, { id: "s3", name: "Style", category: "Cut & Style" }],
   state: {
     onTimeVisits: ["2026-11-10T21:00:00.000Z"], priorVisitCount: 6, depositOverride: null, outstandingBalance: 6250,
     flags: [

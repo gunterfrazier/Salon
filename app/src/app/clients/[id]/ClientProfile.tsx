@@ -10,7 +10,8 @@ import { fullName, money } from "@/lib/format";
 import { formatDateTime, zoneLabel } from "@/lib/time/zone";
 import { clientChips } from "@/lib/ui/standing";
 import { shrinkImage } from "@/lib/ui/resize";
-import { addFormula, deleteFormula, markRefundReturned, setDepositRule, settleBalance, updateClientRecord, updateFlag } from "../actions";
+import { addFormula, deleteFormula, markRefundReturned, saveFavorites, setDepositRule, settleBalance, updateClientRecord, updateFlag } from "../actions";
+import { TIME_BLOCKS, type Favorites, type TimeBlock } from "@/lib/booking/search";
 
 const input = "w-full rounded-lg border border-line bg-background px-3 py-2.5 text-base";
 const card = "rounded-xl border border-line bg-surface p-4";
@@ -72,6 +73,7 @@ export default function ClientProfile({ data }: { data: ClientProfileData }) {
 
       {(openBalances.length > 0 || data.refundsOwed.length > 0) && <Money data={data} date={date} />}
       <Contact data={data} />
+      <FavoritesCard data={data} />
       <DepositRule data={data} />
       {standing.history.length > 0 && <Flags data={data} history={standing.history} date={date} />}
       <Formulas data={data} date={date} />
@@ -363,6 +365,57 @@ function Visits({ data, date }: { data: ClientProfileData; date: DateFn }) {
         ))}
         {data.visits.length === 0 && <li className="py-2 text-muted">No appointments yet.</li>}
       </ul>
+    </section>
+  );
+}
+
+function FavoritesCard({ data }: { data: ClientProfileData }) {
+  const { run, pending, error } = useAction();
+  const initial: Favorites = data.client.favorites ?? { serviceIds: [], weekdays: [], block: "any" };
+  const [fav, setFav] = useState<Favorites>(initial);
+  const changed = JSON.stringify(fav) !== JSON.stringify(initial);
+  const chip = (on: boolean) => `rounded-full border px-3 py-1.5 text-sm ${on ? "border-accent bg-accent text-on-accent" : "border-line"}`;
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  return (
+    <section className={card}>
+      <h2 className="font-semibold">Favorites</h2>
+      <p className="text-sm text-muted">Used to pre-fill Find a time and next-visit booking.</p>
+      <p className="mt-3 text-sm font-semibold">Usual services</p>
+      <div className="mt-1 flex flex-wrap gap-1.5">
+        {data.services.map((s) => {
+          const on = fav.serviceIds.includes(s.id);
+          return (
+            <button key={s.id} type="button" aria-pressed={on} className={chip(on)} onClick={() => setFav({ ...fav, serviceIds: on ? fav.serviceIds.filter((x) => x !== s.id) : [...fav.serviceIds, s.id] })}>
+              {s.name}
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-3 text-sm font-semibold">Favorite days</p>
+      <div className="mt-1 flex flex-wrap gap-1.5">
+        {days.map((d, i) => {
+          const on = fav.weekdays.includes(i);
+          return (
+            <button key={d} type="button" aria-pressed={on} className={chip(on)} onClick={() => setFav({ ...fav, weekdays: on ? fav.weekdays.filter((x) => x !== i) : [...fav.weekdays, i].sort() })}>
+              {d}
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-3 text-sm font-semibold">Time of day</p>
+      <div className="mt-1 flex flex-wrap gap-1.5">
+        {TIME_BLOCKS.map((t) => (
+          <button key={t.key} type="button" aria-pressed={fav.block === t.key} className={chip(fav.block === t.key)} onClick={() => setFav({ ...fav, block: t.key as TimeBlock })}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <Err msg={error} />
+      {changed && (
+        <div className="mt-3 flex justify-end">
+          <button className={primary} disabled={pending} onClick={() => run(() => saveFavorites(data.client.id, fav))}>Save favorites</button>
+        </div>
+      )}
     </section>
   );
 }

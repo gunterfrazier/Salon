@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cleanFavorites } from "@/lib/booking/search";
 import { getContext } from "@/lib/context";
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string };
@@ -247,4 +248,14 @@ export async function importClients(rows: ImportClientInput[], source: "stylesea
   }
   done();
   return { ok: true, imported: toInsert.length, skipped };
+}
+
+export async function saveFavorites(clientId: string, favorites: unknown): Promise<Result> {
+  const fav = cleanFavorites(favorites);
+  const ctx = await ownClient(clientId);
+  if (!ctx) return { ok: false, error: "Client not found." };
+  const { error } = await ctx.supabase.from("clients").update({ preferences: fav ?? {} }).eq("id", clientId);
+  if (error) return { ok: false, error: error.message };
+  done(clientId);
+  return { ok: true };
 }

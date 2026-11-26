@@ -26,7 +26,7 @@ function appt(id: string, clientId: string, name: string, date: string, time: st
   return {
     id, clientId, clientName: name, clientPhone: "(555) 010-0100", start: r.payload.start_at, end: r.payload.end_at, status: "booked", notes: null,
     depositRequired: deposit, depositPaid: paid,
-    services: r.priced.lines.map((l, i) => ({ id: `${id}-${i}`, name: l.name, priceType: servicesByKey[keys[i]].priceType, listPrice: l.listPrice, finalPrice: l.finalPrice, discounts: l.discounts.map((d) => ({ label: d.label, amount_cents: d.amount })) })),
+    services: r.priced.lines.map((l, i) => ({ id: `${id}-${i}`, serviceId: keys[i], name: l.name, priceType: servicesByKey[keys[i]].priceType, listPrice: l.listPrice, finalPrice: l.finalPrice, discounts: l.discounts.map((d) => ({ label: d.label, amount_cents: d.amount })) })),
     busy: r.payload.services.flatMap((s) => s.busy),
   };
 }
@@ -34,16 +34,16 @@ function appt(id: string, clientId: string, name: string, date: string, time: st
 export default async function DevCalendar({ searchParams }: { searchParams: Promise<{ date?: string; view?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
   const sp = await searchParams;
-  const view = sp.view === "week" ? "week" : "day";
+  const view = sp.view === "week" ? "week" : sp.view === "month" ? "month" : "day";
   const day = isDateStr(sp.date) ? sp.date : "2026-12-01";
-  const from = view === "week" ? startOfWeek(day) : day;
+  const from = view === "week" ? startOfWeek(day) : view === "month" ? startOfWeek(`${day.slice(0, 8)}01`) : day;
   const flagDate = "2026-10-20T20:30:00.000Z";
 
   const data: CalendarData = {
     businessName: "Intensity Salon (sample data)",
     timezone: TZ,
     hours: menuJson.hours as unknown as CalendarData["hours"],
-    policy, rules, stages: menu.stages, view, from, days: view === "week" ? 7 : 1, today: "2026-12-01",
+    policy, rules, stages: menu.stages, view, from, days: view === "month" ? 42 : view === "week" ? 7 : 1, today: "2026-12-01",
     appointments: [
       appt("a1", "c1", "Jamie R.", "2026-12-01", "15:30", ["all_over_color", "womens_cut", "style"]),
       appt("a2", "c2", "Morgan T.", "2026-12-01", "16:05", ["mens_boys_cut"], 2000, 0),
@@ -70,9 +70,9 @@ export default async function DevCalendar({ searchParams }: { searchParams: Prom
       { id: "t2", start: "2026-12-24T06:00:00.000Z", end: "2026-12-27T06:00:00.000Z", reason: "Christmas break", allDay: true },
     ],
     clients: [
-      { id: "c1", firstName: "Jamie", lastName: "R.", phone: "(555) 010-0101", email: null },
-      { id: "c2", firstName: "Morgan", lastName: "T.", phone: "(555) 010-0102", email: null },
-      { id: "c3", firstName: "Taylor", lastName: "S.", phone: null, email: "taylor@example.com" },
+      { id: "c1", firstName: "Jamie", lastName: "R.", phone: "(555) 010-0101", email: null, favorites: { serviceIds: ["all_over_color", "womens_cut"], weekdays: [5], block: "morning" } },
+      { id: "c2", firstName: "Morgan", lastName: "T.", phone: "(555) 010-0102", email: null, favorites: null },
+      { id: "c3", firstName: "Taylor", lastName: "S.", phone: null, email: "taylor@example.com", favorites: null },
     ],
   };
   return <CalendarView data={data} focusDate={day} />;

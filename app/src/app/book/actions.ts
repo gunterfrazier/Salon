@@ -10,7 +10,12 @@ import { paymentRequest } from "@/lib/payments/methods";
 import { depositMethods, mergeMethods } from "@/lib/payments/settings";
 import { policyText, policyVersion } from "@/lib/policy/text";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { formatDay, formatTime, isDateStr, parseHHMM, todayIn, toHHMM, zonedToUtc } from "@/lib/time/zone";
+import { addDays, formatDay, formatTime, isDateStr, parseHHMM, todayIn, toHHMM, zonedToUtc } from "@/lib/time/zone";
+import { cleanFavorites, findOpenings, searchWindow, type Opening, type SearchCriteria } from "@/lib/booking/search";
+import { loadBusyRange } from "@/lib/data/schedule";
+import { suggestOrder } from "@/lib/schedule/plan";
+
+const STAGES = { consult: 0, chemical: 1, treatment: 2, cut: 3, style: 4, wax: 5, fee: 9 };
 import { NEW_CLIENT_STATE } from "@/lib/ui/standing";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -48,6 +53,8 @@ export interface OnlineBookingRequest {
   agreed: boolean;
   /** Honeypot: real people leave this empty. */
   website?: string;
+  /** "Remember my favorites": saved on the client record. */
+  favorites?: unknown;
 }
 
 export type OnlineBookingResult =
@@ -114,13 +121,17 @@ export async function submitOnlineBooking(req: OnlineBookingRequest): Promise<On
   if (!clientId) {
     const { data, error } = await admin
       .from("clients")
-      .insert({ business_id: b.id, first_name: firstName, last_name: lastName, phone, email, source: "online", sms_opt_in: true })
+      .insert({ business_id: b.id, first_name: firstName, last_name: lastName, phone, email, source: "online", sms_opt_in: true, preferences: cleanFavorites(req.favorites) ?? {} })
       .select("id")
       .single();
     if (error) return { ok: false, error: "Couldn't save your details. Please try again." };
     clientId = data.id as string;
-  } else if (email && !match?.email) {
-    await admin.from("clients").update({ email }).eq("id", clientId);
+  } else {
+    const patch: Record<string, unknown> = {};
+    if (email && !match?.email) patch.email = email;
+    const fav = cleanFavorites(req.favorites);
+    if (fav) patch.preferences = fav;
+    if (Object.keys(patch).length) await admin.from("clients").update(patch).eq("id", clientId);
   }
 
   const h = await headers();
@@ -180,3 +191,21 @@ export async function submitOnlineBooking(req: OnlineBookingRequest): Promise<On
   };
 }
 
+
+/** Public "Find a time": openings matching days / time of day / when. */
+export async function findPublicOpenings(serviceIds: string[], criteria: SearchCriteria): Promise<{ ok: true; openings: Opening[] } | { ok: false; error: string }> {
+  const b = await loadPublicBusiness();
+  if (!b) return { ok: false, error: "Online booking isn't open yet." };
+  const services = await servicesFor(b.id, serviceIds);
+  if (!services) return { ok: false, error: "Pick your services again." };
+  const tz = b.timezone;
+  const today = todayIn(tz);
+  const horizonDays = b.settings.maxDaysAhead;
+  const { first, last } = searchWindow(criteria.start, today, horizonDays);
+  const from = zonedToUtc(first, 0, tz);
+  const to = zonedToUtc(addDays(last, 1), 0, tz);
+  const [busy, isClosed] = await Promise.all([loadBusyRange(createAdminClient(), b.staffId, from, to), loadClosedChecker(b)]);
+  const ordered = suggestOrder(services, STAGES);
+  const openings = findOpenings({ services: ordered, criteria, today, tz, hours: b.hours, isClosed, busy, now: new Date(), settings: b.settings, horizonDays, limit: 24, perDay: 4 });
+  return { ok: true, openings };
+}

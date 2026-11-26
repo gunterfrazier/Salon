@@ -3,6 +3,7 @@ import type { Hours } from "../context";
 import type { PolicySettings } from "../policy/types";
 import type { BundleRule } from "../pricing/discounts";
 import type { DayOff, HolidayRule } from "../schedule/holidays";
+import type { Favorites } from "../booking/search";
 import type { ClientStateJSON } from "./clients-shared";
 
 /** Shapes passed from the server to the calendar screens (JSON-safe). */
@@ -18,7 +19,7 @@ export interface CalAppointment {
   notes: string | null;
   depositRequired: number;
   depositPaid: number;
-  services: { id: string; name: string; priceType: string; listPrice: number; finalPrice: number; discounts: { label: string; amount_cents: number }[] }[];
+  services: { id: string; serviceId: string; name: string; priceType: string; listPrice: number; finalPrice: number; discounts: { label: string; amount_cents: number }[] }[];
   /** Hands-on time; the rest of [start, end) is processing (open). */
   busy: { phase: string; start: string; end: string }[];
 }
@@ -35,6 +36,7 @@ export interface CalClient {
   lastName: string | null;
   phone: string | null;
   email: string | null;
+  favorites: Favorites | null;
 }
 
 export interface CalendarData {
@@ -44,7 +46,7 @@ export interface CalendarData {
   policy: PolicySettings;
   rules: BundleRule[];
   stages: Record<string, number>;
-  view: "day" | "week";
+  view: "day" | "week" | "month";
   from: string; // first visible day (YYYY-MM-DD)
   days: number;
   today: string;

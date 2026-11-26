@@ -38,8 +38,8 @@ export const PRESET_HOLIDAYS: HolidayRule[] = [
   { key: "labor_day", name: "Labor Day", date: { type: "nth", month: 9, weekday: 1, n: 1 }, closed: true },
   { key: "veterans_day", name: "Veterans Day", date: { type: "fixed", month: 11, day: 11 }, closed: false },
   { key: "thanksgiving", name: "Thanksgiving", date: { type: "nth", month: 11, weekday: 4, n: 4 }, closed: true },
-  { key: "black_friday", name: "Day after Thanksgiving", date: { type: "nth", month: 11, weekday: 4, n: 4, plusDays: 1 }, closed: false },
-  { key: "christmas_eve", name: "Christmas Eve", date: { type: "fixed", month: 12, day: 24 }, closed: false },
+  { key: "black_friday", name: "Day after Thanksgiving", date: { type: "nth", month: 11, weekday: 4, n: 4, plusDays: 1 }, closed: true },
+  { key: "christmas_eve", name: "Christmas Eve", date: { type: "fixed", month: 12, day: 24 }, closed: true },
   { key: "christmas", name: "Christmas Day", date: { type: "fixed", month: 12, day: 25 }, closed: true },
   { key: "new_years_eve", name: "New Year's Eve", date: { type: "fixed", month: 12, day: 31 }, closed: false },
 ];

@@ -1,5 +1,6 @@
 import type { ClientStateJSON } from "../data/clients-shared";
 import type { PolicySettings } from "../policy/types";
+import type { Favorites } from "../booking/search";
 
 /** Everything the client profile page shows (JSON-safe). */
 export interface ClientProfileData {
@@ -18,7 +19,10 @@ export interface ClientProfileData {
     createdAt: string;
     depositOverride: "none" | "amount" | "full";
     depositOverrideCents: number | null;
+    favorites: Favorites | null;
   };
+  /** Services that can be picked as favorites. */
+  services: { id: string; name: string; category: string }[];
   state: ClientStateJSON;
   /** Extra details for each flag in state.flags, by id. */
   flagNotes: Record<string, { clearNote: string | null; madePermanentAt: string | null }>;

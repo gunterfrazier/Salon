@@ -29,14 +29,17 @@ describe("holiday dates", () => {
 describe("closures", () => {
   const rules = mergeHolidays(null);
   it("default closed holidays", () => {
-    expect(rules.filter((r) => r.closed).map((r) => r.key)).toEqual(["new_years_day", "memorial_day", "independence_day", "labor_day", "thanksgiving", "christmas"]);
+    expect(rules.filter((r) => r.closed).map((r) => r.key)).toEqual(["new_years_day", "memorial_day", "independence_day", "labor_day", "thanksgiving", "black_friday", "christmas_eve", "christmas"]);
     expect(holidayOn("2026-11-26", rules)?.name).toBe("Thanksgiving");
-    expect(holidayOn("2026-12-24", rules)).toBeNull(); // Christmas Eve off by default
+    expect(holidayOn("2026-12-24", rules)?.name).toBe("Christmas Eve");
+    expect(holidayOn("2026-11-27", rules)?.name).toBe("Day after Thanksgiving");
+    expect(holidayOn("2026-12-31", rules)).toBeNull(); // New Year's Eve open by default
   });
   it("saved switches and custom holidays", () => {
     const custom: HolidayRule = { key: "custom_bday", name: "Salon anniversary", date: { type: "fixed", month: 3, day: 14 }, closed: true, custom: true };
-    const r = mergeHolidays({ rules: [{ ...preset("christmas_eve"), closed: true }, { ...preset("thanksgiving"), closed: false }, custom] });
-    expect(holidayOn("2026-12-24", r)?.name).toBe("Christmas Eve");
+    const r = mergeHolidays({ rules: [{ ...preset("christmas_eve"), closed: false }, { ...preset("new_years_eve"), closed: true }, { ...preset("thanksgiving"), closed: false }, custom] });
+    expect(holidayOn("2026-12-24", r)).toBeNull();
+    expect(holidayOn("2026-12-31", r)?.name).toBe("New Year's Eve");
     expect(holidayOn("2026-11-26", r)).toBeNull();
     expect(holidayOn("2027-03-14", r)?.name).toBe("Salon anniversary");
   });

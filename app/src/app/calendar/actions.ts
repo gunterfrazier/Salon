@@ -6,10 +6,14 @@ import { checkoutTotals, settleCancel } from "@/lib/checkout/settle";
 import { cancelDefaults, type ChargeOption } from "@/lib/policy/engine";
 import { getContext } from "@/lib/context";
 import { loadClientStates, reviveClientState, type ClientStateJSON } from "@/lib/data/clients";
-import { isDateStr, parseHHMM, zonedToUtc } from "@/lib/time/zone";
+import { addDays, isDateStr, parseHHMM, todayIn, zonedToUtc } from "@/lib/time/zone";
 import { NEW_CLIENT_STATE } from "@/lib/ui/standing";
-import { loadDaysOff } from "@/lib/data/schedule";
-import { blockedDuring, closureForDate, mergeHolidays } from "@/lib/schedule/holidays";
+import { loadBusyRange, loadDaysOff } from "@/lib/data/schedule";
+import { blockedDuring, closureForDate, isClosedDay, mergeHolidays } from "@/lib/schedule/holidays";
+import { bookingSettings } from "@/lib/booking/availability";
+import { findOpenings, searchWindow, type Opening, type SearchCriteria } from "@/lib/booking/search";
+import { menu } from "@/lib/menu";
+import { suggestOrder } from "@/lib/schedule/plan";
 
 export async function fetchClientState(clientId: string): Promise<ClientStateJSON | null> {
   const ctx = await getContext();
@@ -254,4 +258,45 @@ export async function markDepositReceived(appointmentId: string, amountCents: nu
   if (error) return { ok: false, error: error.message };
   revalidatePath("/calendar");
   return { ok: true };
+}
+
+/** Stylist "Find a time": openings for services matching days / time block / start. */
+export async function findTimes(serviceIds: string[], criteria: SearchCriteria): Promise<{ ok: true; openings: Opening[] } | { ok: false; error: string }> {
+  if (!Array.isArray(serviceIds) || serviceIds.length === 0 || serviceIds.length > 8) return { ok: false, error: "Pick at least one service." };
+  const ctx = await getContext();
+  const { supabase, business, staff } = ctx;
+  const { data: rows, error } = await supabase
+    .from("services")
+    .select("id,key,name,price_type,price_cents,estimated_hours,active_min,processing_min,finish_min,deposit_category,stage,includes,is_add_on")
+    .eq("business_id", business.id)
+    .in("id", serviceIds);
+  if (error) return { ok: false, error: error.message };
+  const byId = new Map((rows as ServiceRow[]).map((r) => [r.id, r]));
+  if (serviceIds.some((id) => !byId.has(id))) return { ok: false, error: "Pick your services again." };
+  const services = suggestOrder(serviceIds.map((id) => toBookable(byId.get(id)!)), menu.stages);
+
+  const tz = business.timezone;
+  const today = todayIn(tz);
+  const horizonDays = 365;
+  const { first, last } = searchWindow(criteria.start, today, horizonDays);
+  const from = zonedToUtc(first, 0, tz);
+  const to = zonedToUtc(addDays(last, 1), 0, tz);
+  const [busy, daysOff] = await Promise.all([loadBusyRange(supabase, staff.id, from, to), loadDaysOff(supabase, business.id, from, to)]);
+  const rules = mergeHolidays(business.holidays);
+  const settings = { ...bookingSettings(business.booking_settings), minNoticeHours: 0 };
+  const openings = findOpenings({
+    services,
+    criteria,
+    today,
+    tz,
+    hours: business.business_hours,
+    isClosed: (d) => isClosedDay(d, tz, rules, daysOff),
+    busy,
+    now: new Date(),
+    settings,
+    horizonDays,
+    limit: 30,
+    perDay: 6,
+  });
+  return { ok: true, openings };
 }

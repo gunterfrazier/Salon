@@ -1,6 +1,7 @@
 import "server-only";
 import type { getContext } from "../context";
 import { menu } from "../menu";
+import { cleanFavorites } from "../booking/search";
 import { addDays, todayIn, zonedToUtc } from "../time/zone";
 import type { CalAppointment, CalendarData, CalClient } from "./calendar-types";
 import { loadClientStates } from "./clients";
@@ -32,15 +33,15 @@ type ApptRow = {
   id: string; client_id: string; start_at: string; end_at: string; status: string; notes: string | null; deposit_required_cents: number;
   clients: { first_name: string; last_name: string | null; phone: string | null } | null;
   appointment_services: {
-    id: string; sort: number; list_price_cents: number; price_quoted_cents: number; discounts: { label: string; amount_cents: number }[];
+    id: string; service_id: string; sort: number; list_price_cents: number; price_quoted_cents: number; discounts: { label: string; amount_cents: number }[];
     services: { name: string; price_type: string } | null; staff_busy_blocks: { phase: string; during: string }[];
   }[];
 };
 
-export async function loadCalendar(ctx: Ctx, opts: { from: string; view: "day" | "week" }): Promise<CalendarData> {
+export async function loadCalendar(ctx: Ctx, opts: { from: string; view: "day" | "week" | "month" }): Promise<CalendarData> {
   const { supabase, business } = ctx;
   const tz = business.timezone;
-  const days = opts.view === "week" ? 7 : 1;
+  const days = opts.view === "month" ? 42 : opts.view === "week" ? 7 : 1;
   const rangeStart = zonedToUtc(opts.from, 0, tz).toISOString();
   const rangeEnd = zonedToUtc(addDays(opts.from, days), 0, tz).toISOString();
 
@@ -48,7 +49,7 @@ export async function loadCalendar(ctx: Ctx, opts: { from: string; view: "day" |
     supabase
       .from("appointments")
       .select(
-        "id,client_id,start_at,end_at,status,notes,deposit_required_cents,clients(first_name,last_name,phone),appointment_services(id,sort,list_price_cents,price_quoted_cents,discounts,services(name,price_type),staff_busy_blocks(phase,during))",
+        "id,client_id,start_at,end_at,status,notes,deposit_required_cents,clients(first_name,last_name,phone),appointment_services(id,service_id,sort,list_price_cents,price_quoted_cents,discounts,services(name,price_type),staff_busy_blocks(phase,during))",
       )
       .eq("business_id", business.id)
       .lt("start_at", rangeEnd)
@@ -62,7 +63,7 @@ export async function loadCalendar(ctx: Ctx, opts: { from: string; view: "day" |
       )
       .eq("business_id", business.id)
       .eq("archived", false),
-    supabase.from("clients").select("id,first_name,last_name,phone,email").eq("business_id", business.id).order("first_name").limit(5000),
+    supabase.from("clients").select("id,first_name,last_name,phone,email,preferences").eq("business_id", business.id).order("first_name").limit(5000),
   ]);
   for (const r of [appts, services, clients]) if (r.error) throw new Error(r.error.message);
 
@@ -96,6 +97,7 @@ export async function loadCalendar(ctx: Ctx, opts: { from: string; view: "day" |
       depositPaid: paid[a.id] ?? 0,
       services: lines.map((l) => ({
         id: l.id,
+        serviceId: l.service_id,
         name: l.services?.name ?? "Service",
         priceType: l.services?.price_type ?? "fixed",
         listPrice: l.list_price_cents,
@@ -113,7 +115,14 @@ export async function loadCalendar(ctx: Ctx, opts: { from: string; view: "day" |
     .map(({ service_categories, ...s }) => ({ ...s, category: service_categories?.name ?? "Other", categorySort: service_categories?.sort ?? 99 }))
     .sort((x, y) => x.categorySort - y.categorySort || x.sort - y.sort);
 
-  const clientList: CalClient[] = (clients.data ?? []).map((c) => ({ id: c.id, firstName: c.first_name, lastName: c.last_name, phone: c.phone, email: c.email }));
+  const clientList: CalClient[] = (clients.data ?? []).map((c) => ({
+    id: c.id,
+    firstName: c.first_name,
+    lastName: c.last_name,
+    phone: c.phone,
+    email: c.email,
+    favorites: cleanFavorites(c.preferences),
+  }));
 
   return {
     businessName: business.name,

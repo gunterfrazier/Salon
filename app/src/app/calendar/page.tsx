@@ -10,9 +10,10 @@ export const dynamic = "force-dynamic";
 export default async function CalendarPage({ searchParams }: { searchParams: Promise<{ date?: string; view?: string }> }) {
   const sp = await searchParams;
   const ctx = await getContext();
-  const view = sp.view === "week" ? "week" : "day";
+  const view = sp.view === "week" ? "week" : sp.view === "month" ? "month" : "day";
   const day = isDateStr(sp.date) ? sp.date : todayIn(ctx.business.timezone);
-  const data = await loadCalendar(ctx, { from: view === "week" ? startOfWeek(day) : day, view });
+  const from = view === "week" ? startOfWeek(day) : view === "month" ? startOfWeek(`${day.slice(0, 8)}01`) : day;
+  const data = await loadCalendar(ctx, { from, view });
 
   return (
     <>

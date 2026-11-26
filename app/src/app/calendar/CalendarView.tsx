@@ -7,7 +7,7 @@ import { StatusChip } from "@/components/StatusChip";
 import type { CalAppointment, CalendarData } from "@/lib/data/calendar-types";
 import { reviveClientState } from "@/lib/data/clients-shared";
 import { duration, money } from "@/lib/format";
-import { addDays, formatDateTime, formatDay, formatMinutes, formatTime, formatTimeRange, parseHHMM, toHHMM, tzAbbrev, wallParts, weekday, WEEKDAY_KEYS, zonedToUtc, zoneLabel } from "@/lib/time/zone";
+import { addDays, formatDateTime, formatDay, formatMinutes, formatTime, formatTimeRange, parseHHMM, toHHMM, tzAbbrev, wallParts, weekday, WEEKDAY_KEYS, zonedToUtc, zoneLabel, isDateStr, addMonths, formatClock } from "@/lib/time/zone";
 import { clientChips, NEW_CLIENT_STATE } from "@/lib/ui/standing";
 import type { StatusKey } from "@/lib/ui/status-colors";
 
@@ -20,6 +20,7 @@ import BookingSheet from "./BookingSheet";
 import { closureForDate } from "@/lib/schedule/holidays";
 import CheckoutSheet from "./CheckoutSheet";
 import CloseSheet from "./CloseSheet";
+import FindTimeSheet, { type FindTimeStart } from "./FindTimeSheet";
 
 const SNAP = 15;
 
@@ -35,7 +36,8 @@ export default function CalendarView({ data, focusDate }: { data: CalendarData; 
   const pxPerMin = data.view === "week" ? 1 : 1.5;
   const [now, setNow] = useState<Date | null>(null);
   const [selected, setSelected] = useState<CalAppointment | null>(null);
-  const [booking, setBooking] = useState<{ date: string; time: string } | null>(null);
+  const [booking, setBooking] = useState<{ date: string; time: string; serviceIds?: string[]; clientId?: string | null } | null>(null);
+  const [finding, setFinding] = useState<FindTimeStart | null>(null);
   const [closing, setClosing] = useState<{ a: CalAppointment; kind: CloseKind } | null>(null);
   const done = () => {
     setClosing(null);
@@ -71,13 +73,16 @@ export default function CalendarView({ data, focusDate }: { data: CalendarData; 
   const height = (endMin - startMin) * pxPerMin;
   const hoursMarks = Array.from({ length: (endMin - startMin) / 60 + 1 }, (_, i) => startMin + i * 60);
 
-  const prevDate = addDays(data.from, -data.days);
-  const nextDate = addDays(data.from, data.days);
+  const monthFirst = `${focusDate.slice(0, 8)}01`;
+  const prevDate = data.view === "month" ? addMonths(monthFirst, -1) : addDays(data.from, -data.days);
+  const nextDate = data.view === "month" ? addMonths(monthFirst, 1) : addDays(data.from, data.days);
   const href = (date: string, view = data.view) => `/calendar?view=${view}&date=${date}`;
   const title =
     data.view === "day"
       ? formatDay(data.from, { weekday: "long", month: "long", day: "numeric", year: "numeric" })
-      : `${formatDay(dates[0], { month: "short", day: "numeric" })} – ${formatDay(dates[6], { month: "short", day: "numeric", year: "numeric" })}`;
+      : data.view === "month"
+        ? formatDay(monthFirst, { month: "long", year: "numeric" })
+        : `${formatDay(dates[0], { month: "short", day: "numeric" })} – ${formatDay(dates[6], { month: "short", day: "numeric", year: "numeric" })}`;
 
   const chipsFor = (a: CalAppointment): Chip[] => {
     const st = data.clientStates[a.clientId];
@@ -104,9 +109,9 @@ export default function CalendarView({ data, focusDate }: { data: CalendarData; 
             <span className="block text-xs font-normal text-muted">{zoneLabel(tz, zonedToUtc(dates[0], 12 * 60, tz))}</span>
           </h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex rounded-lg border border-line bg-surface p-0.5 text-sm" role="group" aria-label="View">
-            {(["day", "week"] as const).map((v) => (
+            {(["day", "week", "month"] as const).map((v) => (
               <Link
                 key={v}
                 href={href(focusDate, v)}
@@ -117,6 +122,20 @@ export default function CalendarView({ data, focusDate }: { data: CalendarData; 
               </Link>
             ))}
           </div>
+          <label className="flex items-center gap-1 rounded-lg border border-line bg-surface px-2 py-1 text-sm">
+            <span className="sr-only sm:not-sr-only">Go to</span>
+            <input
+              type="date"
+              defaultValue={focusDate}
+              key={focusDate}
+              onChange={(e) => isDateStr(e.target.value) && router.push(href(e.target.value, data.view === "week" ? "week" : data.view === "month" ? "month" : "day"))}
+              className="bg-transparent py-1"
+              aria-label="Go to date"
+            />
+          </label>
+          <button type="button" onClick={() => setFinding({})} className="rounded-lg border border-line bg-surface px-3 py-2 text-sm font-semibold">
+            Find a time
+          </button>
           <button
             type="button"
             onClick={() => setBooking({ date: data.view === "day" ? data.from : focusDate, time: "" })}
@@ -127,6 +146,9 @@ export default function CalendarView({ data, focusDate }: { data: CalendarData; 
         </div>
       </div>
 
+      {data.view === "month" ? (
+        <MonthGrid data={data} dates={dates} monthFirst={monthFirst} href={href} />
+      ) : (
       <div className="mt-4 overflow-x-auto rounded-xl border border-line bg-surface">
         <div className={data.view === "week" ? "min-w-[760px]" : ""}>
           {/* Day headers */}
@@ -223,20 +245,53 @@ export default function CalendarView({ data, focusDate }: { data: CalendarData; 
         </div>
       </div>
 
+      )}
+
       <p className="mt-2 text-xs text-muted">
-        Tap an empty time to book it. <span className="processing-stripes inline-block h-3 w-6 rounded align-middle" /> striped = processing time, open for a short service.
+        {data.view === "month" ? (
+          "Tap a day to open it."
+        ) : (
+          <>
+            Tap an empty time to book it. <span className="processing-stripes inline-block h-3 w-6 rounded align-middle" /> striped = processing time, open for a short service.
+          </>
+        )}
       </p>
 
       {selected && !closing && (
         <AppointmentDetails a={selected} tz={tz} chips={chipsFor(selected)} data={data} now={now} onClose={() => setSelected(null)} onAction={(kind) => setClosing({ a: selected, kind })} onDepositDone={done} />
       )}
-      {closing?.kind === "checkout" && <CheckoutSheet a={closing.a} data={data} onClose={() => setClosing(null)} onDone={done} />}
+      {closing?.kind === "checkout" && (
+        <CheckoutSheet
+          a={closing.a}
+          data={data}
+          onClose={() => setClosing(null)}
+          onDone={() => {
+            const a = closing.a;
+            done();
+            // Offer to book the next visit right away, same services and client.
+            setFinding({ title: `Book ${a.clientName}'s next visit`, serviceIds: a.services.map((s) => s.serviceId), clientId: a.clientId, rebook: true });
+          }}
+        />
+      )}
+      {finding && (
+        <FindTimeSheet
+          data={data}
+          start={finding}
+          onClose={() => setFinding(null)}
+          onPick={(p) => {
+            setFinding(null);
+            setBooking({ date: p.date, time: p.time, serviceIds: p.serviceIds, clientId: p.clientId });
+          }}
+        />
+      )}
       {closing && closing.kind !== "checkout" && <CloseSheet a={closing.a} data={data} mode={closing.kind} onClose={() => setClosing(null)} onDone={done} />}
       {booking && (
         <BookingSheet
           data={data}
           initialDate={booking.date}
           initialTime={booking.time}
+          initialServiceIds={booking.serviceIds}
+          initialClientId={booking.clientId}
           onClose={() => setBooking(null)}
           onSaved={() => {
             setBooking(null);
@@ -429,6 +484,43 @@ function AppointmentDetails({
         ) : (
           <p className="mt-4 rounded-lg bg-background px-3 py-2 text-sm font-semibold">{STATUS_LABEL[a.status] ?? a.status}</p>
         )}
+      </div>
+    </div>
+  );
+}
+
+function MonthGrid({ data, dates, monthFirst, href }: { data: CalendarData; dates: string[]; monthFirst: string; href: (d: string, v?: "day" | "week" | "month") => string }) {
+  const tz = data.timezone;
+  const month = monthFirst.slice(0, 7);
+  return (
+    <div className="mt-4 overflow-hidden rounded-xl border border-line bg-surface">
+      <div className="grid grid-cols-7 border-b border-line text-center text-xs font-semibold text-muted">
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => <div key={d} className="py-2">{d}</div>)}
+      </div>
+      <div className="grid grid-cols-7">
+        {dates.map((d) => {
+          const inMonth = d.startsWith(month);
+          const appts = data.appointments.filter((a) => wallParts(new Date(a.start), tz).date === d && a.status !== "cancelled");
+          const closure = closureForDate(d, tz, data.holidays, data.daysOff);
+          const closedDay = (closure && closure.kind !== "blocked_hours") || !data.hours[WEEKDAY_KEYS[weekday(d)]];
+          return (
+            <Link
+              key={d}
+              href={href(d, "day")}
+              className={`min-h-24 border-b border-r border-line p-1.5 text-left text-xs hover:bg-background ${closedDay ? "bg-closed" : ""} ${inMonth ? "" : "opacity-45"}`}
+              aria-label={`${formatDay(d, { weekday: "long", month: "long", day: "numeric" })}: ${appts.length} appointment${appts.length === 1 ? "" : "s"}${closure && closure.kind !== "blocked_hours" ? `, closed: ${closure.label}` : ""}`}
+            >
+              <span className={`inline-flex size-6 items-center justify-center rounded-full font-semibold ${d === data.today ? "bg-accent text-on-accent" : ""}`}>{Number(d.slice(8))}</span>
+              {closure && closure.kind !== "blocked_hours" && <span className="block truncate font-semibold text-red-700 dark:text-red-300">{closure.label}</span>}
+              {appts.slice(0, 3).map((a) => (
+                <span key={a.id} className="mt-0.5 block truncate">
+                  <span className="text-muted">{formatClock(new Date(a.start), tz)}</span> {a.clientName}
+                </span>
+              ))}
+              {appts.length > 3 && <span className="block text-muted">+{appts.length - 3} more</span>}
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
