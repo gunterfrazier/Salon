@@ -94,6 +94,7 @@ export const NAV: { href: string; label: string; need?: Permission | Permission[
   { href: "/app/settings/notifications", label: "Messages", need: "settings.messages" },
   { href: "/app/settings/forms", label: "Forms", need: "settings.messages" },
   { href: "/app/team", label: "Team", need: "team.manage" },
+  { href: "/app/pay", label: "Pay" },
   { href: "/app/legend", label: "Color chart" },
 ];
 

@@ -104,6 +104,13 @@ Use a second email address (a Gmail you control) as a pretend client, and a thir
 - [ ] Check out that client's blowout: tick **Use package**; the line shows "Package" and visits left go down (client profile and their home page).
 - [ ] **Reports**: gift card and package sales show under money received; gift card spending shows as "Also paid with gift cards".
 
+### Pay
+- [ ] **Pay**: set the pretend employee to Commission (e.g. 40% services, 10% retail); check out one of their visits with a tip. Their commission and tips show for this week.
+- [ ] Switch them to Booth rent ($200/week, collects their own); record $100 rent received. Rent still owed shows $100.
+- [ ] Switch to "salon collects and pays them out": pay out = their services + tips minus rent.
+- [ ] Sign in as the pretend employee: **Pay** shows only their own numbers.
+- [ ] **Download CSV** opens in a spreadsheet.
+
 ### Check-in kiosk (tablet)
 - [ ] On the tablet, sign in, Today → **Check-in kiosk**. Enter the pretend client's phone and tap **I'm here** on a same-day appointment.
 - [ ] You get a check-in alert; the calendar shows "Checked in".

@@ -43,7 +43,7 @@ Reviewed Meevo, Zenoti, Vagaro (salon page + pricing), Booksy's buyer's guide, a
 2. Card on file, no-show/late fees charged automatically (Booksy's top point). With Stripe.
 3. **Done (Nov 26):** Digital forms: intake, color consultation, patch-test/consent, signed on a phone or the kiosk (Vagaro, Zenoti, Meevo). Settings → Forms; sent with bookings; shown on the client profile.
 4. **Done (Nov 26):** Gift cards and packages (prepaid visits). Memberships (monthly billing) wait for Stripe.
-5. Commissions, tips by stylist, booth rent collection (Vagaro, Zenoti). Decide how booth renters take payments before Stripe.
+5. **Done (Nov 26):** Pay page: commission (% of services and retail) plus tips, booth rent (weekly/monthly, renter collects their own or the salon pays them out minus rent), rent received, CSV. Each person sees their own; the owner sees everyone. Hourly pay/time clock not built.
 6. Reputation: review requests + private feedback (already in Phase E).
 7. Book from Instagram/Google/Facebook (Zenoti); Reserve with Google later.
 8. Later: AI receptionist / missed-call text-back (Meevo, Zenoti, Vagaro all lead with it).
