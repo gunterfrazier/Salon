@@ -10,13 +10,15 @@ import { paymentRequest } from "@/lib/payments/methods";
 import { depositMethods, mergeMethods } from "@/lib/payments/settings";
 import { policyText, policyVersion } from "@/lib/policy/text";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { formatDay, formatTime, isDateStr, parseHHMM, todayIn, toHHMM, zonedToUtc } from "@/lib/time/zone";
-import { cleanFavorites, type Opening, type SearchCriteria } from "@/lib/booking/search";
+import { addDays, formatDay, formatTime, isDateStr, parseHHMM, todayIn, toHHMM, zonedToUtc } from "@/lib/time/zone";
+import { blockRange, cleanFavorites, type Opening, type SearchCriteria } from "@/lib/booking/search";
 import { hoursFor, whoOffers, type Stylist } from "@/lib/staff/stylists";
 import type { BookableService } from "@/lib/booking/build";
 import type { PublicBusiness, PublicService } from "@/lib/data/public-booking";
 import { salonOpenings } from "@/lib/discovery/openings";
-import { notifyAppointment } from "@/lib/notify/events";
+import { notifyAppointment, notifyStaff } from "@/lib/notify/events";
+import { cleanEntry } from "@/lib/data/waitlist";
+import { describeWindow } from "@/lib/waitlist/match";
 import { whoAmI } from "@/lib/auth/whoami";
 
 import { NEW_CLIENT_STATE } from "@/lib/ui/standing";
@@ -243,4 +245,71 @@ export async function findPublicOpenings(salon: string, serviceIds: string[], cr
   if (!eligible(b, serviceIds, staffId).length) return { ok: false, error: "No one offers all of these services. Try fewer services or another stylist." };
   const openings = await salonOpenings(b, services as PublicService[], criteria, staffId);
   return { ok: true, openings };
+}
+
+export interface WaitlistJoinRequest {
+  salon: string;
+  serviceIds: string[];
+  staffId?: string | null;
+  weekdays: number[];
+  block: SearchCriteria["block"];
+  weeks: number;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+  notes: string;
+  textOk?: boolean;
+  website?: string;
+}
+
+/** "Join the waitlist" from online booking. */
+export async function joinWaitlistOnline(req: WaitlistJoinRequest): Promise<{ ok: true; summary: string } | { ok: false; error: string }> {
+  if (req.website) return { ok: false, error: "Something went wrong. Please try again." };
+  const b = await loadPublicBusiness({ slug: req.salon });
+  if (!b) return { ok: false, error: "Online booking isn't open yet." };
+  const firstName = clean(req.firstName, 100);
+  const lastName = clean(req.lastName, 100);
+  const email = clean(req.email, 200)?.toLowerCase() ?? null;
+  const phone = clean(req.phone, 40);
+  if (!firstName || !lastName) return { ok: false, error: "Enter your first and last name." };
+  if (!phone || phoneKey(phone).length < 10) return { ok: false, error: "Enter your mobile number." };
+  if (email && !EMAIL.test(email)) return { ok: false, error: "That email doesn't look right." };
+  if (!req.textOk && !email) return { ok: false, error: "Tick “Text me” or add your email so we can let you know." };
+  const services = await servicesFor(b.id, req.serviceIds);
+  if (!services) return { ok: false, error: "Pick your services again." };
+  const staffId = req.staffId && req.staffId !== "any" ? req.staffId : null;
+  if (!eligible(b, req.serviceIds, staffId).length) return { ok: false, error: "No one offers all of those services together." };
+  const weeks = [1, 2, 4, 6, 8].includes(req.weeks) ? req.weeks : 4;
+  const [timeFrom, timeTo] = blockRange(req.block);
+  const today = todayIn(b.timezone);
+  const c = cleanEntry({ serviceIds: req.serviceIds, weekdays: req.weekdays, timeFrom, timeTo, dateFrom: today, dateTo: addDays(today, weeks * 7), note: req.notes }, today);
+  if (!c.ok) return c;
+
+  const admin = createAdminClient();
+  const { data: candidates } = await admin.from("clients").select("id,phone,email").eq("business_id", b.id).limit(10000);
+  const key = phoneKey(phone);
+  const match = (candidates ?? []).find((x) => phoneKey(x.phone) === key) ?? (email ? (candidates ?? []).find((x) => (x.email ?? "").toLowerCase() === email) : undefined);
+  let clientId = match?.id as string | undefined;
+  if (!clientId) {
+    const { data, error } = await admin.from("clients").insert({ business_id: b.id, first_name: firstName, last_name: lastName, phone, email, source: "online", sms_opt_in: req.textOk === true }).select("id").single();
+    if (error) return { ok: false, error: "Couldn't save your details. Please try again." };
+    clientId = data.id as string;
+  } else {
+    const patch: Record<string, unknown> = {};
+    if (email && !match?.email) patch.email = email;
+    if (req.textOk === true) patch.sms_opt_in = true;
+    if (Object.keys(patch).length) await admin.from("clients").update(patch).eq("id", clientId);
+  }
+
+  const { count } = await admin.from("waitlist").select("id", { count: "exact", head: true }).eq("business_id", b.id).eq("client_id", clientId).eq("status", "active");
+  if ((count ?? 0) >= 3) return { ok: false, error: "You're already on the waitlist three times here. Contact the salon to change it." };
+  const { error } = await admin.from("waitlist").insert({ business_id: b.id, client_id: clientId, staff_id: staffId, source: "online", ...c.v });
+  if (error) return { ok: false, error: "Couldn't add you to the waitlist. Please try again." };
+
+  const window = describeWindow({ weekdays: c.v.weekdays, timeFrom: c.v.time_from, timeTo: c.v.time_to, dateFrom: c.v.date_from, dateTo: c.v.date_to });
+  const what = services.map((s) => s.name).join(" + ");
+  const who = staffId ? b.stylists.find((s) => s.id === staffId)?.name : null;
+  await notifyStaff(b.id, staffId, "stylistWaitlist", `${firstName} ${lastName} joined the waitlist: ${what}${who ? ` with ${who}` : ""} · ${window}.`, `waitlist-joined:${clientId}:${c.v.date_from}:${c.v.service_ids.join(",")}`, (s) => s.stylist.waitlistJoined?.enabled !== false);
+  return { ok: true, summary: `${what}${who ? ` with ${who}` : ""} · ${window}` };
 }

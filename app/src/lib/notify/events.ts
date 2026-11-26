@@ -96,3 +96,20 @@ export async function notifyAppointment(businessId: string, appointmentId: strin
     console.error(`[messages] ${event} ${appointmentId}: ${(e as Error).message}`);
   }
 }
+
+/** An alert to a stylist (or the owner) that isn't about one appointment. Never throws. */
+export async function notifyStaff(businessId: string, staffId: string | null, template: string, body: string, key: string, toggle: (s: Awaited<ReturnType<typeof loadBusinesses>>[number]["settings"]) => boolean): Promise<void> {
+  try {
+    const db = createAdminClient();
+    const [b] = await loadBusinesses(db, siteUrl(), businessId);
+    if (!b || !toggle(b.settings)) return;
+    const now = new Date();
+    const row = stylistRow({ salon: b.salon, staff: contactFor(b, staffId), template, body, apptId: null, key, sendAfter: now });
+    const { data: inserted, error } = await db.from("messages").upsert([row], { onConflict: "business_id,dedupe_key,channel", ignoreDuplicates: true }).select("id");
+    if (error) throw new Error(error.message);
+    const ids = (inserted ?? []).map((r) => r.id as string);
+    if (ids.length) await deliverQueued(db, configuredSender(), now, new Map([[b.salon.id, b.salon.name]]), ids);
+  } catch (e) {
+    console.error(`[messages] ${template}: ${(e as Error).message}`);
+  }
+}

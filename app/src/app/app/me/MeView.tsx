@@ -5,7 +5,7 @@ import { useEffect, useState, useTransition } from "react";
 import type { PortalAppt, PortalData } from "@/lib/data/portal";
 import { money } from "@/lib/format";
 import { formatDay, formatMinutes, formatTimeRange, parseHHMM, tzAbbrev, wallParts, zoneLabel, zonedToUtc } from "@/lib/time/zone";
-import { myOpenings, portalCancel, portalMove, portalMoveOptions, portalUpdateContact, savePreferences, type Level } from "./actions";
+import { leaveWaitlist, myOpenings, portalCancel, portalMove, portalMoveOptions, portalUpdateContact, savePreferences, type Level } from "./actions";
 import { OpeningsCard } from "@/app/find/FindView";
 import type { SalonResult } from "@/lib/discovery/openings";
 import type { CustomerHome } from "@/lib/data/customer";
@@ -15,7 +15,7 @@ const btn = "rounded-lg border border-line px-3 py-2 text-sm disabled:opacity-50
 const primary = "rounded-lg bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-50";
 
 /** The customer's own page: every salon they use, upcoming visits, balances, history and preferences. */
-export default function MeView({ me, salons }: { me: CustomerHome; salons: PortalData[] }) {
+export default function MeView({ me, salons, waiting = [] }: { me: CustomerHome; salons: PortalData[]; waiting?: Waiting[] }) {
   const upcoming = salons.flatMap((d) => d.upcoming.map((a) => ({ a, d }))).sort((x, y) => x.a.start.localeCompare(y.a.start));
   const past = salons.flatMap((d) => d.past.map((p) => ({ p, d }))).sort((x, y) => y.p.start.localeCompare(x.p.start)).slice(0, 20);
   const owed = salons.filter((d) => d.balance > 0);
@@ -67,6 +67,13 @@ export default function MeView({ me, salons }: { me: CustomerHome; salons: Porta
           ))}
         </section>
 
+        {waiting.length > 0 && (
+          <section className="space-y-3">
+            <h2 className="text-lg font-semibold">On the waitlist</h2>
+            {waiting.map((w) => <WaitingCard key={w.id} w={w} many={many} />)}
+          </section>
+        )}
+
         <OpeningsForYou me={me} />
 
         <Preferences me={me} />
@@ -100,6 +107,36 @@ export default function MeView({ me, salons }: { me: CustomerHome; salons: Porta
 }
 
 /** Openings with my stylist → anyone at my salon → salons near me. */
+type Waiting = { id: string; salon: string; what: string; window: string };
+
+function WaitingCard({ w, many }: { w: Waiting; many: boolean }) {
+  const [gone, setGone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  if (gone) return <p className={`${card} text-sm`}>Removed from the waitlist.</p>;
+  return (
+    <article className={card}>
+      <p className="font-semibold">{w.what}{many && w.salon ? ` · ${w.salon}` : ""}</p>
+      <p className="text-sm text-muted">{w.window}</p>
+      <p className="mt-1 text-sm text-muted">We&rsquo;ll let you know when a matching time opens.</p>
+      <button
+        className={`${btn} mt-2`}
+        disabled={pending}
+        onClick={() =>
+          start(async () => {
+            const r = await leaveWaitlist(w.id);
+            if (r.ok) setGone(true);
+            else setError(r.error);
+          })
+        }
+      >
+        {pending ? "Removing…" : "Leave the waitlist"}
+      </button>
+      {error && <p role="alert" className="mt-1 text-sm text-red-700 dark:text-red-300">{error}</p>}
+    </article>
+  );
+}
+
 function OpeningsForYou({ me }: { me: CustomerHome }) {
   const levels = ([
     me.preferredStylistId ? ["stylist", `With ${me.preferredSalon?.stylists.find((s) => s.id === me.preferredStylistId)?.name.split(" ")[0] ?? "my stylist"}`] : null,

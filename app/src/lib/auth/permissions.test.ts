@@ -25,7 +25,7 @@ describe("permissions", () => {
 
   it("shows only allowed menu items", () => {
     const labels = navFor(permissionsFor("stylist", {})).map((n) => n.label);
-    expect(labels).toEqual(["Today", "Calendar", "Clients", "Inventory", "Sell", "Color chart"]);
+    expect(labels).toEqual(["Today", "Calendar", "Waitlist", "Clients", "Inventory", "Sell", "Color chart"]);
     expect(navFor(permissionsFor("owner", {})).map((n) => n.label)).toContain("Team");
   });
 });

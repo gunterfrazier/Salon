@@ -12,7 +12,7 @@ import type { BundleRule } from "@/lib/pricing/discounts";
 import { suggestOrder } from "@/lib/schedule/plan";
 import { formatDay, formatSlot, parseHHMM, toHHMM, tzAbbrev, WEEKDAY_KEYS, zonedToUtc, zoneLabel } from "@/lib/time/zone";
 import { NEW_CLIENT_STATE } from "@/lib/ui/standing";
-import { findPublicOpenings, getTimes, submitOnlineBooking, type OnlineBookingResult } from "./actions";
+import { findPublicOpenings, getTimes, joinWaitlistOnline, submitOnlineBooking, type OnlineBookingResult } from "./actions";
 
 const FAV_KEY = "chairvana.favorites.v1";
 function readFavorites(): Favorites | null {
@@ -63,6 +63,10 @@ export default function BookingWizard({
   const [f, setF] = useState({ firstName: prefill?.firstName ?? "", lastName: prefill?.lastName ?? "", phone: prefill?.phone ?? "", email: prefill?.email ?? "", notes: "", website: "" });
   const [agreed, setAgreed] = useState(false);
   const [textOk, setTextOk] = useState(false);
+  /** Joining the waitlist instead of booking a time. */
+  const [waiting, setWaiting] = useState(false);
+  const [waitWeeks, setWaitWeeks] = useState(4);
+  const [joined, setJoined] = useState<string | null>(null);
   const [criteria, setCriteria] = useState<SearchCriteria>({ weekdays: [], block: "any", start: { kind: "next" } });
   const [openings, setOpenings] = useState<Opening[] | null>(null);
   const [searching, startSearching] = useTransition();
@@ -187,12 +191,34 @@ export default function BookingWizard({
     });
   }
 
+  function joinWait() {
+    setError(null);
+    startSaving(async () => {
+      const r = await joinWaitlistOnline({ salon, serviceIds: ordered.map((s) => s.id), staffId, weekdays: criteria.weekdays, block: criteria.block, weeks: waitWeeks, ...f, textOk });
+      if (r.ok) setJoined(r.summary);
+      else setError(r.error);
+    });
+  }
+
   const header = (
     <header className="mb-5">
       <p className="text-sm text-muted">Book online</p>
       <h1 className="text-2xl font-bold">{business.name}</h1>
     </header>
   );
+
+  if (joined) {
+    return (
+      <main className="mx-auto max-w-lg px-4 py-8">
+        {header}
+        <section className="rounded-2xl border border-line bg-surface p-5" role="status">
+          <h2 className="text-xl font-bold">You&rsquo;re on the waitlist</h2>
+          <p className="mt-2">{joined}</p>
+          <p className="mt-2 text-muted">When a matching time opens, we&rsquo;ll {textOk ? "text" : "email"} you a link to book it. The first person to book gets the time, so book quickly if it works for you.</p>
+        </section>
+      </main>
+    );
+  }
 
   if (done) {
     return (
@@ -331,6 +357,22 @@ export default function BookingWizard({
             {!searching && openings && openings.length === 0 && <p className="text-sm text-muted">No openings match. Try more days or a wider time.</p>}
             {!searching && openings && openings.length > 0 && openingsList(openings)}
           </div>
+          {!searching && openings && ordered.length > 0 && !addOnOnly && (
+            <div className="rounded-xl border border-dashed border-line p-3 text-sm">
+              <p className="font-semibold">Nothing that works?</p>
+              <p className="text-muted">Join the waitlist. We&rsquo;ll text or email you when a time opens on the days and times picked above.</p>
+              <button
+                onClick={() => {
+                  setWaiting(true);
+                  setError(null);
+                  setStep("details");
+                }}
+                className="mt-2 rounded-lg border border-line px-3 py-2 font-semibold hover:bg-background"
+              >
+                Join the waitlist
+              </button>
+            </div>
+          )}
         </section>
       )}
 
@@ -377,12 +419,33 @@ export default function BookingWizard({
         </section>
       )}
 
-      {step === "details" && date && time && (
+      {step === "details" && waiting && (
+        <section className="mb-4 space-y-2 rounded-xl bg-surface p-4 text-sm">
+          <p className="font-semibold">Waitlist: {ordered.map((s) => s.name).join(" + ")}</p>
+          <p className="text-muted">
+            {criteria.weekdays.length ? criteria.weekdays.map((d) => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d]).join(", ") : "Any day"}
+            {" · "}
+            {criteria.block === "any" ? "any time" : typeof criteria.block === "string" ? `${criteria.block}s` : "your times"}
+            {stylists.length > 1 ? ` · ${staffId === "any" ? "anyone" : `with ${stylists.find((x) => x.id === staffId)?.name ?? "your stylist"}`}` : ""}
+          </p>
+          <label className="flex items-center gap-2">
+            For the next
+            <select className="rounded-lg border border-line bg-surface px-2 py-1.5" value={waitWeeks} onChange={(e) => setWaitWeeks(Number(e.target.value))}>
+              {[1, 2, 4, 6, 8].map((w) => <option key={w} value={w}>{w} week{w === 1 ? "" : "s"}</option>)}
+            </select>
+          </label>
+          <p className="text-muted">We&rsquo;ll send at most one message a day, and only when there&rsquo;s a new opening. Tick &ldquo;Text me&rdquo; below or add your email so we can reach you.</p>
+        </section>
+      )}
+
+      {step === "details" && ((date && time) || waiting) && (
         <section className="space-y-4">
+          {!waiting && date && time && (
           <div className="rounded-xl bg-surface p-4 text-sm">
             <p className="font-semibold">{formatDay(date, { weekday: "long", month: "long", day: "numeric" })} at {formatSlot(date, parseHHMM(time), business.timezone)}</p>
             <p className="text-muted">{ordered.map((s) => s.name).join(" + ")}</p>
           </div>
+          )}
           <div className="grid gap-2 sm:grid-cols-2">
             <input className={input} placeholder="First name" aria-label="First name" autoComplete="given-name" value={f.firstName} onChange={(e) => setF({ ...f, firstName: e.target.value })} />
             <input className={input} placeholder="Last name" aria-label="Last name" autoComplete="family-name" value={f.lastName} onChange={(e) => setF({ ...f, lastName: e.target.value })} />
@@ -402,6 +465,8 @@ export default function BookingWizard({
           <textarea className={input} rows={2} placeholder="Anything we should know? (optional)" aria-label="Notes" value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} />
           {/* Honeypot for bots: hidden from people and screen readers. */}
           <input tabIndex={-1} autoComplete="off" aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 opacity-0" value={f.website} onChange={(e) => setF({ ...f, website: e.target.value })} name="website" />
+          {!waiting && (
+          <>
           <div className="rounded-xl border border-line bg-surface p-4">
             <h2 className="font-semibold">Booking policy</h2>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
@@ -421,6 +486,8 @@ export default function BookingWizard({
               </span>
             </label>
           </div>
+          </>
+          )}
         </section>
       )}
 
@@ -441,7 +508,10 @@ export default function BookingWizard({
           </div>
           <div className="flex shrink-0 gap-2">
             {step !== "services" && (
-              <button className="rounded-xl px-3 py-3" onClick={() => setStep(step === "details" ? "when" : "services")}>Back</button>
+              <button className="rounded-xl px-3 py-3" onClick={() => {
+                  if (step === "details") setWaiting(false);
+                  setStep(step === "details" ? "when" : "services");
+                }}>Back</button>
             )}
             {step === "services" && (
               <button disabled={!ordered.length || addOnOnly} onClick={() => setStep("when")} className="rounded-xl bg-accent px-5 py-3 font-semibold text-on-accent disabled:opacity-40">
@@ -453,7 +523,16 @@ export default function BookingWizard({
                 Next
               </button>
             )}
-            {step === "details" && (
+            {step === "details" && waiting && (
+              <button
+                disabled={saving || !f.firstName.trim() || !f.lastName.trim() || f.phone.replace(/\D/g, "").length < 10 || (!textOk && !f.email.trim())}
+                onClick={joinWait}
+                className="rounded-xl bg-accent px-5 py-3 font-semibold text-on-accent disabled:opacity-40"
+              >
+                {saving ? "Joining…" : "Join waitlist"}
+              </button>
+            )}
+            {step === "details" && !waiting && (
               <button
                 disabled={saving || !agreed || !f.firstName.trim() || !f.lastName.trim() || f.phone.replace(/\D/g, "").length < 10}
                 onClick={submit}

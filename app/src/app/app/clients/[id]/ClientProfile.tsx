@@ -70,6 +70,7 @@ export default function ClientProfile({ data }: { data: ClientProfileData }) {
         </p>
         {chips.length > 0 && <div className="mt-2 flex flex-wrap gap-1.5">{chips.map((c, i) => <StatusChip key={i} status={c.status} text={c.text} />)}</div>}
         <p className="mt-1 text-xs text-muted">Times in {zoneLabel(tz)}</p>
+        <Link href={`/app/waitlist?client=${client.id}`} className="mt-2 inline-block rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-background">Add to waitlist</Link>
       </div>
 
       {(openBalances.length > 0 || data.refundsOwed.length > 0) && (data.can.checkout || data.can.policy) && <Money data={data} date={date} />}

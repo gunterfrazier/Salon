@@ -11,6 +11,7 @@ import { hasPushDevice, pushToStaff } from "../push/server";
 import { loadProducts } from "../data/inventory";
 import { stockLevel } from "../inventory/stock";
 import { mergeNotificationSettings, type NotificationSettings } from "./settings";
+import { waitlistOffers } from "../waitlist/run";
 
 const OPEN = ["pending", "booked", "confirmed"];
 const HORIZON_DAYS = 15;
@@ -234,6 +235,10 @@ export async function scheduleBusiness(db: SupabaseClient, b: Business, now: Dat
     out.push(...(await rebookNudges(db, b, now)));
   }
 
+  // Waitlist: close finished entries any time; offer openings outside quiet hours.
+  const quiet = afterQuiet(now, tz, s.quietHours).getTime() !== now.getTime();
+  out.push(...(await waitlistOffers(db, salon, quiet ? { ...s, client: { ...s.client, waitlist: { ...s.client.waitlist, enabled: false } } } : s, now)));
+
   await queueRows(db, out);
   return { queued: out.filter((r) => r.status === "queued").length, released };
 }
@@ -303,6 +308,7 @@ const PUSH_TITLE: Record<string, string> = {
   stylistCheckIn: "Client checked in",
   stylistClientChange: "Appointment changed by client",
   stylistTest: "Chairvana alerts are on",
+  stylistWaitlist: "New on the waitlist",
 };
 
 const SUBJECT: Record<string, string> = {
@@ -316,6 +322,7 @@ const SUBJECT: Record<string, string> = {
   receipt: "Your receipt",
   reviewRequest: "Thanks for coming in",
   rebookNudge: "Time for your next visit?",
+  waitlistOffer: "A time opened up",
 };
 
 /** Sends queued messages that are due. Each one is claimed first, so two runs can't send the same message. */

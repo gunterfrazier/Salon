@@ -82,6 +82,7 @@ export const roleLabel = (r: string) => ROLES.find((x) => x.key === r)?.label ??
 export const NAV: { href: string; label: string; need?: Permission | Permission[] }[] = [
   { href: "/app/today", label: "Today" },
   { href: "/app/calendar", label: "Calendar" },
+  { href: "/app/waitlist", label: "Waitlist", need: "booking.manage" },
   { href: "/app/clients", label: "Clients" },
   { href: "/app/reports", label: "Reports", need: "reports.view" },
   { href: "/app/inventory", label: "Inventory", need: "inventory.view" },

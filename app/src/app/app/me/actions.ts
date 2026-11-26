@@ -224,3 +224,15 @@ export async function myOpenings(level: Level, serviceText?: string): Promise<{ 
   if (level === "stylist" && !staff) return { ok: false, error: "Pick your stylist below first." };
   return { ok: true, results: await openingsAcross([{ slug: b.slug }], wanted, criteria, { [c.preferred_business_id]: staff }, 8), services: wanted };
 }
+
+/** The signed-in client leaves a waitlist entry of their own. */
+export async function leaveWaitlist(id: string): Promise<Result> {
+  const who = await whoAmI();
+  if (who.kind !== "customer" || !/^[0-9a-f-]{36}$/.test(id)) return { ok: false, error: "Sign in again." };
+  const db = createAdminClient();
+  const { data: w } = await db.from("waitlist").select("id,client_id").eq("id", id).eq("status", "active").maybeSingle();
+  if (!w || !who.links.some((l) => l.clientId === w.client_id)) return { ok: false, error: "That waitlist spot wasn't found." };
+  await db.from("waitlist").update({ status: "removed", closed_at: new Date().toISOString() }).eq("id", id);
+  revalidatePath("/app/me");
+  return { ok: true };
+}

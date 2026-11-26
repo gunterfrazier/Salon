@@ -19,6 +19,7 @@ const TEMPLATE_LABEL: Record<TemplateKey, string> = {
   receipt: "Receipt",
   reviewRequest: "Review request",
   rebookNudge: "Time to rebook",
+  waitlistOffer: "Waitlist: a time opened",
 };
 
 function Switch({ label, on, onChange }: { label: string; on: boolean; onChange: (v: boolean) => void }) {
@@ -117,6 +118,8 @@ export default function NotificationSettingsForm({ initial, salon, timezone, con
     book_link: "chairvana.app/book",
     review_link: s.client.reviewRequest.url || "(your review link)",
     weeks: s.client.rebookNudge.afterWeeks,
+    openings: "Fri, Dec 4 at 10 AM, Fri, Dec 11 at 9:30 AM",
+    waitlist_link: "chairvana.app/s/your-salon/book",
   };
 
   const reminders = [...s.client.reminders].sort((a, b) => reminderMinutes(b) - reminderMinutes(a));
@@ -194,6 +197,7 @@ export default function NotificationSettingsForm({ initial, salon, timezone, con
             ["cancel", "Appointment cancelled", "When an appointment is cancelled"],
             ["depositRequest", "Deposit request", "When a booking needs a deposit"],
             ["receipt", "Receipt", "After checkout"],
+            ["waitlist", "Waitlist offers", "When a time opens for someone on the waitlist (at most once a day each)"],
           ] as const
         ).map(([k, label, hint]) => (
           <Row key={k} label={label} hint={hint}>
@@ -234,6 +238,7 @@ export default function NotificationSettingsForm({ initial, salon, timezone, con
             ["changeOrCancel", "Client changes or cancels"],
             ["depositReceived", "Deposit marked received"],
             ["checkIn", "Client checks in at the kiosk"],
+            ["waitlistJoined", "Someone joins the waitlist online"],
           ] as const
         ).map(([k, label]) => (
           <Row key={k} label={label}>
