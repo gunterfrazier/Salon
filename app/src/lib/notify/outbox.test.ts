@@ -11,7 +11,7 @@ describe("outbox rows", () => {
   it("renders one row per channel with times in salon time", () => {
     const rows = clientRows({ salon, settings: s, to, appt, template: "reminder", channels: ["sms", "email"], key: "k1", sendAfter: new Date("2026-11-29T16:30:00Z") });
     expect(rows.map((r) => [r.channel, r.to_address, r.status])).toEqual([["sms", "(256) 555-0101", "queued"], ["email", "jamie@example.com", "queued"]]);
-    expect(rows[0].body).toBe("Hi Jamie! Reminder: All Over Color, Style at Intensity Salon on Tue, Dec 1 at 10:30 AM CST. Need to change it? https://chairvana.app/book");
+    expect(rows[0].body).toBe("Hi Jamie! Reminder: All Over Color, Style at Intensity Salon on Tue, Dec 1 at 10:30 AM CST. Need to change it? https://chairvana.app/me");
   });
 
   it("skips texts without consent or a number, with the reason", () => {

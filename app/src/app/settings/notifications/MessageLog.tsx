@@ -29,6 +29,7 @@ const LABEL: Record<string, string> = {
   stylistBeforeEach: "Next client alert",
   stylistDayPreview: "Day preview",
   stylistCheckIn: "Check-in alert",
+  stylistClientChange: "Client change alert",
 };
 
 const STATUS: Record<string, string> = { queued: "Waiting", sending: "Sending", sent: "Sent", delivered: "Delivered", failed: "Failed", skipped: "Not sent" };

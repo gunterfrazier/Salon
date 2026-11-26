@@ -3,6 +3,8 @@ import { loadClosedChecker, loadPublicBusiness, loadPublicServices } from "@/lib
 import { policyText } from "@/lib/policy/text";
 import { todayIn } from "@/lib/time/zone";
 import BookingWizard from "./BookingWizard";
+import { whoAmI } from "@/lib/auth/whoami";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +13,8 @@ export async function generateMetadata() {
   return { title: b ? `Book with ${b.name}` : "Book online" };
 }
 
-export default async function BookPage() {
+export default async function BookPage({ searchParams }: { searchParams: Promise<{ services?: string }> }) {
+  const sp = await searchParams;
   const b = await loadPublicBusiness();
   if (!b) {
     return (
@@ -21,12 +24,21 @@ export default async function BookPage() {
     );
   }
   const services = await loadPublicServices(b.id);
+  // Signed-in client? Fill in their details.
+  let prefill: { firstName: string; lastName: string; phone: string; email: string } | undefined;
+  const who = await whoAmI().catch(() => ({ kind: "signed_out" as const }));
+  if (who.kind === "client" && who.businessId === b.id) {
+    const { data: c } = await createAdminClient().from("clients").select("first_name,last_name,phone,email").eq("id", who.clientId).single();
+    if (c) prefill = { firstName: c.first_name ?? "", lastName: c.last_name ?? "", phone: c.phone ?? "", email: c.email ?? who.user.email ?? "" };
+  }
   return (
     <BookingWizard
       business={{ name: b.name, timezone: b.timezone, hours: b.hours, policy: b.policy, rules: b.rules }}
       services={services}
       dates={bookableDates(todayIn(b.timezone), b.hours, b.settings, await loadClosedChecker(b))}
       policyLines={policyText(b.policy)}
+      initialPicked={(sp.services ?? "").split(",").filter((x) => /^[0-9a-f-]{36}$/.test(x)).slice(0, 8)}
+      prefill={prefill}
     />
   );
 }

@@ -36,19 +36,23 @@ const input = "w-full rounded-xl border border-line bg-surface px-4 py-3 text-ba
 const STAGES = { consult: 0, chemical: 1, treatment: 2, cut: 3, style: 4, wax: 5, fee: 9 };
 
 export default function BookingWizard({
-  business, services, dates, policyLines,
+  business, services, dates, policyLines, initialPicked = [], prefill,
 }: {
   business: { name: string; timezone: string; hours: Hours; policy: PolicySettings; rules: BundleRule[] };
   services: PublicService[];
   dates: string[];
   policyLines: string[];
+  /** "Book again" from the client portal. */
+  initialPicked?: string[];
+  /** Signed-in client's details. */
+  prefill?: { firstName: string; lastName: string; phone: string; email: string };
 }) {
   const [step, setStep] = useState<Step>("services");
-  const [picked, setPicked] = useState<string[]>([]);
+  const [picked, setPicked] = useState<string[]>(() => initialPicked.filter((id) => services.some((s) => s.id === id)));
   const [date, setDate] = useState<string | null>(null);
   const [times, setTimes] = useState<string[] | null>(null);
   const [time, setTime] = useState<string | null>(null);
-  const [f, setF] = useState({ firstName: "", lastName: "", phone: "", email: "", notes: "", website: "" });
+  const [f, setF] = useState({ firstName: prefill?.firstName ?? "", lastName: prefill?.lastName ?? "", phone: prefill?.phone ?? "", email: prefill?.email ?? "", notes: "", website: "" });
   const [agreed, setAgreed] = useState(false);
   const [criteria, setCriteria] = useState<SearchCriteria>({ weekdays: [], block: "any", start: { kind: "next" } });
   const [openings, setOpenings] = useState<Opening[] | null>(null);

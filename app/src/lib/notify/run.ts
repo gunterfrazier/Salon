@@ -278,6 +278,7 @@ const PUSH_TITLE: Record<string, string> = {
   stylistBeforeEach: "Next client",
   stylistDayPreview: "Day preview",
   stylistCheckIn: "Client checked in",
+  stylistClientChange: "Appointment changed by client",
   stylistTest: "Chairvana alerts are on",
 };
 

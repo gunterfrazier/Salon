@@ -72,7 +72,7 @@ export function messageVars(salon: SalonInfo, s: NotificationSettings, who: { fi
     pay_link: appt?.depositDue ? payLine(salon.paymentMethods, appt.depositDue, `Deposit ${date} ${who?.firstName ?? ""}`.trim()) : "",
     hold_hours: s.depositHold.releaseAfterHours,
     book_link: `${salon.siteUrl}/book`,
-    manage_link: `${salon.siteUrl}/book`,
+    manage_link: `${salon.siteUrl}/me`,
     review_link: s.client.reviewRequest.url,
     ...extra,
   };

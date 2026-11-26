@@ -17,7 +17,7 @@ const siteUrl = () => process.env.SITE_URL ?? "https://chairvana.app";
  * happened to an appointment. Never throws: a messaging problem must not undo
  * or block a booking.
  */
-export async function notifyAppointment(businessId: string, appointmentId: string, event: AppointmentEvent, receipt?: ReceiptInfo): Promise<void> {
+export async function notifyAppointment(businessId: string, appointmentId: string, event: AppointmentEvent, receipt?: ReceiptInfo, opts: { byClient?: boolean; note?: string } = {}): Promise<void> {
   try {
     const db = createAdminClient();
     const [b] = await loadBusinesses(db, siteUrl(), businessId);
@@ -67,6 +67,12 @@ export async function notifyAppointment(businessId: string, appointmentId: strin
 
     if (event === "moved" && s.client.change.enabled) {
       client("change", s.client.change.channels, `change:${a.id}:${appt.start.toISOString()}`, afterQuiet(now, salon.timezone, s.quietHours));
+    }
+
+    // The client changed it themselves (client portal): let the stylist know.
+    if (opts.byClient && (event === "cancelled" || event === "moved") && s.stylist.changeOrCancel.enabled) {
+      const what = event === "cancelled" ? "cancelled" : "moved to";
+      rows.push(stylistRow({ salon, staff: b.staff, template: "stylistClientChange", body: `${name} ${what} ${event === "cancelled" ? `their ${when}` : when} appointment (${appt.services.join(", ")}).${opts.note ? ` ${opts.note}` : ""}`, apptId: a.id, key: `client-${event}:${a.id}:${appt.start.toISOString()}`, sendAfter: now }));
     }
 
     if (event === "checked_in" && s.stylist.checkIn.enabled) {
