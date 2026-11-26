@@ -10,10 +10,10 @@ const mono = JetBrains_Mono({ subsets: ["latin"], weight: ["400"], variable: "--
 export const metadata: Metadata = {
   metadataBase: new URL("https://chairvana.app"),
   title: { default: "Chairvana · Where your schedule finds its flow", template: "%s · Chairvana" },
-  description: "Salon management and booking for salon owners and independent stylists: online booking, reminders, client records, color formulas, inventory and reports.",
+  description: "Where your schedule finds its flow. Salon management and booking for salon owners and independent stylists: online booking, reminders, client records, color formulas, inventory and reports.",
   applicationName: "Chairvana",
   icons: { icon: "/favicon.ico", apple: "/apple-touch-icon.png" },
-  openGraph: { type: "website", siteName: "Chairvana", title: "Chairvana · Where your schedule finds its flow", description: "Calm, beautiful salon booking and management.", images: [{ url: "/brand/og.png", width: 1200, height: 630, alt: "Chairvana" }] },
+  openGraph: { type: "website", siteName: "Chairvana", title: "Chairvana · Where your schedule finds its flow", description: "Where your schedule finds its flow. Salon booking and management for owners, stylists and their clients.", images: [{ url: "/brand/og.png", width: 1200, height: 630, alt: "Chairvana" }] },
 };
 
 export const viewport: Viewport = {

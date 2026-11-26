@@ -5,7 +5,7 @@ import TideMark from "@/components/landing/TideMark";
 
 export const metadata = {
   title: { absolute: "Chairvana · Where your schedule finds its flow" },
-  description: "Salon booking and management for salon owners and independent stylists: online booking with deposits, reminders, waitlist, client records and color formulas, forms, gift cards, inventory, pay and reports.",
+  description: "Where your schedule finds its flow. Salon booking and management for salon owners and independent stylists: online booking with deposits, reminders, waitlist, client records and color formulas, forms, gift cards, inventory, pay and reports.",
 };
 
 const OWNER = [

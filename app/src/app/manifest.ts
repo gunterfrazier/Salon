@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Chairvana",
     short_name: "Chairvana",
-    description: "Salon calendar, clients and booking",
+    description: "Where your schedule finds its flow.",
     start_url: "/app/today",
     display: "standalone",
     background_color: "#0f0f11",
