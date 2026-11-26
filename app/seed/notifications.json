@@ -1,0 +1,37 @@
+{
+  "quietHours": { "start": "20:00", "end": "08:00" },
+  "client": {
+    "reminders": [
+      { "id": "r1", "before": { "hours": 48 }, "channels": ["sms", "email"], "enabled": true },
+      { "id": "r2", "before": { "hours": 3 }, "channels": ["sms"], "enabled": true }
+    ],
+    "confirmation": { "enabled": true, "channels": ["sms", "email"] },
+    "change": { "enabled": true, "channels": ["sms", "email"] },
+    "cancel": { "enabled": true, "channels": ["sms", "email"] },
+    "depositRequest": { "enabled": true, "channels": ["sms", "email"] },
+    "receipt": { "enabled": true, "channels": ["email"] },
+    "reviewRequest": { "enabled": false, "afterHours": 3, "channels": ["sms"], "url": "" },
+    "rebookNudge": { "enabled": false, "afterWeeks": 6, "channels": ["sms"] }
+  },
+  "stylist": {
+    "newOnlineBooking": { "enabled": true },
+    "changeOrCancel": { "enabled": true },
+    "depositReceived": { "enabled": true },
+    "dayPreview": { "enabled": true, "at": "19:30", "day": "tomorrow" },
+    "beforeEach": { "enabled": false, "minutes": 15 }
+  },
+  "depositHold": { "releaseAfterHours": 24, "remindAfterHours": 12 },
+  "templates": {
+    "reminder": "Hi {first_name}! Reminder: {services} at {salon} on {date} at {time}. Need to change it? {manage_link}",
+    "confirmation": "You're booked, {first_name}! {services} at {salon} on {date} at {time}.",
+    "change": "Hi {first_name}, your appointment at {salon} is now {date} at {time} ({services}).",
+    "cancel": "Hi {first_name}, your {date} {time} appointment at {salon} has been cancelled. Book again: {book_link}",
+    "depositRequest": "Hi {first_name}, to hold {date} at {time} please send your {deposit} deposit: {pay_link}. Unpaid holds are released after {hold_hours} hours.",
+    "depositReminder": "Hi {first_name}, we're still holding {date} at {time} for you. Please send your {deposit} deposit: {pay_link}",
+    "holdReleased": "Hi {first_name}, we didn't receive your deposit, so {date} at {time} has been released. Book again anytime: {book_link}",
+    "receipt": "Thank you, {first_name}! {salon} receipt for {date}: {services}. Total {total}.",
+    "reviewRequest": "Thanks for coming in, {first_name}! If you loved your visit, a quick review means a lot: {review_link}",
+    "rebookNudge": "Hi {first_name}, it's been {weeks} weeks since your last visit at {salon}. Ready for your next one? {book_link}"
+  },
+  "footer": "Reply STOP to opt out."
+}
