@@ -10,6 +10,7 @@ import { fullName, money } from "@/lib/format";
 import { formatDateTime, zoneLabel } from "@/lib/time/zone";
 import { clientChips } from "@/lib/ui/standing";
 import { shrinkImage } from "@/lib/ui/resize";
+import { containersUsed, usageLabel } from "@/lib/inventory/stock";
 import { addFormula, deleteFormula, markRefundReturned, saveFavorites, setDepositRule, settleBalance, updateClientRecord, updateFlag } from "../actions";
 import { TIME_BLOCKS, type Favorites, type TimeBlock } from "@/lib/booking/search";
 
@@ -268,6 +269,7 @@ function Formulas({ data, date }: { data: ClientProfileData; date: DateFn }) {
   const [f, setF] = useState({ formula: "", developer: "", processing: "", notes: "" });
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
+  const [usage, setUsage] = useState<UsageRow[]>([]);
 
   async function save() {
     setBusy(true);
@@ -276,10 +278,12 @@ function Formulas({ data, date }: { data: ClientProfileData; date: DateFn }) {
       const form = new FormData();
       Object.entries(f).forEach(([k, v]) => form.set(k, v));
       shrunk.forEach((x) => form.append("photos", x));
+      form.set("usage", JSON.stringify(usage.filter((u) => u.productId && Number(u.amount) > 0).map((u) => ({ productId: u.productId, amount: Number(u.amount), unit: u.unit }))));
       run(() => addFormula(data.client.id, form), () => {
         setAdding(false);
         setF({ formula: "", developer: "", processing: "", notes: "" });
         setFiles([]);
+        setUsage([]);
       });
     } finally {
       setBusy(false);
@@ -300,6 +304,7 @@ function Formulas({ data, date }: { data: ClientProfileData; date: DateFn }) {
             <input className={input} type="number" min={0} placeholder="Processing minutes" aria-label="Processing minutes" value={f.processing} onChange={(e) => setF({ ...f, processing: e.target.value })} />
           </div>
           <textarea className={input} rows={2} placeholder="Notes (result, what to change next time)" aria-label="Formula notes" value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} />
+          <UsageEditor products={data.products} rows={usage} onChange={setUsage} />
           <label className="block text-sm">
             <span className="font-semibold">Photos</span> <span className="text-muted">(before / after, up to 6)</span>
             <input type="file" accept="image/*" multiple className="mt-1 block w-full text-sm" onChange={(e) => setFiles(Array.from(e.target.files ?? []).slice(0, 6))} aria-label="Photos" />
@@ -327,6 +332,11 @@ function Formulas({ data, date }: { data: ClientProfileData; date: DateFn }) {
             <p className="mt-1 whitespace-pre-wrap font-semibold">{x.formula}</p>
             <p className="text-muted">{[x.developer, x.processingMin !== null ? `${x.processingMin} min` : null].filter(Boolean).join(" · ")}</p>
             {x.notes && <p className="mt-1 whitespace-pre-wrap">{x.notes}</p>}
+            {x.usage.length > 0 && (
+              <p className="mt-1 text-muted">
+                Used: {x.usage.map((u) => `${u.label}${u.amount !== null && u.unit && u.unit !== "container" ? ` ${u.amount} ${u.unit}` : ""} (${usageLabel(u.containers, u.kind)})`).join("; ")}
+              </p>
+            )}
             {x.photos.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-2">
                 {x.photos.map((p) =>
@@ -421,5 +431,54 @@ function FavoritesCard({ data }: { data: ClientProfileData }) {
         </div>
       )}
     </section>
+  );
+}
+
+interface UsageRow {
+  key: number;
+  productId: string;
+  amount: string;
+  unit: "oz" | "ml" | "g" | "each" | "container";
+}
+
+const small = "rounded-lg border border-line bg-background px-3 py-2 text-base";
+
+/** "Products used" lines on a formula: product + amount; the stock goes down when saved. */
+function UsageEditor({ products, rows, onChange }: { products: ClientProfileData["products"]; rows: UsageRow[]; onChange: (r: UsageRow[]) => void }) {
+  const update = (key: number, patch: Partial<UsageRow>) => onChange(rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+  if (products.length === 0) {
+    return <p className="text-xs text-muted">Add your color to Inventory to record how much each formula uses.</p>;
+  }
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-semibold">Products used <span className="font-normal text-muted">(taken out of inventory)</span></p>
+      {rows.map((r) => {
+        const p = products.find((x) => x.id === r.productId);
+        const share = p && Number(r.amount) > 0 ? containersUsed(Number(r.amount), r.unit, p) : null;
+        return (
+          <div key={r.key} className="space-y-1 rounded-lg border border-line p-2">
+            <select className={input} value={r.productId} onChange={(e) => update(r.key, { productId: e.target.value, unit: products.find((x) => x.id === e.target.value)?.unit ?? "oz" })} aria-label="Product">
+              <option value="">Pick a product…</option>
+              {products.map((x) => (
+                <option key={x.id} value={x.id}>{x.label}</option>
+              ))}
+            </select>
+            <div className="flex flex-wrap items-center gap-2">
+              <input className={small} inputMode="decimal" placeholder="Amount" value={r.amount} onChange={(e) => update(r.key, { amount: e.target.value })} aria-label="Amount used" size={6} />
+              <select className={small} value={r.unit} onChange={(e) => update(r.key, { unit: e.target.value as UsageRow["unit"] })} aria-label="Unit">
+                <option value="oz">oz</option>
+                <option value="g">g</option>
+                <option value="ml">ml</option>
+                <option value="container">{p?.kind === "developer" ? "bottles" : "tubes"}</option>
+              </select>
+              {share !== null && <span className="text-sm text-muted">= {usageLabel(share, p?.kind)}</span>}
+              {p && share === null && Number(r.amount) > 0 && r.unit !== "container" && <span className="text-xs text-muted">Set this product&apos;s size in Inventory, or use tubes</span>}
+              <button type="button" className="ml-auto text-xs underline" onClick={() => onChange(rows.filter((x) => x.key !== r.key))}>Remove</button>
+            </div>
+          </div>
+        );
+      })}
+      <button type="button" className={btn} onClick={() => onChange([...rows, { key: Date.now(), productId: "", amount: "", unit: "oz" }])}>+ Product used</button>
+    </div>
   );
 }

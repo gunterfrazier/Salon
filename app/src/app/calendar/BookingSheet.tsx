@@ -9,7 +9,7 @@ import { duration, fullName, money } from "@/lib/format";
 import { suggestOrder } from "@/lib/schedule/plan";
 import { formatDay, formatSlot, formatTimeRange, isDateStr, parseHHMM, tzAbbrev, weekday, WEEKDAY_KEYS, zonedToUtc } from "@/lib/time/zone";
 import { clientChips, NEW_CLIENT_STATE } from "@/lib/ui/standing";
-import { createAppointment, fetchClientState } from "./actions";
+import { createAppointment, fetchClientState, supplyFor } from "./actions";
 import { blockedDuring, closureForDate } from "@/lib/schedule/holidays";
 
 const input = "w-full rounded-lg border border-line bg-background px-3 py-2.5 text-base";
@@ -67,8 +67,15 @@ export default function BookingSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const [supply, setSupply] = useState<string[]>([]);
+  useEffect(() => {
+    if (initialClientId) supplyFor(initialClientId).then(setSupply);
+  }, [initialClientId]);
+
   async function pickClient(id: string) {
     setClientId(id);
+    setSupply([]);
+    supplyFor(id).then(setSupply);
     setClientState(data.clientStates[id] ?? null);
     if (!data.clientStates[id]) setClientState(await fetchClientState(id));
   }
@@ -224,6 +231,14 @@ export default function BookingSheet({
               </div>
             )}
             {standingChips.length > 0 && <div className="flex flex-wrap gap-1.5">{standingChips.map((c, i) => <StatusChip key={i} status={c.status} text={"text" in c ? c.text : undefined} />)}</div>}
+            {mode === "existing" && supply.length > 0 && (
+              <div role="note" className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
+                <p className="font-semibold">Check your color stock</p>
+                <ul className="mt-1 list-disc pl-5">
+                  {supply.map((w) => <li key={w}>{w}</li>)}
+                </ul>
+              </div>
+            )}
           </section>
 
           {/* Services */}

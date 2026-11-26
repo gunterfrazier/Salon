@@ -5,6 +5,11 @@ _Updated 2026-11-26_
 ## Built so far
 Calendar (day/week/month, go-to-date, Find a time), stylist booking with stacked services, deposits, flags and policy rules, check-out / cancel / no-show, clients (profiles, favorites, formulas with private photos, balances), StyleSeat import, online booking with search and remembered favorites, holiday schedule and days off, time zones everywhere, payment settings. Hosting: Cloudflare Workers at chairvana.app; database: Supabase.
 
+## Progress (Nov 26)
+- **A. Notifications & messaging: built.** Today agenda; Messages settings (reminder times, quiet hours, wording); outbox + 5-minute scheduler; deposit-hold reminders/release; receipts, review requests, rebook nudges; moving appointments with change notices; push alerts to the stylist's devices. Texts/email switch on when Twilio/Resend keys are added in Cloudflare.
+- **B. Reporting: built.** Ranges with comparisons, money by type/method, visits, rates, clients, services, busiest times, CSV downloads.
+- **C. Inventory: built (first pass).** Products from the Kenra/Redken catalog or by hand, counts, received, min/max, reorder lists by supplier, barcode scanning, usage per formula (oz/g/ml/tubes → % of a tube), supply check when booking and on Today, low stock in the day preview. Next: SalonInteractive partner inquiry for SalonCentric auto-ordering.
+
 ## Plan (in order)
 
 | Phase | What | Depends on |

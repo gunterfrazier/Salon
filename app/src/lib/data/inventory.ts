@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Product } from "../inventory/stock";
+import { lineTitle, qty, supplyCheck, usageLabel, type Product } from "../inventory/stock";
 
 export const PRODUCT_COLS = "id,kind,brand,line,shade,name,size,unit,barcode,saloncentric_item,cosmoprof_item,vendor,cost_cents,price_cents,on_hand,min_qty,max_qty,archived";
 
@@ -59,4 +59,17 @@ export async function lastUsageFor(db: SupabaseClient, businessId: string, clien
   const first = data[0];
   const sameVisit = data.filter((m) => (first.formula_id ? m.formula_id === first.formula_id : first.appointment_id ? m.appointment_id === first.appointment_id : m.created_at === first.created_at));
   return { formulaId: first.formula_id, at: first.created_at, items: sameVisit.map((m) => ({ productId: m.product_id, containers: -Number(m.change) })) };
+}
+
+/**
+ * Warnings for a client's next visit: products their last formula used more of
+ * than is on hand now, e.g. "Last formula used 1.5 tubes (150%) of Kenra Color Permanent 6N; 1 on hand."
+ */
+export async function supplyWarnings(db: SupabaseClient, businessId: string, clientId: string): Promise<string[]> {
+  const last = await lastUsageFor(db, businessId, clientId);
+  if (!last?.items.length) return [];
+  const { data, error } = await db.from("products").select(PRODUCT_COLS).eq("business_id", businessId).in("id", [...new Set(last.items.map((i) => i.productId))]);
+  if (error) throw new Error(error.message);
+  const products = new Map((data ?? []).map((r) => [r.id as string, toProduct(r as Row)]));
+  return supplyCheck(last.items, products).map((w) => `Last formula used ${usageLabel(w.needed, w.product.kind)} of ${lineTitle(w.product)} ${w.product.name}; ${qty(w.product.onHand)} on hand.`);
 }

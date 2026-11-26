@@ -45,7 +45,17 @@ const profile: ClientProfileData = {
     { id: "v1", start: flagAt, status: "no_show", services: ["All Over Color"], total: 9500, paid: 0, cancelReason: "No-show" },
   ],
   formulas: [
-    { id: "x1", createdAt: "2026-11-10T21:00:00Z", formula: "Roots: 6N + 6G (1:1)\nEnds: 8V gloss", developer: "20 vol", processingMin: 35, notes: "Came out a touch warm, add more V next time.", photos: [] },
+    { id: "x1", createdAt: "2026-11-10T21:00:00Z", formula: "Roots: 6N + 6G (1:1)\nEnds: 8V gloss", developer: "20 vol", processingMin: 35, notes: "Came out a touch warm, add more V next time.", photos: [],
+      usage: [
+        { productId: "p6n", label: "Kenra Color Permanent 6N", amount: 1.5, unit: "oz", containers: 0.5, kind: "color" },
+        { productId: "p8v", label: "Redken Shades EQ Gloss 08V Iridescent Quartz", amount: 30, unit: "g", containers: 0.51, kind: "color" },
+      ] },
+  ],
+  products: [
+    { id: "00000000-0000-0000-0000-0000000000a1", label: "Kenra Color Permanent 6N", size: 3, unit: "oz", kind: "color", onHand: 2 },
+    { id: "00000000-0000-0000-0000-0000000000a2", label: "Kenra Color Permanent 6G", size: 3, unit: "oz", kind: "color", onHand: 1 },
+    { id: "00000000-0000-0000-0000-0000000000a3", label: "Redken Shades EQ Gloss 08V Iridescent Quartz", size: 2, unit: "oz", kind: "color", onHand: 3 },
+    { id: "00000000-0000-0000-0000-0000000000a4", label: "Kenra Developer 20 Volume", size: 32, unit: "oz", kind: "developer", onHand: 1 },
   ],
 };
 

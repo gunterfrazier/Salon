@@ -13,7 +13,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 /** The day at a glance: who's coming, what they're having, what's owed, and open time. */
-export default function TodayView({ agenda, today, timezone, closureLabel, basePath = "/today" }: { agenda: Agenda; today: string; timezone: string; closureLabel: string | null; basePath?: string }) {
+export default function TodayView({ agenda, today, timezone, closureLabel, basePath = "/today", supply = {} }: { agenda: Agenda; today: string; timezone: string; closureLabel: string | null; basePath?: string; supply?: Record<string, string[]> }) {
   const tz = timezone;
   const { date, items, gaps, summary } = agenda;
   const label = date === today ? "Today" : date === addDays(today, 1) ? "Tomorrow" : date === addDays(today, -1) ? "Yesterday" : formatDay(date, { weekday: "long" });
@@ -78,7 +78,7 @@ export default function TodayView({ agenda, today, timezone, closureLabel, baseP
               </Link>
             </li>
           ) : (
-            <AgendaRow key={r.i.appt.id} item={r.i} tz={tz} date={date} />
+            <AgendaRow key={r.i.appt.id} item={r.i} tz={tz} date={date} supply={supply[r.i.appt.id] ?? []} />
           ),
         )}
         {rows.length === 0 && !agenda.closed && <li className="rounded-xl border border-line bg-surface p-4 text-sm">Nothing booked yet.</li>}
@@ -96,7 +96,7 @@ function Stat({ label, value, warn }: { label: string; value: string; warn?: boo
   );
 }
 
-function AgendaRow({ item, tz, date }: { item: Agenda["items"][number]; tz: string; date: string }) {
+function AgendaRow({ item, tz, date, supply }: { item: Agenda["items"][number]; tz: string; date: string; supply: string[] }) {
   const a = item.appt;
   const start = new Date(a.start);
   const phone = a.clientPhone?.replace(/[^\d+]/g, "");
@@ -126,6 +126,9 @@ function AgendaRow({ item, tz, date }: { item: Agenda["items"][number]; tz: stri
         </div>
       )}
       {a.notes && <p className="mt-1 text-sm">Note: {a.notes}</p>}
+      {supply.map((w) => (
+        <p key={w} className="mt-1 rounded-lg bg-amber-50 px-2 py-1 text-sm text-amber-950 dark:bg-amber-950 dark:text-amber-100">Stock: {w}</p>
+      ))}
       <div className="mt-2 flex flex-wrap gap-2 text-sm">
         <Link href={`/calendar?date=${date}`} className="rounded-lg border border-line px-3 py-1.5 hover:bg-background">
           Details

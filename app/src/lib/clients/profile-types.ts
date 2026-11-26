@@ -47,5 +47,9 @@ export interface ClientProfileData {
     processingMin: number | null;
     notes: string | null;
     photos: { path: string; url: string | null }[];
+    /** Products used, from inventory. */
+    usage: { productId: string; label: string; amount: number | null; unit: string | null; containers: number; kind: string }[];
   }[];
+  /** Inventory products to pick from when recording usage. */
+  products: { id: string; label: string; size: number | null; unit: "oz" | "ml" | "g" | "each"; kind: string; onHand: number }[];
 }

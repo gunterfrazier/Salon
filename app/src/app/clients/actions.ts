@@ -3,6 +3,21 @@
 import { revalidatePath } from "next/cache";
 import { cleanFavorites } from "@/lib/booking/search";
 import { getContext } from "@/lib/context";
+import { containersUsed, type Unit } from "@/lib/inventory/stock";
+
+/** Products used, sent from the formula form as JSON: [{ productId, amount, unit }]. */
+function parseUsage(raw: FormDataEntryValue | null): { productId: string; amount: number; unit: Unit | "container" }[] | null {
+  if (!raw || typeof raw !== "string" || !raw.trim()) return [];
+  try {
+    const list = JSON.parse(raw);
+    if (!Array.isArray(list) || list.length > 12) return null;
+    const units = new Set(["oz", "ml", "g", "each", "container"]);
+    const out = list.map((u) => ({ productId: String(u?.productId ?? ""), amount: Number(u?.amount), unit: String(u?.unit) as Unit | "container" }));
+    return out.every((u) => /^[0-9a-f-]{36}$/.test(u.productId) && u.amount > 0 && u.amount < 10000 && units.has(u.unit)) ? out : null;
+  } catch {
+    return null;
+  }
+}
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string };
 const clean = (s: unknown) => (typeof s === "string" ? s.trim() : "") || null;
@@ -167,18 +182,50 @@ export async function addFormula(clientId: string, form: FormData): Promise<Resu
     paths.push(path);
   }
 
-  const { error } = await ctx.supabase.from("color_formulas").insert({
-    business_id: ctx.business.id,
-    client_id: clientId,
-    formula_text: formula,
-    developer: clean(form.get("developer")),
-    processing_min: processing,
-    notes: clean(form.get("notes")),
-    photo_paths: paths,
-  });
+  const usage = parseUsage(form.get("usage"));
+  if (usage === null) return { ok: false, error: "Check the products used: each needs a product and an amount." };
+
+  const { data: saved, error } = await ctx.supabase
+    .from("color_formulas")
+    .insert({
+      business_id: ctx.business.id,
+      client_id: clientId,
+      appointment_id: clean(form.get("appointmentId")),
+      formula_text: formula,
+      developer: clean(form.get("developer")),
+      processing_min: processing,
+      notes: clean(form.get("notes")),
+      photo_paths: paths,
+    })
+    .select("id")
+    .single();
   if (error) {
     if (paths.length) await ctx.supabase.storage.from("client-photos").remove(paths);
     return { ok: false, error: error.message };
+  }
+
+  // Take what was used out of inventory.
+  if (usage.length) {
+    const { data: prods } = await ctx.supabase.from("products").select("id,size,unit").eq("business_id", ctx.business.id).in("id", usage.map((u) => u.productId));
+    const byId = new Map((prods ?? []).map((p) => [p.id as string, { size: p.size === null ? null : Number(p.size), unit: p.unit as Unit }]));
+    const problems: string[] = [];
+    for (const u of usage) {
+      const p = byId.get(u.productId);
+      const containers = p ? containersUsed(u.amount, u.unit, p) : null;
+      if (containers === null) {
+        problems.push("a product without a size (set its size in Inventory, or enter tubes)");
+        continue;
+      }
+      const { error: moveErr } = await ctx.supabase.rpc("stock_move", {
+        p: { product_id: u.productId, reason: "used", change: -containers, amount: u.amount, unit: u.unit, client_id: clientId, formula_id: saved.id, appointment_id: clean(form.get("appointmentId")) },
+      });
+      if (moveErr) problems.push(moveErr.message);
+    }
+    if (problems.length) {
+      done(clientId);
+      return { ok: false, error: `Formula saved, but inventory wasn't updated for ${problems[0]}.` };
+    }
+    revalidatePath("/inventory");
   }
   done(clientId);
   return { ok: true };
@@ -187,6 +234,12 @@ export async function addFormula(clientId: string, form: FormData): Promise<Resu
 export async function deleteFormula(clientId: string, formulaId: string): Promise<Result> {
   const ctx = await ownClient(clientId);
   if (!ctx) return { ok: false, error: "Client not found." };
+  // Put what this formula used back into inventory.
+  const { data: used } = await ctx.supabase.from("stock_moves").select("product_id,change").eq("formula_id", formulaId).eq("reason", "used");
+  for (const m of used ?? []) {
+    await ctx.supabase.rpc("stock_move", { p: { product_id: m.product_id, reason: "adjust", change: -Number(m.change), client_id: clientId, note: "Formula deleted" } });
+  }
+  if (used?.length) revalidatePath("/inventory");
   const { data, error } = await ctx.supabase.from("color_formulas").delete().eq("id", formulaId).eq("client_id", clientId).select("photo_paths");
   if (error) return { ok: false, error: error.message };
   const paths = (data ?? []).flatMap((r) => (r.photo_paths as string[]) ?? []);

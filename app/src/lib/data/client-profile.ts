@@ -1,4 +1,6 @@
 import "server-only";
+import { loadProducts } from "./inventory";
+import { lineTitle } from "../inventory/stock";
 import type { ClientProfileData } from "../clients/profile-types";
 import type { getContext } from "../context";
 import { MANUAL_METHODS } from "./calendar";
@@ -32,6 +34,21 @@ export async function loadClientProfile(ctx: Ctx, clientId: string): Promise<Cli
     supabase.from("services").select("id,name,sort,service_categories(name,sort)").eq("business_id", business.id).eq("archived", false),
   ]);
   for (const r of [flags, balances, refunds, appts, formulas, services]) if (r.error) throw new Error(r.error.message);
+
+  // Inventory: products to pick from, and what each formula used.
+  const products = await loadProducts(supabase, business.id);
+  const byId = new Map(products.map((p) => [p.id, p]));
+  const formulaIds = (formulas.data ?? []).map((f) => f.id as string);
+  const { data: used } = formulaIds.length
+    ? await supabase.from("stock_moves").select("formula_id,product_id,change,amount,unit").eq("reason", "used").in("formula_id", formulaIds)
+    : { data: [] as { formula_id: string; product_id: string; change: number; amount: number | null; unit: string | null }[] };
+  const usage = new Map<string, ClientProfileData["formulas"][number]["usage"]>();
+  for (const m of used ?? []) {
+    const p = byId.get(m.product_id);
+    const list = usage.get(m.formula_id) ?? [];
+    list.push({ productId: m.product_id, label: p ? `${lineTitle(p)} ${p.name}` : "Removed product", amount: m.amount === null ? null : Number(m.amount), unit: m.unit, containers: -Number(m.change), kind: p?.kind ?? "color" });
+    usage.set(m.formula_id, list);
+  }
 
   // Short-lived links for private photos.
   const allPaths = (formulas.data ?? []).flatMap((f) => (f.photo_paths as string[]) ?? []);
@@ -90,6 +107,8 @@ export async function loadClientProfile(ctx: Ctx, clientId: string): Promise<Cli
       processingMin: f.processing_min,
       notes: f.notes,
       photos: ((f.photo_paths as string[]) ?? []).map((p) => ({ path: p, url: urls[p] ?? null })),
+      usage: usage.get(f.id) ?? [],
     })),
+    products: products.map((p) => ({ id: p.id, label: `${lineTitle(p)} ${p.name}`, size: p.size, unit: p.unit, kind: p.kind, onHand: p.onHand })),
   };
 }

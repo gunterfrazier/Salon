@@ -8,6 +8,8 @@ import { afterQuiet, dayPreviewDue, dueReminders, holdActions, type NotifyAppt }
 import { clientRows, dayPreviewText, stylistRow, type ApptInfo, type MessageRow, type Recipient, type SalonInfo } from "./outbox";
 import type { Sender } from "./provider";
 import { hasPushDevice, pushToStaff } from "../push/server";
+import { loadProducts } from "../data/inventory";
+import { stockLevel } from "../inventory/stock";
 import { mergeNotificationSettings, type NotificationSettings } from "./settings";
 
 const OPEN = ["pending", "booked", "confirmed"];
@@ -195,7 +197,13 @@ export async function scheduleBusiness(db: SupabaseClient, b: Business, now: Dat
         const standing = st ? clientStanding(reviveClientState(st), b.policy, now).standing : "clear";
         return { start: new Date(r.start_at), clientName: clientName(r), services: toInfo(r, day.paid).services, depositDue: r.status === "pending" || r.status === "booked" ? toInfo(r, day.paid).depositDue : 0, flagged: standing === "active" || standing === "permanent" };
       });
-      out.push(stylistRow({ salon, staff: b.staff, template: "stylistDayPreview", body: dayPreviewText(salon, previewDay, items), apptId: null, key, sendAfter: now }));
+      const low = (await loadProducts(db, salon.id)).filter((p) => ["low", "out"].includes(stockLevel(p)));
+      const preview = dayPreviewText(salon, previewDay, items);
+      const lowLine = low.length ? `Low on ${low.length} product${low.length === 1 ? "" : "s"}: ${low.slice(0, 4).map((p) => p.name).join(", ")}${low.length > 4 ? ", …" : ""}.` : "";
+      // Keep the link as the last line (push opens it).
+      const lines = preview.split("\n");
+      const body = lowLine ? [...lines.slice(0, -1), lowLine, lines[lines.length - 1]].join("\n") : preview;
+      out.push(stylistRow({ salon, staff: b.staff, template: "stylistDayPreview", body, apptId: null, key, sendAfter: now }));
     }
   }
 

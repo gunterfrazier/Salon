@@ -17,11 +17,23 @@ import { suggestOrder } from "@/lib/schedule/plan";
 import { notifyAppointment } from "@/lib/notify/events";
 import { moveStarts } from "@/lib/booking/move";
 import { parseRange } from "@/lib/data/calendar";
+import { supplyWarnings } from "@/lib/data/inventory";
 
 export async function fetchClientState(clientId: string): Promise<ClientStateJSON | null> {
   const ctx = await getContext();
   const states = await loadClientStates(ctx.supabase, ctx.business.id, [clientId]);
   return states[clientId] ?? null;
+}
+
+/** Inventory warnings for a client's usual color (from their last formula). */
+export async function supplyFor(clientId: string): Promise<string[]> {
+  if (!/^[0-9a-f-]{36}$/.test(clientId)) return [];
+  const ctx = await getContext();
+  try {
+    return await supplyWarnings(ctx.supabase, ctx.business.id, clientId);
+  } catch {
+    return [];
+  }
 }
 
 export interface BookingRequest {
