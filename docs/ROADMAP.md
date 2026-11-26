@@ -28,6 +28,29 @@ Calendar (day/week/month, go-to-date, Find a time), stylist booking with stacked
 | **E. Marketing & growth** | QR codes (booking, reviews, check-in); social links; specials and promo codes; loyalty (points or punch card, optional Google Wallet pass); referrals; reviews (Google + private feedback); graphics generator for posts/flyers using the stylist's photos and brand assets she downloads. | A (messaging) for reviews/referrals |
 | **F. Digital signage / smart board** | Display-only calendar (day/week/month) with specials, QR codes and reviews, first names only. **Android TV / Fire TV stick** (browser or a small kiosk app; the church app's Android TV WebView approach can be reused) and a **touchscreen smart board** mode (tap a day, check in). | — |
 | **G. Online store (optional)** | Evaluate later: hosted store (e.g. Shopify with drop-ship apps) linked from Chairvana vs built-in. | Stripe |
+| **H. Brand, UI and marketing site** | Logo and palette; UI redesign (stylish + functional); per-salon branding on the salon page, booking, emails and receipts (logo, accent color, cover photo, gallery); chairvana.app marketing site; branded email templates. | Domain decision (below) |
+
+## Competitor review & brand plan (Nov 26)
+Reviewed Meevo, Zenoti, Vagaro (salon page + pricing), Booksy's buyer's guide, and earlier Mangomint, StyleSeat, Booksy. Reference sites for our own marketing: ourfaithfulchurch.com, veritaslogos.com.
+
+**Decide now (affects remaining work):**
+- **Domain layout.** Push subscriptions, saved passwords, sign-in links, links in sent texts, and the Play Store app's domain check (assetlinks) are all tied to the domain. Pick before Friday's Resend/Twilio setup and before Play Store packaging.
+- **Privacy policy, terms and SMS terms pages.** Twilio's A2P 10DLC review and the Play Store listing both need a public website with these pages and the text opt-in wording.
+- **Email sender:** `bookings@chairvana.app` with the salon's name as the display name and the salon's email as reply-to.
+
+**Features others have that we don't (candidate order):**
+1. Waitlist: auto-notify when a slot opens (Meevo, Vagaro, Zenoti). Reuses the openings engine and messaging. Small.
+2. Card on file, no-show/late fees charged automatically (Booksy's top point). With Stripe.
+3. Digital forms: intake, color consultation, patch-test/consent, signed on a phone or the kiosk (Vagaro, Zenoti, Meevo).
+4. Gift cards, packages/memberships (all four).
+5. Commissions, tips by stylist, booth rent collection (Vagaro, Zenoti). Decide how booth renters take payments before Stripe.
+6. Reputation: review requests + private feedback (already in Phase E).
+7. Book from Instagram/Google/Facebook (Zenoti); Reserve with Google later.
+8. Later: AI receptionist / missed-call text-back (Meevo, Zenoti, Vagaro all lead with it).
+
+**Pricing reference:** Vagaro $30/mo base (one calendar), add-ons priced separately (text marketing $20+, forms $10, website $20, branded app $100, payroll $34+$5/person). Opportunity: one simple price with booking page, branded salon page and app included.
+
+**Marketing site pattern (from the reference sites):** short headline + one-line subhead + two buttons (primary action and "try the demo salon"); real app screenshots as the imagery; sections for each audience (owner, stylist, client, front desk); a "Questions" FAQ (price, data, Android); Sign in at the top right; footer with privacy/terms.
 
 ## Supplier & brand research (Nov 2026)
 
