@@ -4,6 +4,7 @@ const LINKS = [
   { href: "/today", label: "Today" },
   { href: "/calendar", label: "Calendar" },
   { href: "/clients", label: "Clients" },
+  { href: "/reports", label: "Reports" },
   { href: "/dashboard", label: "Services" },
   { href: "/settings/schedule", label: "Schedule" },
   { href: "/settings/payments", label: "Payments" },

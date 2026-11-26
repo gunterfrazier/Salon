@@ -9,6 +9,7 @@
   --accent: #4338ca;
   --on-accent: #ffffff;
   --closed: #efedeb;
+  --chart-1: #257de0;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -21,6 +22,7 @@
     --accent: #a5b4fc;
     --on-accent: #1e1b4b;
     --closed: #141210;
+    --chart-1: #338ced;
   }
 }
 
@@ -79,4 +81,9 @@ body {
 .appt-done {
   opacity: 0.6;
   border-left-color: var(--muted);
+}
+
+/* Single-series charts (reports). */
+.chart-bar {
+  fill: var(--chart-1);
 }
