@@ -3,6 +3,7 @@ import { getContext } from "@/lib/context";
 import { configuredSender } from "@/lib/notify/provider";
 import { mergeNotificationSettings } from "@/lib/notify/settings";
 import AlertContact from "./AlertContact";
+import PushSetup from "./PushSetup";
 import MessageLog, { type LogRow } from "./MessageLog";
 import NotificationSettingsForm from "./NotificationSettingsForm";
 
@@ -31,6 +32,7 @@ export default async function NotificationsPage() {
     to: m.audience === "stylist" ? "you" : [m.clients?.first_name, m.clients?.last_name].filter(Boolean).join(" ") || "client",
   }));
   const { data: me } = await ctx.supabase.from("staff").select("phone,email").eq("id", ctx.staff.id).single();
+  const { data: devices } = await ctx.supabase.from("push_subscriptions").select("endpoint,device,last_ok_at").eq("staff_id", ctx.staff.id);
   const sender = configuredSender();
   return (
     <>
@@ -41,6 +43,8 @@ export default async function NotificationsPage() {
         timezone={ctx.business.timezone}
         connected={{ sms: !!sender.sms, email: !!sender.email }}
       />
+      <PushSetup devices={(devices ?? []).map((d) => ({ endpoint: d.endpoint, device: d.device, lastOk: d.last_ok_at }))} />
+      <div className="h-4" />
       <AlertContact phone={me?.phone ?? ""} email={me?.email ?? ""} />
       <div className="h-4" />
       <MessageLog rows={rows} timezone={ctx.business.timezone} />

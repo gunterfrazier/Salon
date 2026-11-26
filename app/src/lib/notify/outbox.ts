@@ -11,7 +11,7 @@ export interface MessageRow {
   client_id: string | null;
   appointment_id: string | null;
   audience: "client" | "stylist";
-  channel: Channel;
+  channel: Channel | "push";
   template: string;
   body: string;
   to_address: string | null;
@@ -112,10 +112,11 @@ export function clientRows(o: {
   });
 }
 
-/** An alert to the stylist's own phone (text), falling back to email. */
-export function stylistRow(o: { salon: SalonInfo; staff: { phone: string | null; email: string | null }; template: string; body: string; apptId: string | null; key: string | null; sendAfter: Date }): MessageRow {
-  const channel: Channel = o.staff.phone ? "sms" : "email";
-  const address = o.staff.phone ?? o.staff.email;
+/** An alert to the stylist: push notification, text, or email. */
+export function stylistRow(o: { salon: SalonInfo; staff: { id?: string; phone: string | null; email: string | null; push?: boolean }; template: string; body: string; apptId: string | null; key: string | null; sendAfter: Date }): MessageRow {
+  // Push to the stylist's own devices when turned on (free); otherwise text, then email.
+  const channel: Channel | "push" = o.staff.push && o.staff.id ? "push" : o.staff.phone ? "sms" : "email";
+  const address = channel === "push" ? o.staff.id! : (o.staff.phone ?? o.staff.email);
   return {
     business_id: o.salon.id,
     client_id: null,

@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { getContext } from "@/lib/context";
+import { pushToStaff, vapidKeys } from "@/lib/push/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { mergeNotificationSettings, validateNotificationSettings, type NotificationSettings } from "@/lib/notify/settings";
 
 export async function saveNotificationSettings(input: NotificationSettings): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -33,4 +35,37 @@ export async function saveAlertContact(phone: string, email: string): Promise<{ 
   if (error) return { ok: false, error: error.message };
   revalidatePath("/settings/notifications");
   return { ok: true };
+}
+
+// --- Push alerts on the stylist's own devices -------------------------------
+
+/** Public key the browser needs to subscribe this device. */
+export async function pushPublicKey(): Promise<string> {
+  await getContext(); // signed-in staff only
+  return (await vapidKeys(createAdminClient())).publicKey;
+}
+
+export async function savePushDevice(sub: { endpoint: string; keys: { p256dh: string; auth: string } }, device: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!sub?.endpoint?.startsWith("https://") || !sub.keys?.p256dh || !sub.keys?.auth) return { ok: false, error: "This browser didn't return a valid subscription." };
+  const ctx = await getContext();
+  const { error } = await ctx.supabase.from("push_subscriptions").upsert(
+    { business_id: ctx.business.id, staff_id: ctx.staff.id, endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth, device: device.slice(0, 120), failures: 0 },
+    { onConflict: "endpoint" },
+  );
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/settings/notifications");
+  return { ok: true };
+}
+
+export async function removePushDevice(endpoint: string): Promise<{ ok: true }> {
+  const ctx = await getContext();
+  await ctx.supabase.from("push_subscriptions").delete().eq("staff_id", ctx.staff.id).eq("endpoint", endpoint);
+  revalidatePath("/settings/notifications");
+  return { ok: true };
+}
+
+export async function sendTestPush(): Promise<{ ok: true; devices: number } | { ok: false; error: string }> {
+  const ctx = await getContext();
+  const r = await pushToStaff(createAdminClient(), ctx.staff.id, { title: "Chairvana alerts are on", body: "You'll get new bookings, released holds and your day preview here.", url: "/today", tag: "test" });
+  return r.ok ? { ok: true, devices: r.devices } : { ok: false, error: r.error ?? "Couldn't send" };
 }

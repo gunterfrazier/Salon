@@ -7,6 +7,7 @@ import { addDays, zonedToUtc } from "../time/zone";
 import { afterQuiet, dayPreviewDue, dueReminders, holdActions, type NotifyAppt } from "./engine";
 import { clientRows, dayPreviewText, stylistRow, type ApptInfo, type MessageRow, type Recipient, type SalonInfo } from "./outbox";
 import type { Sender } from "./provider";
+import { hasPushDevice, pushToStaff } from "../push/server";
 import { mergeNotificationSettings, type NotificationSettings } from "./settings";
 
 const OPEN = ["pending", "booked", "confirmed"];
@@ -87,7 +88,7 @@ export interface Business {
   salon: SalonInfo;
   settings: NotificationSettings;
   policy: PolicySettings;
-  staff: { phone: string | null; email: string | null };
+  staff: { id?: string; phone: string | null; email: string | null; push?: boolean };
 }
 
 export async function loadBusinesses(db: SupabaseClient, siteUrl: string, onlyId?: string): Promise<Business[]> {
@@ -97,13 +98,13 @@ export async function loadBusinesses(db: SupabaseClient, siteUrl: string, onlyId
   if (error) throw new Error(error.message);
   const out: Business[] = [];
   for (const b of data ?? []) {
-    const { data: staff } = await db.from("staff").select("phone,email,role").eq("business_id", b.id).eq("active", true).order("created_at").limit(5);
+    const { data: staff } = await db.from("staff").select("id,phone,email,role").eq("business_id", b.id).eq("active", true).order("created_at").limit(5);
     const owner = (staff ?? []).find((s) => s.role === "owner") ?? staff?.[0];
     out.push({
       salon: { id: b.id, name: b.name, timezone: b.timezone, paymentMethods: b.payment_methods, siteUrl },
       settings: mergeNotificationSettings(b.notification_settings),
       policy: b.policy_settings,
-      staff: { phone: owner?.phone ?? null, email: owner?.email ?? null },
+      staff: { id: owner?.id, phone: owner?.phone ?? null, email: owner?.email ?? null, push: owner ? await hasPushDevice(db, owner.id) : false },
     });
   }
   return out;
@@ -243,7 +244,7 @@ function dayPreviewDateTime(d: Date, tz: string) {
 interface QueuedRow {
   id: string;
   business_id: string;
-  channel: "sms" | "email";
+  channel: "sms" | "email" | "push";
   audience: string;
   template: string;
   body: string;
@@ -251,6 +252,25 @@ interface QueuedRow {
   send_after: string;
   attempts: number;
 }
+
+/** A chairvana link at the end of a message (e.g. the day preview), as a path. */
+function linkIn(body: string): string | undefined {
+  const last = body.trim().split("\n").pop() ?? "";
+  try {
+    const u = new URL(last);
+    return u.pathname + u.search;
+  } catch {
+    return undefined;
+  }
+}
+
+const PUSH_TITLE: Record<string, string> = {
+  stylistNewBooking: "New online booking",
+  stylistHoldReleased: "Hold released",
+  stylistBeforeEach: "Next client",
+  stylistDayPreview: "Day preview",
+  stylistTest: "Chairvana alerts are on",
+};
 
 const SUBJECT: Record<string, string> = {
   reminder: "Appointment reminder",
@@ -281,6 +301,17 @@ export async function deliverQueued(db: SupabaseClient, sender: Sender, now: Dat
     if (now.getTime() - new Date(m.send_after).getTime() > STALE_HOURS * 3_600_000) {
       await finish({ status: "skipped", error: "Too late to send" });
       tally.skipped++;
+      continue;
+    }
+    if (m.channel === "push") {
+      const r = m.to_address ? await pushToStaff(db, m.to_address, { title: PUSH_TITLE[m.template] ?? "Chairvana", body: linkIn(m.body) ? m.body.trim().split("\n").slice(0, -1).join("\n") : m.body, url: linkIn(m.body) ?? "/today", tag: m.template }) : { ok: false, error: "No device" };
+      if (r.ok) {
+        await finish({ status: "sent", sent_at: new Date().toISOString(), error: null });
+        tally.sent++;
+      } else {
+        await finish({ status: "failed", error: r.error ?? "Push failed" });
+        tally.failed++;
+      }
       continue;
     }
     const fn = m.channel === "sms" ? sender.sms : sender.email;
