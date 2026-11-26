@@ -62,6 +62,7 @@ export default function BookingWizard({
   const [time, setTime] = useState<string | null>(initialSlot && initialPicked.length ? initialSlot.time : null);
   const [f, setF] = useState({ firstName: prefill?.firstName ?? "", lastName: prefill?.lastName ?? "", phone: prefill?.phone ?? "", email: prefill?.email ?? "", notes: "", website: "" });
   const [agreed, setAgreed] = useState(false);
+  const [textOk, setTextOk] = useState(false);
   const [criteria, setCriteria] = useState<SearchCriteria>({ weekdays: [], block: "any", start: { kind: "next" } });
   const [openings, setOpenings] = useState<Opening[] | null>(null);
   const [searching, startSearching] = useTransition();
@@ -171,7 +172,7 @@ export default function BookingWizard({
     setError(null);
     startSaving(async () => {
       const fav: Favorites | null = remember ? cleanFavorites({ serviceIds: ordered.map((s) => s.id), weekdays: criteria.weekdays, block: criteria.block }) : null;
-      const r = await submitOnlineBooking({ salon, serviceIds: ordered.map((s) => s.id), staffId, date: date!, time: time!, ...f, agreed, favorites: fav ?? undefined });
+      const r = await submitOnlineBooking({ salon, serviceIds: ordered.map((s) => s.id), staffId, date: date!, time: time!, ...f, agreed, textOk, favorites: fav ?? undefined });
       if (r.ok) {
         writeFavorites(fav);
         setDone(r);
@@ -388,6 +389,16 @@ export default function BookingWizard({
             <input className={input} placeholder="Mobile number" aria-label="Mobile number" type="tel" autoComplete="tel" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
             <input className={input} placeholder="Email (optional)" aria-label="Email" type="email" autoComplete="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
           </div>
+          <label className="flex items-start gap-3 rounded-xl border border-line bg-surface p-4">
+            <input type="checkbox" checked={textOk} onChange={(e) => setTextOk(e.target.checked)} className="mt-1 size-5 accent-[var(--accent)]" />
+            <span className="text-sm">
+              <span className="font-semibold">Text me about my appointments</span>
+              <span className="block text-muted">
+                Confirmations, reminders and changes from {business.name}, sent through Chairvana. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out, HELP for help. Not required to book.{" "}
+                <a href="/texting" target="_blank" className="underline">Texting terms</a> · <a href="/privacy" target="_blank" className="underline">Privacy</a>
+              </span>
+            </span>
+          </label>
           <textarea className={input} rows={2} placeholder="Anything we should know? (optional)" aria-label="Notes" value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} />
           {/* Honeypot for bots: hidden from people and screen readers. */}
           <input tabIndex={-1} autoComplete="off" aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 opacity-0" value={f.website} onChange={(e) => setF({ ...f, website: e.target.value })} name="website" />

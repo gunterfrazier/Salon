@@ -1,3 +1,4 @@
+import SiteFooter from "@/components/SiteFooter";
 import { whoAmI } from "@/lib/auth/whoami";
 import { createAdminClient } from "@/lib/supabase/admin";
 import FindView from "./FindView";
@@ -17,5 +18,10 @@ export default async function FindPage({ searchParams }: { searchParams: Promise
     if (!where && data?.home_zip) where = data.home_zip;
     if (!sp.miles && data?.search_miles) miles = data.search_miles;
   }
-  return <FindView initialWhere={where} initialMiles={miles} initialService={sp.service ?? ""} signedIn={signedIn} />;
+  return (
+    <>
+      <FindView initialWhere={where} initialMiles={miles} initialService={sp.service ?? ""} signedIn={signedIn} />
+      <SiteFooter />
+    </>
+  );
 }

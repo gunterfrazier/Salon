@@ -1,6 +1,6 @@
 # Chairvana: your to-do and test checklist
 
-_Updated Nov 26, 2026. Check items off as you go._
+_Updated Nov 26, 2026. Check items off as you go. The app is now at **chairvana.app/app** (sign in at chairvana.app/app/login); old links still work._
 
 ## Part 1: Setup (things only you can do)
 
@@ -26,7 +26,13 @@ _Updated Nov 26, 2026. Check items off as you go._
 - [ ] **Clients**: open regular clients who agreed to texts and tick **OK to text** (needed before reminders can be texted).
 
 ### Texting and email (Twilio is Friday Nov 27, 9:00 AM)
+- [ ] Before Twilio: make the mailbox **hello@chairvana.app** work (free: Cloudflare → chairvana.app → Email → Email Routing → forward it to your Gmail). The privacy and texting pages list it.
 - [ ] Twilio: create the account, register for business texting (Sole Proprietor A2P 10DLC), buy a local number.
+- [ ] In the Twilio registration form, use these links:
+  - Website / privacy policy: https://chairvana.app/privacy
+  - Terms: https://chairvana.app/terms (texting terms: https://chairvana.app/texting)
+  - How clients opt in: "On the online booking page (https://chairvana.app/s/intensity-salon/book) clients tick an unchecked box, 'Text me about my appointments', with message frequency, rates, STOP/HELP and links to terms and privacy. Clients can also agree in person; the stylist records it on the client's record."
+  - Sample messages: copy two from **Messages → Recent messages** (a confirmation and a reminder).
 - [ ] Add 3 Twilio keys in Cloudflare (Workers → salon → Settings → Variables and Secrets): `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_MESSAGING_SERVICE_SID` (or `TWILIO_FROM`).
 - [ ] Email: create a Resend account, verify chairvana.app (add the DNS records in Cloudflare), then add `RESEND_API_KEY` and `EMAIL_FROM` in Cloudflare.
 - [ ] Use the same Resend account as Supabase's SMTP (see above).

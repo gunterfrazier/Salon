@@ -72,6 +72,8 @@ export interface OnlineBookingRequest {
   email: string;
   notes: string;
   agreed: boolean;
+  /** Ticked "Text me about my appointments" (unticked by default). */
+  textOk?: boolean;
   /** Honeypot: real people leave this empty. */
   website?: string;
   /** "Remember my favorites": saved on the client record. */
@@ -150,7 +152,7 @@ export async function submitOnlineBooking(req: OnlineBookingRequest): Promise<On
   if (!clientId) {
     const { data, error } = await admin
       .from("clients")
-      .insert({ business_id: b.id, first_name: firstName, last_name: lastName, phone, email, source: "online", sms_opt_in: true, preferences: cleanFavorites(req.favorites) ?? {}, customer_id: customerId && who?.kind === "customer" && email === (who.user.email ?? "").toLowerCase() ? customerId : null })
+      .insert({ business_id: b.id, first_name: firstName, last_name: lastName, phone, email, source: "online", sms_opt_in: req.textOk === true, preferences: cleanFavorites(req.favorites) ?? {}, customer_id: customerId && who?.kind === "customer" && email === (who.user.email ?? "").toLowerCase() ? customerId : null })
       .select("id")
       .single();
     if (error) return { ok: false, error: "Couldn't save your details. Please try again." };
@@ -158,6 +160,7 @@ export async function submitOnlineBooking(req: OnlineBookingRequest): Promise<On
   } else {
     const patch: Record<string, unknown> = {};
     if (email && !match?.email) patch.email = email;
+    if (req.textOk === true) patch.sms_opt_in = true;
     if (customerId && who?.kind === "customer") {
       // Only claim this salon's record when it carries the customer's own verified email
       // (a phone match alone could be someone else's record).

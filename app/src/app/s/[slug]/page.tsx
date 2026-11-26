@@ -1,3 +1,4 @@
+import SiteFooter from "@/components/SiteFooter";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadSalonProfile } from "@/lib/data/salon-profile";
@@ -39,6 +40,7 @@ export default async function SalonPage({ params, searchParams }: Props) {
   const book = (q = "") => `/s/${s.slug}/book${q}`;
 
   return (
+    <>
     <main className="mx-auto max-w-2xl space-y-5 px-4 py-6">
       <header>
         <p className="text-xs text-muted">
@@ -122,5 +124,7 @@ export default async function SalonPage({ params, searchParams }: Props) {
         </ul>
       </section>
     </main>
+      <SiteFooter />
+    </>
   );
 }
