@@ -9,10 +9,11 @@ export function statusVars(key: StatusKey): CSSProperties {
   } as CSSProperties;
 }
 
-export function StatusChip({ status, text }: { status: StatusKey; text?: string }) {
+export function StatusChip({ status, text, size = "md" }: { status: StatusKey; text?: string; size?: "sm" | "md" }) {
   const s = STATUS[status];
+  const sz = size === "sm" ? "gap-1 border px-1.5 py-0 text-[11px]" : "gap-1.5 px-2.5 py-0.5 text-sm";
   return (
-    <span className="status inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-sm font-semibold whitespace-nowrap" style={statusVars(status)}>
+    <span className={`status inline-flex items-center rounded-full font-semibold whitespace-nowrap ${sz}`} style={statusVars(status)} title={s.label}>
       <span aria-hidden>{s.icon}</span>
       {text ?? s.label}
     </span>

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { AppNav } from "@/components/AppNav";
 import { redirect } from "next/navigation";
 import { ensureBusinessFor } from "@/lib/setup/bootstrap";
 import { createClient } from "@/lib/supabase/server";
@@ -55,27 +55,14 @@ export default async function Dashboard() {
   const count = categories.reduce((n, c) => n + c.services.length, 0);
 
   return (
+    <>
+    <AppNav current="/dashboard" businessName={biz?.name ?? "Your salon"} />
     <main className="mx-auto max-w-3xl px-4 py-8">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-sm text-muted">Chairvana</p>
-          <h1 className="text-2xl font-bold">{biz?.name ?? "Your salon"}</h1>
-          <p className="text-sm text-muted">Signed in as {user.email}</p>
-        </div>
-        <SignOut />
-      </header>
+      <h1 className="text-2xl font-bold">Services</h1>
+      <p className="text-sm text-muted">Signed in as {user.email}</p>
 
-      <nav className="mt-6 flex flex-wrap gap-2 text-sm">
-        <Link className="rounded-lg border border-line bg-surface px-3 py-2" href="/settings/payments">
-          Payments
-        </Link>
-        <Link className="rounded-lg border border-line bg-surface px-3 py-2" href="/legend">
-          Color chart
-        </Link>
-      </nav>
-
-      <section className="mt-8">
-        <h2 className="text-lg font-semibold">Services ({count})</h2>
+      <section className="mt-6">
+        <h2 className="text-lg font-semibold">{count} services</h2>
         {error && <p className="mt-2 text-sm text-red-700 dark:text-red-300">Couldn&rsquo;t load services: {error.message}</p>}
         <div className="mt-3 space-y-5">
           {categories.map((c) => (
@@ -106,6 +93,7 @@ export default async function Dashboard() {
         </div>
       </section>
     </main>
+    </>
   );
 }
 

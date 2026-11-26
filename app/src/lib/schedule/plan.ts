@@ -69,7 +69,7 @@ export function linePrice(s: MenuService): Cents {
 }
 
 /** Default order for stacked services: chemical → treatment → cut → style → wax → fees. */
-export function suggestOrder(services: MenuService[], stages: Record<string, number>): MenuService[] {
+export function suggestOrder<T extends MenuService>(services: T[], stages: Record<string, number>): T[] {
   return services
     .map((s, i) => ({ s, i }))
     .sort((a, b) => (stages[a.s.stage] ?? 5) - (stages[b.s.stage] ?? 5) || a.i - b.i)

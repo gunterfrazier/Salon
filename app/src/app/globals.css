@@ -6,6 +6,9 @@
   --foreground: #1c1917;
   --muted: #57534e;
   --line: #e7e5e4;
+  --accent: #4338ca;
+  --on-accent: #ffffff;
+  --closed: #efedeb;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -15,6 +18,9 @@
     --foreground: #f5f5f4;
     --muted: #a8a29e;
     --line: #292524;
+    --accent: #a5b4fc;
+    --on-accent: #1e1b4b;
+    --closed: #141210;
   }
 }
 
@@ -24,6 +30,9 @@
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-closed: var(--closed);
 }
 
 body {
@@ -52,4 +61,16 @@ body {
     color-mix(in srgb, var(--muted) 18%, transparent) 0 6px,
     transparent 6px 12px
   );
+}
+
+/* Calendar appointment: tinted block; hands-on time drawn solid on top of the
+   striped (processing) background. */
+.appt-block {
+  background-color: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  border-left-color: var(--accent);
+  color: var(--foreground);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.appt-busy {
+  background-color: color-mix(in srgb, var(--accent) 24%, var(--surface));
 }
