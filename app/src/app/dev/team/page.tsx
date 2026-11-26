@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import TeamView from "@/app/team/TeamView";
+import TeamView from "@/app/app/team/TeamView";
 
 /** Development-only preview of the Team page (404 in production). */
 export const dynamic = "force-dynamic";

@@ -47,7 +47,7 @@ export async function signUp(_: SignupState, form: FormData): Promise<SignupStat
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("x-forwarded-host") ?? h.get("host")}`;
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent("/account?welcome=1")}` } });
+  const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent("/app/account?welcome=1")}` } });
   if (error) return { status: "error", message: /rate|seconds/i.test(error.message) ? "Too many emails just now. Wait a minute and try again." : "Couldn't send the link. Try again in a minute." };
   return { status: "sent", message: email };
 }

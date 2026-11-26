@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import CalendarView from "@/app/calendar/CalendarView";
+import CalendarView from "@/app/app/calendar/CalendarView";
 import { buildBooking, type BookableService } from "@/lib/booking/build";
 import { MANUAL_METHODS } from "@/lib/data/calendar";
 import type { CalAppointment, CalendarData } from "@/lib/data/calendar-types";

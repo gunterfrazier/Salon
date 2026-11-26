@@ -337,7 +337,7 @@ export async function deliverQueued(db: SupabaseClient, sender: Sender, now: Dat
       continue;
     }
     if (m.channel === "push") {
-      const r = m.to_address ? await pushToStaff(db, m.to_address, { title: PUSH_TITLE[m.template] ?? "Chairvana", body: linkIn(m.body) ? m.body.trim().split("\n").slice(0, -1).join("\n") : m.body, url: linkIn(m.body) ?? "/today", tag: m.template }) : { ok: false, error: "No device" };
+      const r = m.to_address ? await pushToStaff(db, m.to_address, { title: PUSH_TITLE[m.template] ?? "Chairvana", body: linkIn(m.body) ? m.body.trim().split("\n").slice(0, -1).join("\n") : m.body, url: linkIn(m.body) ?? "/app/today", tag: m.template }) : { ok: false, error: "No device" };
       if (r.ok) {
         await finish({ status: "sent", sent_at: new Date().toISOString(), error: null });
         tally.sent++;

@@ -3,14 +3,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { supabasePublicKeyOrNull, supabaseUrlOrNull } from "@/lib/supabase/env";
 
 /** Pages anyone can open without signing in. */
-const PUBLIC = [/^\/login(\/|$)/, /^\/auth\//, /^\/api\/health$/, /^\/api\/cron\//, /^\/book(\/|$)/, /^\/s\//, /^\/find(\/|$)/, /^\/join(\/|$)/, /^\/signup(\/|$)/];
+const PUBLIC = [/^\/app\/login(\/|$)/, /^\/auth\//, /^\/api\/health$/, /^\/api\/cron\//, /^\/book(\/|$)/, /^\/s\//, /^\/find(\/|$)/, /^\/join(\/|$)/, /^\/signup(\/|$)/, /^\/$/];
 
 /**
  * Edge middleware (not proxy.ts): the Cloudflare/OpenNext build supports Edge
  * middleware reliably, while Node "proxy" support is still experimental there.
  *
  * Keeps the Supabase session cookie fresh and sends signed-out visitors to
- * /login. Pages still check the user themselves; this is the first gate.
+ * /app/login. Pages still check the user themselves; this is the first gate.
  */
 export async function middleware(request: NextRequest) {
   const url = supabaseUrlOrNull();
@@ -35,7 +35,7 @@ export async function middleware(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   if (!data?.claims && !isPublic) {
     const to = request.nextUrl.clone();
-    to.pathname = "/login";
+    to.pathname = "/app/login";
     to.search = "";
     return NextResponse.redirect(to);
   }

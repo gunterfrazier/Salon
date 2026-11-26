@@ -11,7 +11,7 @@ describe("outbox rows", () => {
   it("renders one row per channel with times in salon time", () => {
     const rows = clientRows({ salon, settings: s, to, appt, template: "reminder", channels: ["sms", "email"], key: "k1", sendAfter: new Date("2026-11-29T16:30:00Z") });
     expect(rows.map((r) => [r.channel, r.to_address, r.status])).toEqual([["sms", "(256) 555-0101", "queued"], ["email", "jamie@example.com", "queued"]]);
-    expect(rows[0].body).toBe("Hi Jamie! Reminder: All Over Color, Style at Intensity Salon on Tue, Dec 1 at 10:30 AM CST. Need to change it? https://chairvana.app/me");
+    expect(rows[0].body).toBe("Hi Jamie! Reminder: All Over Color, Style at Intensity Salon on Tue, Dec 1 at 10:30 AM CST. Need to change it? https://chairvana.app/app/me");
   });
 
   it("skips texts without consent or a number, with the reason", () => {
@@ -40,7 +40,7 @@ describe("outbox rows", () => {
 
   it("writes the day preview", () => {
     const text = dayPreviewText(salon, "2026-12-01", [{ start: appt.start, clientName: "Jamie Rivers", services: appt.services, depositDue: 0, flagged: true }]);
-    expect(text).toBe("Tuesday, Dec 1, 1 appointment:\n10:30 AM CST Jamie Rivers: All Over Color, Style (flagged)\nhttps://chairvana.app/today?date=2026-12-01");
+    expect(text).toBe("Tuesday, Dec 1, 1 appointment:\n10:30 AM CST Jamie Rivers: All Over Color, Style (flagged)\nhttps://chairvana.app/app/today?date=2026-12-01");
   });
 });
 

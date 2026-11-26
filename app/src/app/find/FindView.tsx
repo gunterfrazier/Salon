@@ -36,7 +36,7 @@ export default function FindView({ initialWhere, initialMiles, initialService, s
       <header className="flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="text-3xl font-bold">Find a salon</h1>
         <nav className="text-sm">
-          {signedIn ? <Link href="/me" className="underline">My appointments</Link> : <><Link href="/login" className="underline">Sign in</Link> · <Link href="/signup" className="underline">Create an account</Link></>}
+          {signedIn ? <Link href="/app/me" className="underline">My appointments</Link> : <><Link href="/app/login" className="underline">Sign in</Link> · <Link href="/signup" className="underline">Create an account</Link></>}
         </nav>
       </header>
 

@@ -74,7 +74,7 @@ export function messageVars(salon: SalonInfo, s: NotificationSettings, who: { fi
     pay_link: appt?.depositDue ? payLine(salon.paymentMethods, appt.depositDue, `Deposit ${date} ${who?.firstName ?? ""}`.trim()) : "",
     hold_hours: s.depositHold.releaseAfterHours,
     book_link: salon.slug ? `${salon.siteUrl}/s/${salon.slug}/book` : `${salon.siteUrl}/book`,
-    manage_link: `${salon.siteUrl}/me`,
+    manage_link: `${salon.siteUrl}/app/me`,
     review_link: s.client.reviewRequest.url,
     ...extra,
   };
@@ -140,7 +140,7 @@ export function dayPreviewText(salon: SalonInfo, date: string, appts: { start: D
   const day = formatDay(date, { weekday: "long", month: "short", day: "numeric" });
   if (!appts.length) return `${day}: nothing booked.`;
   const lines = appts.map((a) => `${formatTime(a.start, salon.timezone)} ${a.clientName}: ${a.services.join(", ")}${a.depositDue ? ` (deposit ${money(a.depositDue)} due)` : ""}${a.flagged ? " (flagged)" : ""}`);
-  return `${day}, ${appts.length} appointment${appts.length === 1 ? "" : "s"}:\n${lines.join("\n")}\n${salon.siteUrl}/today?date=${date}`;
+  return `${day}, ${appts.length} appointment${appts.length === 1 ? "" : "s"}:\n${lines.join("\n")}\n${salon.siteUrl}/app/today?date=${date}`;
 }
 
 /** What was charged at checkout, for the receipt. */

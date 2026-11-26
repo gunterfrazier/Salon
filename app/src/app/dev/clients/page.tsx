@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import ClientProfile from "@/app/clients/[id]/ClientProfile";
-import ClientsList from "@/app/clients/ClientsList";
+import ClientProfile from "@/app/app/clients/[id]/ClientProfile";
+import ClientsList from "@/app/app/clients/ClientsList";
 import type { ClientProfileData } from "@/lib/clients/profile-types";
 import type { ClientSummary } from "@/lib/clients/summary";
 import type { PolicySettings } from "@/lib/policy/types";

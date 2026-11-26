@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import ImportClients from "@/app/clients/import/ImportClients";
+import ImportClients from "@/app/app/clients/import/ImportClients";
 
 /** Development-only preview of the import screen (404 in production). */
 export default function DevImport() {

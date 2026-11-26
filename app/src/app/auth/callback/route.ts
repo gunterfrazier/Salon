@@ -4,10 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 /** The emailed sign-in link lands here and is swapped for a session. */
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
-  const next = request.nextUrl.searchParams.get("next") ?? "/";
+  const next = request.nextUrl.searchParams.get("next") ?? "/app";
   // Only same-site paths.
-  const safeNext = /^\/(?!\/)[\w\-/?=&.]*$/.test(next) ? next : "/";
-  const fail = new URL("/login?error=link", request.url);
+  const safeNext = /^\/(?!\/)[\w\-/?=&.]*$/.test(next) ? next : "/app";
+  const fail = new URL("/app/login?error=link", request.url);
   if (!code) return NextResponse.redirect(fail);
 
   const supabase = await createClient();

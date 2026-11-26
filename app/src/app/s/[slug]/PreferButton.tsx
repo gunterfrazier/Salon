@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { savePreferences } from "@/app/me/actions";
+import { savePreferences } from "@/app/app/me/actions";
 
 /** "Make this my salon" / "Make X my stylist" for signed-in customers. */
 export default function PreferButton({ businessId, staffId = null, label, active }: { businessId: string; staffId?: string | null; label: string; active: boolean }) {

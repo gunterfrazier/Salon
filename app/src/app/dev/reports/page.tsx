@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import ReportView from "@/app/reports/ReportView";
+import ReportView from "@/app/app/reports/ReportView";
 import { buildReport, previousRange, rangeFor, type RAppt, type RPayment } from "@/lib/reports/build";
 import { addDays, zonedToUtc } from "@/lib/time/zone";
 

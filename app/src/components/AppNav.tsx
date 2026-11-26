@@ -6,7 +6,7 @@ import { isPlatformAdmin } from "@/lib/platform/salons";
 /** Main menu: shows only what the signed-in team member's role allows. */
 export async function AppNav({ current, businessName }: { current: string; businessName: string }) {
   const ctx = await getContext();
-  const links = [...navFor(ctx.perms), ...(isPlatformAdmin(ctx.user.email) ? [{ href: "/admin", label: "Platform" }] : [])];
+  const links = [...navFor(ctx.perms), ...(isPlatformAdmin(ctx.user.email) ? [{ href: "/app/admin", label: "Platform" }] : [])];
   return (
     <header className="border-b border-line bg-surface">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-2">
@@ -27,7 +27,7 @@ export async function AppNav({ current, businessName }: { current: string; busin
               {l.label}
             </Link>
           ))}
-          <Link href="/account" aria-current={current === "/account" ? "page" : undefined} className={`rounded-lg px-3 py-2 ${current === "/account" ? "bg-foreground font-semibold text-background" : "text-muted hover:bg-background"}`}>
+          <Link href="/app/account" aria-current={current === "/app/account" ? "page" : undefined} className={`rounded-lg px-3 py-2 ${current === "/app/account" ? "bg-foreground font-semibold text-background" : "text-muted hover:bg-background"}`}>
             Account
           </Link>
         </nav>

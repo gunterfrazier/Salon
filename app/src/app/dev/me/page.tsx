@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import MeView from "@/app/me/MeView";
+import MeView from "@/app/app/me/MeView";
 
 /** Development-only preview of the client portal (404 in production). */
 export const dynamic = "force-dynamic";

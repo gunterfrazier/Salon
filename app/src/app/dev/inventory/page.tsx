@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import InventoryView from "@/app/inventory/InventoryView";
+import InventoryView from "@/app/app/inventory/InventoryView";
 import type { Product } from "@/lib/inventory/stock";
 
 /** Development-only preview of Inventory with sample products (404 in production). */

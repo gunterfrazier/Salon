@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import ScheduleSettings from "@/app/settings/schedule/ScheduleSettings";
+import ScheduleSettings from "@/app/app/settings/schedule/ScheduleSettings";
 import { mergeHolidays } from "@/lib/schedule/holidays";
 
 /** Development-only preview of Settings › Schedule (404 in production). */

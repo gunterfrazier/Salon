@@ -1,6 +1,6 @@
 /* Chairvana service worker: shows alerts pushed to the stylist's device. */
 self.addEventListener("push", (event) => {
-  let data = { title: "Chairvana", body: "", url: "/today" };
+  let data = { title: "Chairvana", body: "", url: "/app/today" };
   try {
     data = { ...data, ...event.data.json() };
   } catch {
@@ -12,14 +12,14 @@ self.addEventListener("push", (event) => {
       tag: data.tag,
       icon: "/icon-192.png",
       badge: "/icon-192.png",
-      data: { url: data.url || "/today" },
+      data: { url: data.url || "/app/today" },
     }),
   );
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = new URL(event.notification.data?.url || "/today", self.location.origin).href;
+  const url = new URL(event.notification.data?.url || "/app/today", self.location.origin).href;
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
       for (const c of list) {

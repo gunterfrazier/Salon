@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Chairvana",
     short_name: "Chairvana",
     description: "Salon calendar, clients and booking",
-    start_url: "/today",
+    start_url: "/app/today",
     display: "standalone",
     background_color: "#fafaf9",
     theme_color: "#1c1917",

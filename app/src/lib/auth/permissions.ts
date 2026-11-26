@@ -80,19 +80,19 @@ export const roleLabel = (r: string) => ROLES.find((x) => x.key === r)?.label ??
 
 /** Menu items and what each needs. */
 export const NAV: { href: string; label: string; need?: Permission | Permission[] }[] = [
-  { href: "/today", label: "Today" },
-  { href: "/calendar", label: "Calendar" },
-  { href: "/clients", label: "Clients" },
-  { href: "/reports", label: "Reports", need: "reports.view" },
-  { href: "/inventory", label: "Inventory", need: "inventory.view" },
-  { href: "/sell", label: "Sell", need: "sell" },
-  { href: "/settings/salon", label: "Salon", need: "settings.salon" },
-  { href: "/dashboard", label: "Services", need: "settings.services" },
-  { href: "/settings/schedule", label: "Schedule", need: "settings.schedule" },
-  { href: "/settings/payments", label: "Payments", need: "settings.payments" },
-  { href: "/settings/notifications", label: "Messages", need: "settings.messages" },
-  { href: "/team", label: "Team", need: "team.manage" },
-  { href: "/legend", label: "Color chart" },
+  { href: "/app/today", label: "Today" },
+  { href: "/app/calendar", label: "Calendar" },
+  { href: "/app/clients", label: "Clients" },
+  { href: "/app/reports", label: "Reports", need: "reports.view" },
+  { href: "/app/inventory", label: "Inventory", need: "inventory.view" },
+  { href: "/app/sell", label: "Sell", need: "sell" },
+  { href: "/app/settings/salon", label: "Salon", need: "settings.salon" },
+  { href: "/app/dashboard", label: "Services", need: "settings.services" },
+  { href: "/app/settings/schedule", label: "Schedule", need: "settings.schedule" },
+  { href: "/app/settings/payments", label: "Payments", need: "settings.payments" },
+  { href: "/app/settings/notifications", label: "Messages", need: "settings.messages" },
+  { href: "/app/team", label: "Team", need: "team.manage" },
+  { href: "/app/legend", label: "Color chart" },
 ];
 
 export function navFor(perms: Set<Permission>) {

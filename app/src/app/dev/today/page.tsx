@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import TodayView from "@/app/today/TodayView";
+import TodayView from "@/app/app/today/TodayView";
 import type { CalAppointment } from "@/lib/data/calendar-types";
 import type { PolicySettings } from "@/lib/policy/types";
 import { buildAgenda } from "@/lib/today/agenda";

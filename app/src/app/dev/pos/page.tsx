@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import Kiosk from "@/app/kiosk/Kiosk";
-import SellView from "@/app/sell/SellView";
+import Kiosk from "@/app/app/kiosk/Kiosk";
+import SellView from "@/app/app/sell/SellView";
 
 /** Development-only previews of the kiosk and Sell screens (404 in production). */
 export const dynamic = "force-dynamic";

@@ -35,13 +35,13 @@ export const getContext = cache(async function getContext() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) redirect("/app/login");
 
   const businessId = await ensureBusinessFor(user);
   if (!businessId) {
     // Not on the salon team: clients go to their own page.
     const customer = await linkedCustomer(user);
-    redirect(customer ? "/me" : "/login?error=noaccess");
+    redirect(customer ? "/app/me" : "/app/login?error=noaccess");
   }
 
   const [{ data: business, error }, { data: staff }] = await Promise.all([
@@ -68,7 +68,7 @@ export type Ctx = Awaited<ReturnType<typeof getContext>>;
 export async function requirePermission(p: Permission | Permission[]): Promise<Ctx> {
   const ctx = await getContext();
   const list = Array.isArray(p) ? p : [p];
-  if (!list.some((x) => ctx.can(x))) redirect("/today?denied=1");
+  if (!list.some((x) => ctx.can(x))) redirect("/app/today?denied=1");
   return ctx;
 }
 

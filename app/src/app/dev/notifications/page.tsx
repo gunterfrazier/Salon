@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import NotificationSettingsForm from "@/app/settings/notifications/NotificationSettingsForm";
+import NotificationSettingsForm from "@/app/app/settings/notifications/NotificationSettingsForm";
 import { DEFAULT_NOTIFICATIONS } from "@/lib/notify/settings";
 
 /** Development-only preview of Settings › Messages (404 in production). */
