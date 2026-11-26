@@ -13,6 +13,7 @@ import { loadBusyRange } from "@/lib/data/schedule";
 import { notifyAppointment } from "@/lib/notify/events";
 import { cancelDefaults } from "@/lib/policy/engine";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { locatePlace, parsePlace } from "@/lib/geo";
 import { addDays, isDateStr, parseHHMM, todayIn, toHHMM, zonedToUtc } from "@/lib/time/zone";
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -21,14 +22,13 @@ const MOVABLE = ["pending", "booked", "confirmed"];
 /** The signed-in client's own appointment, or null. */
 async function ownAppointment(appointmentId: string) {
   const who = await whoAmI();
-  if (who.kind !== "client" || !/^[0-9a-f-]{36}$/.test(appointmentId)) return null;
+  if (who.kind !== "customer" || !who.links.length || !/^[0-9a-f-]{36}$/.test(appointmentId)) return null;
   const db = createAdminClient();
   const { data: a } = await db
     .from("appointments")
     .select("id,business_id,client_id,staff_id,start_at,end_at,status,appointment_services(id,price_quoted_cents,staff_busy_blocks(during))")
     .eq("id", appointmentId)
-    .eq("client_id", who.clientId)
-    .eq("business_id", who.businessId)
+    .in("client_id", who.links.map((l) => l.clientId))
     .maybeSingle();
   if (!a) return null;
   return { who, db, a };
@@ -126,10 +126,53 @@ export async function portalMove(appointmentId: string, date: string, time: stri
 
 export async function portalUpdateContact(phone: string, smsOptIn: boolean): Promise<Result> {
   const who = await whoAmI();
-  if (who.kind !== "client") return { ok: false, error: "Please sign in again." };
+  if (who.kind !== "customer") return { ok: false, error: "Please sign in again." };
   const p = phone.trim().slice(0, 40);
   if (p && phoneKey(p).length < 10) return { ok: false, error: "Enter a 10-digit mobile number." };
-  const { error } = await createAdminClient().from("clients").update({ phone: p || null, sms_opt_in: !!p && smsOptIn }).eq("id", who.clientId).eq("business_id", who.businessId);
+  const db = createAdminClient();
+  const patch = { phone: p || null, sms_opt_in: !!p && smsOptIn };
+  const { error } = await db.from("customers").update(patch).eq("id", who.customerId);
+  if (error) return { ok: false, error: "Couldn't save. Try again." };
+  // Keep each salon's record in step.
+  if (who.links.length) await db.from("clients").update(patch).in("id", who.links.map((l) => l.clientId));
+  revalidatePath("/me");
+  return { ok: true };
+}
+
+/** "My salon", "my stylist", home ZIP and how far to look. */
+export async function savePreferences(p: { businessId: string | null; staffId: string | null; zip?: string; miles?: number }): Promise<{ ok: true } | { ok: false; error: string }> {
+  const who = await whoAmI();
+  if (who.kind !== "customer") return { ok: false, error: "Please sign in again." };
+  const db = createAdminClient();
+  const patch: Record<string, unknown> = {};
+  if (p.businessId !== undefined) {
+    if (p.businessId) {
+      const { data: b } = await db.from("businesses").select("id").eq("id", p.businessId).eq("status", "approved").maybeSingle();
+      if (!b) return { ok: false, error: "That salon isn't available." };
+    }
+    patch.preferred_business_id = p.businessId;
+    patch.preferred_staff_id = null;
+  }
+  if (p.staffId) {
+    const { data: s } = await db.from("staff").select("id,business_id,bookable,active").eq("id", p.staffId).maybeSingle();
+    if (!s || !s.active || !s.bookable || (p.businessId && s.business_id !== p.businessId)) return { ok: false, error: "That stylist isn't available." };
+    patch.preferred_business_id = s.business_id;
+    patch.preferred_staff_id = s.id;
+  }
+  if (p.zip !== undefined) {
+    const zip = p.zip.trim();
+    if (zip) {
+      const q = parsePlace(zip);
+      const at = q ? await locatePlace(q) : null;
+      if (!at) return { ok: false, error: "We couldn't find that ZIP or city. Try a 5-digit ZIP." };
+      Object.assign(patch, { home_zip: zip.slice(0, 40), home_lat: at.lat, home_lng: at.lng });
+    } else Object.assign(patch, { home_zip: null, home_lat: null, home_lng: null });
+  }
+  if (p.miles !== undefined) {
+    if (![5, 10, 25, 50, 100].includes(p.miles)) return { ok: false, error: "Pick a distance." };
+    patch.search_miles = p.miles;
+  }
+  const { error } = await db.from("customers").update(patch).eq("id", who.customerId);
   if (error) return { ok: false, error: "Couldn't save. Try again." };
   revalidatePath("/me");
   return { ok: true };

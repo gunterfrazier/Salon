@@ -5,87 +5,155 @@ import { useEffect, useState, useTransition } from "react";
 import type { PortalAppt, PortalData } from "@/lib/data/portal";
 import { money } from "@/lib/format";
 import { formatDay, formatMinutes, formatTimeRange, parseHHMM, tzAbbrev, wallParts, zoneLabel, zonedToUtc } from "@/lib/time/zone";
-import { portalCancel, portalMove, portalMoveOptions, portalUpdateContact } from "./actions";
+import { portalCancel, portalMove, portalMoveOptions, portalUpdateContact, savePreferences } from "./actions";
+import type { CustomerHome } from "@/lib/data/customer";
 
 const card = "rounded-xl border border-line bg-surface p-4";
 const btn = "rounded-lg border border-line px-3 py-2 text-sm disabled:opacity-50";
 const primary = "rounded-lg bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-50";
 
-/** The client's own page: upcoming visits, changes within policy, balance, history. */
-export default function MeView({ data }: { data: PortalData }) {
-  const tz = data.salon.timezone;
-  const c = data.client;
-  // "Book again": the services from the last completed visit.
-  const last = data.past.find((p) => p.status === "completed");
-  const bookAgain = last ? `/book?services=${last.serviceIds.join(",")}` : "/book";
+/** The customer's own page: every salon they use, upcoming visits, balances, history and preferences. */
+export default function MeView({ me, salons }: { me: CustomerHome; salons: PortalData[] }) {
+  const upcoming = salons.flatMap((d) => d.upcoming.map((a) => ({ a, d }))).sort((x, y) => x.a.start.localeCompare(y.a.start));
+  const past = salons.flatMap((d) => d.past.map((p) => ({ p, d }))).sort((x, y) => y.p.start.localeCompare(x.p.start)).slice(0, 20);
+  const owed = salons.filter((d) => d.balance > 0);
+  const lastDone = past.find((x) => x.p.status === "completed");
+  const bookAgain = lastDone ? `/s/${lastDone.d.salon.slug}/book?services=${lastDone.p.serviceIds.join(",")}` : null;
+  const home = me.preferredSalon ? `/s/${me.preferredSalon.slug}/book${me.preferredStylistId ? `?staff=${me.preferredStylistId}` : ""}` : "/find";
+  const zones = [...new Set(salons.map((d) => d.salon.timezone))];
+  const many = salons.length > 1;
 
   return (
     <>
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-2 px-4 py-3">
           <div>
-            <p className="text-xs text-muted">{data.salon.name}</p>
-            <p className="font-semibold">Hi, {c.firstName}</p>
+            <p className="text-xs text-muted">Chairvana</p>
+            <p className="font-semibold">Hi{me.firstName ? `, ${me.firstName}` : ""}</p>
           </div>
           <nav className="flex gap-1 text-sm">
-            <Link href="/book" className="rounded-lg bg-foreground px-3 py-2 font-semibold text-background">Book</Link>
+            <Link href={home} className="rounded-lg bg-foreground px-3 py-2 font-semibold text-background">Book</Link>
+            <Link href="/find" className="rounded-lg px-3 py-2 hover:bg-background">Find</Link>
             <Link href="/account" className="rounded-lg px-3 py-2 hover:bg-background">Account</Link>
           </nav>
         </div>
       </header>
       <main className="mx-auto max-w-2xl space-y-4 px-4 py-4">
-        <p className="text-xs text-muted">Times are {zoneLabel(tz)}.</p>
+        {zones.length > 0 && <p className="text-xs text-muted">Times are {zones.map((z) => zoneLabel(z)).join(" / ")}.</p>}
 
-        {data.balance > 0 && (
-          <section className={card}>
-            <h2 className="font-semibold">Balance due: {money(data.balance)}</h2>
-            <p className="mt-1 text-sm">Please pay before your next visit. <PayLinks text={data.balancePayWith} /></p>
+        {owed.map((d) => (
+          <section key={d.salon.id} className={card}>
+            <h2 className="font-semibold">Balance due{many ? ` at ${d.salon.name}` : ""}: {money(d.balance)}</h2>
+            <p className="mt-1 text-sm">Please pay before your next visit. <PayLinks text={d.balancePayWith} /></p>
           </section>
-        )}
+        ))}
 
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">Upcoming</h2>
-          {data.upcoming.length === 0 && (
+          {upcoming.length === 0 && (
             <p className={`${card} text-sm`}>
               Nothing booked.{" "}
-              <Link href={bookAgain} className="underline">
-                {last ? `Book ${last.services.join(", ")} again` : "Book a visit"}
-              </Link>
+              {bookAgain ? (
+                <Link href={bookAgain} className="underline">Book {lastDone!.p.services.join(", ")} again</Link>
+              ) : (
+                <Link href={home} className="underline">{me.preferredSalon ? `Book with ${me.preferredSalon.name}` : "Find a salon"}</Link>
+              )}
             </p>
           )}
-          {data.upcoming.map((a) => (
-            <Upcoming key={a.id} a={a} tz={tz} policy={data.policy} salonPhone={data.salon.phone} />
+          {upcoming.map(({ a, d }) => (
+            <Upcoming key={a.id} a={a} tz={d.salon.timezone} policy={d.policy} salonPhone={d.salon.phone} salon={many || !me.preferredSalon ? d.salon : null} />
           ))}
         </section>
 
-        {data.past.length > 0 && (
+        <Preferences me={me} />
+
+        {past.length > 0 && (
           <section className={card}>
             <h2 className="font-semibold">Past visits</h2>
             <ul className="mt-2 divide-y divide-line text-sm">
-              {data.past.map((p) => (
+              {past.map(({ p, d }) => (
                 <li key={p.id} className="flex flex-wrap justify-between gap-x-3 py-2">
                   <span>
-                    {formatDay(wallParts(new Date(p.start), tz).date, { month: "short", day: "numeric", year: "numeric" })} · {p.services.join(", ")}
+                    {formatDay(wallParts(new Date(p.start), d.salon.timezone).date, { month: "short", day: "numeric", year: "numeric" })} · {p.services.join(", ")}
+                    {many && <span className="text-muted"> · {d.salon.name}</span>}
                   </span>
                   <span className="text-muted">{p.status === "completed" ? money(p.total) : p.status === "cancelled" ? "Cancelled" : p.status === "no_show" ? "Missed" : ""}</span>
                 </li>
               ))}
             </ul>
-            {last && (
+            {bookAgain && (
               <p className="mt-2 text-sm">
-                <Link className="underline" href={bookAgain}>Book {last.services.join(", ")} again</Link>
+                <Link className="underline" href={bookAgain}>Book {lastDone!.p.services.join(", ")} again</Link>
               </p>
             )}
           </section>
         )}
 
-        <Contact phone={c.phone ?? ""} smsOptIn={c.smsOptIn} email={c.email} />
+        <Contact phone={me.phone ?? ""} smsOptIn={me.smsOptIn} email={me.email} />
       </main>
     </>
   );
 }
 
-function Upcoming({ a, tz, policy, salonPhone }: { a: PortalAppt; tz: string; policy: PortalData["policy"]; salonPhone: string | null }) {
+/** "My salon", "my stylist", and where to look for openings. */
+function Preferences({ me }: { me: CustomerHome }) {
+  const [salonId, setSalonId] = useState(me.preferredSalon?.id ?? "");
+  const [staffId, setStaffId] = useState(me.preferredStylistId ?? "");
+  const [zip, setZip] = useState(me.homeZip ?? "");
+  const [miles, setMiles] = useState(me.searchMiles);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [pending, start] = useTransition();
+  const sel = "w-full rounded-lg border border-line bg-background px-3 py-2 text-base";
+  const stylists = me.preferredSalon && me.preferredSalon.id === salonId ? me.preferredSalon.stylists : [];
+
+  return (
+    <section className={card}>
+      <h2 className="font-semibold">My salon &amp; stylist</h2>
+      <p className="mt-0.5 text-sm text-muted">We&apos;ll show their openings first. You can always look wider.</p>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <label className="text-sm">
+          My salon
+          <select className={`${sel} mt-1`} value={salonId} onChange={(e) => { setSalonId(e.target.value); setStaffId(""); }}>
+            <option value="">None yet</option>
+            {me.salons.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+          </select>
+        </label>
+        <label className="text-sm">
+          My stylist
+          <select className={`${sel} mt-1`} value={staffId} onChange={(e) => setStaffId(e.target.value)} disabled={!stylists.length}>
+            <option value="">Anyone at the salon</option>
+            {stylists.map((x) => <option key={x.id} value={x.id}>{x.name}{x.title ? ` · ${x.title}` : ""}</option>)}
+          </select>
+          {salonId && salonId !== me.preferredSalon?.id && <span className="text-xs text-muted">Save, then pick a stylist.</span>}
+        </label>
+        <label className="text-sm">
+          Home ZIP or city
+          <input className={`${sel} mt-1`} value={zip} onChange={(e) => setZip(e.target.value)} placeholder="36280 or Ranburne, AL" />
+        </label>
+        <label className="text-sm">
+          Look within
+          <select className={`${sel} mt-1`} value={miles} onChange={(e) => setMiles(Number(e.target.value))}>
+            {[5, 10, 25, 50, 100].map((m) => <option key={m} value={m}>{m} miles</option>)}
+          </select>
+        </label>
+      </div>
+      <p className="mt-2 text-xs text-muted">Find another salon on <Link href="/find" className="underline">Find</Link>, then tap &ldquo;Make this my salon&rdquo; on its page.</p>
+      {msg && <p role={msg.ok ? "status" : "alert"} className={`mt-2 text-sm ${msg.ok ? "" : "font-semibold text-red-700 dark:text-red-300"}`}>{msg.text}</p>}
+      <button
+        className={`${primary} mt-3`}
+        disabled={pending}
+        onClick={() => start(async () => {
+          const r = await savePreferences({ businessId: salonId || null, staffId: staffId || null, zip, miles });
+          setMsg(r.ok ? { ok: true, text: "Saved." } : { ok: false, text: r.error });
+        })}
+      >
+        {pending ? "Saving…" : "Save"}
+      </button>
+    </section>
+  );
+}
+
+function Upcoming({ a, tz, policy, salonPhone, salon }: { a: PortalAppt; tz: string; policy: PortalData["policy"]; salonPhone: string | null; salon?: PortalData["salon"] | null }) {
   const [mode, setMode] = useState<"view" | "cancel" | "move">("view");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
@@ -94,6 +162,7 @@ function Upcoming({ a, tz, policy, salonPhone }: { a: PortalAppt; tz: string; po
 
   return (
     <article className={card}>
+      {salon && <p className="text-xs text-muted"><Link href={`/s/${salon.slug}`} className="underline">{salon.name}</Link></p>}
       <p className="font-semibold">{formatDay(day, { weekday: "long", month: "long", day: "numeric" })}</p>
       <p className="text-sm">{formatTimeRange(new Date(a.start), new Date(a.end), tz)}</p>
       <p className="mt-1 text-sm text-muted">{a.services.map((s) => s.name).join(", ")} · est. {money(a.total)}</p>

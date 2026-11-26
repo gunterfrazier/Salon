@@ -26,7 +26,7 @@ export interface PortalAppt {
 }
 
 export interface PortalData {
-  salon: { name: string; timezone: string; phone: string | null };
+  salon: { id: string; slug: string; name: string; timezone: string; phone: string | null };
   client: { id: string; firstName: string; lastName: string | null; phone: string | null; email: string | null; smsOptIn: boolean; favorites: Favorites | null };
   upcoming: PortalAppt[];
   past: { id: string; start: string; status: string; services: string[]; serviceIds: string[]; total: number }[];
@@ -39,7 +39,7 @@ export interface PortalData {
 export async function loadPortal(clientId: string, businessId: string, now = new Date()): Promise<PortalData | null> {
   const db = createAdminClient();
   const [{ data: b }, { data: c }, { data: appts }, { data: bal }, { data: owner }] = await Promise.all([
-    db.from("businesses").select("name,timezone,policy_settings,payment_methods").eq("id", businessId).single(),
+    db.from("businesses").select("id,slug,name,timezone,phone,policy_settings,payment_methods").eq("id", businessId).single(),
     db.from("clients").select("id,first_name,last_name,phone,email,sms_opt_in,preferences").eq("id", clientId).eq("business_id", businessId).single(),
     db
       .from("appointments")
@@ -97,7 +97,7 @@ export async function loadPortal(clientId: string, businessId: string, now = new
   const balance = (bal ?? []).reduce((n, r) => n + r.amount_cents, 0);
 
   return {
-    salon: { name: b.name, timezone: b.timezone, phone: owner?.[0]?.phone ?? null },
+    salon: { id: b.id, slug: b.slug, name: b.name, timezone: b.timezone, phone: b.phone ?? owner?.[0]?.phone ?? null },
     client: { id: c.id, firstName: c.first_name, lastName: c.last_name, phone: c.phone, email: c.email, smsOptIn: !!c.sms_opt_in, favorites: cleanFavorites(c.preferences) },
     upcoming,
     past,

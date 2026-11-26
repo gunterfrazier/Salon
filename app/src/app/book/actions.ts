@@ -17,6 +17,7 @@ import { hoursFor, whoOffers, type Stylist } from "@/lib/staff/stylists";
 import type { BookableService } from "@/lib/booking/build";
 import type { PublicBusiness } from "@/lib/data/public-booking";
 import { notifyAppointment } from "@/lib/notify/events";
+import { whoAmI } from "@/lib/auth/whoami";
 import { suggestOrder } from "@/lib/schedule/plan";
 
 const STAGES = { consult: 0, chemical: 1, treatment: 2, cut: 3, style: 4, wax: 5, fee: 9 };
@@ -144,10 +145,14 @@ export async function submitOnlineBooking(req: OnlineBookingRequest): Promise<On
   const result = buildBooking({ services, start: zonedToUtc(req.date, minutes, b.timezone), rules: b.rules, policy: b.policy, client: state, now: new Date() });
   if (result.errors.length) return { ok: false, error: result.errors[0] };
 
+  // Signed in with a customer account? This salon's record joins it.
+  const who = await whoAmI().catch(() => null);
+  const customerId = who?.kind === "customer" ? who.customerId : null;
+
   if (!clientId) {
     const { data, error } = await admin
       .from("clients")
-      .insert({ business_id: b.id, first_name: firstName, last_name: lastName, phone, email, source: "online", sms_opt_in: true, preferences: cleanFavorites(req.favorites) ?? {} })
+      .insert({ business_id: b.id, first_name: firstName, last_name: lastName, phone, email, source: "online", sms_opt_in: true, preferences: cleanFavorites(req.favorites) ?? {}, customer_id: customerId && who?.kind === "customer" && email === (who.user.email ?? "").toLowerCase() ? customerId : null })
       .select("id")
       .single();
     if (error) return { ok: false, error: "Couldn't save your details. Please try again." };
@@ -155,6 +160,13 @@ export async function submitOnlineBooking(req: OnlineBookingRequest): Promise<On
   } else {
     const patch: Record<string, unknown> = {};
     if (email && !match?.email) patch.email = email;
+    if (customerId && who?.kind === "customer") {
+      // Only claim this salon's record when it carries the customer's own verified email
+      // (a phone match alone could be someone else's record).
+      const { data: rec } = await admin.from("clients").select("customer_id,email").eq("id", clientId).single();
+      const mine = !!rec?.email && rec.email.toLowerCase() === (who.user.email ?? "").toLowerCase() && !!who.user.email_confirmed_at;
+      if (!rec?.customer_id && mine) patch.customer_id = customerId;
+    }
     const fav = cleanFavorites(req.favorites);
     if (fav) patch.preferences = fav;
     if (Object.keys(patch).length) await admin.from("clients").update(patch).eq("id", clientId);

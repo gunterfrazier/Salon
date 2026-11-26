@@ -6,7 +6,7 @@ import type { PolicySettings } from "./policy/types";
 import type { StoredMethods } from "./payments/settings";
 import type { BundleRule } from "./pricing/discounts";
 import type { HolidayRule } from "./schedule/holidays";
-import { linkedClient } from "./auth/whoami";
+import { linkedCustomer } from "./auth/whoami";
 import { ensureBusinessFor } from "./setup/bootstrap";
 import { createClient } from "./supabase/server";
 
@@ -40,8 +40,8 @@ export const getContext = cache(async function getContext() {
   const businessId = await ensureBusinessFor(user);
   if (!businessId) {
     // Not on the salon team: clients go to their own page.
-    const client = await linkedClient(user);
-    redirect(client ? "/me" : "/login?error=noaccess");
+    const customer = await linkedCustomer(user);
+    redirect(customer ? "/me" : "/login?error=noaccess");
   }
 
   const [{ data: business, error }, { data: staff }] = await Promise.all([

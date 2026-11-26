@@ -36,7 +36,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         <header className="border-b border-line bg-surface">
           <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
             <span className="font-semibold">Chairvana</span>
-            {who.kind === "client" && <Link href="/me" className="text-sm underline">My appointments</Link>}
+            {who.kind === "customer" && <Link href="/me" className="text-sm underline">My appointments</Link>}
           </div>
         </header>
       )}

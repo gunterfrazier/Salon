@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadSalonProfile } from "@/lib/data/salon-profile";
+import { whoAmI } from "@/lib/auth/whoami";
+import { createAdminClient } from "@/lib/supabase/admin";
+import PreferButton from "./PreferButton";
 import { duration, money } from "@/lib/format";
 import { formatMinutes, parseHHMM, tzAbbrev, WEEKDAY_KEYS } from "@/lib/time/zone";
 
@@ -20,6 +23,13 @@ export default async function SalonPage({ params, searchParams }: Props) {
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const s = await loadSalonProfile(slug);
   if (!s) notFound();
+  // Signed-in customer: show "my salon / my stylist" buttons.
+  const who = await whoAmI().catch(() => null);
+  let pref: { business: string | null; staff: string | null } | null = null;
+  if (who?.kind === "customer") {
+    const { data } = await createAdminClient().from("customers").select("preferred_business_id,preferred_staff_id").eq("id", who.customerId).single();
+    pref = { business: data?.preferred_business_id ?? null, staff: data?.preferred_staff_id ?? null };
+  }
   const focus = s.stylists.find((x) => x.id === sp.stylist) ?? null;
   const address = [s.street, [s.city, s.state].filter(Boolean).join(", "), s.zip].filter(Boolean).join(" ");
   const map = address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${s.name} ${address}`)}` : null;
@@ -45,6 +55,8 @@ export default async function SalonPage({ params, searchParams }: Props) {
           <Link href={book(focus ? `?staff=${focus.id}` : "")} className="rounded-xl bg-accent px-5 py-3 font-semibold text-on-accent">
             {focus ? `Book with ${focus.name.split(" ")[0]}` : "Book online"}
           </Link>
+          {pref && <span className="self-center"><PreferButton businessId={s.id} label="Make this my salon" active={pref.business === s.id} /></span>}
+          {!pref && <Link href="/signup" className="self-center text-sm underline">Create an account to save this salon</Link>}
         </div>
       </header>
 
@@ -59,9 +71,10 @@ export default async function SalonPage({ params, searchParams }: Props) {
                 <p className="font-semibold">{x.name}</p>
                 {x.title && <p className="text-sm text-muted">{x.title}</p>}
                 {x.bio && <p className="mt-1 text-sm">{x.bio}</p>}
-                <div className="mt-2 flex gap-3 text-sm">
+                <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
                   <Link href={book(`?staff=${x.id}`)} className="underline">Book</Link>
                   <Link href={`/s/${s.slug}?stylist=${x.id}`} className="underline">Services</Link>
+                  {pref && <PreferButton businessId={s.id} staffId={x.id} label={`Make ${x.name.split(" ")[0]} my stylist`} active={pref.staff === x.id} />}
                 </div>
               </li>
             ))}

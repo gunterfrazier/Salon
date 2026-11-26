@@ -25,8 +25,9 @@ export default async function SalonBookPage({ params, searchParams }: Props) {
   // Signed-in client of this salon? Fill in their details.
   let prefill: { firstName: string; lastName: string; phone: string; email: string } | undefined;
   const who = await whoAmI().catch(() => ({ kind: "signed_out" as const }));
-  if (who.kind === "client" && who.businessId === b.id) {
-    const { data: c } = await createAdminClient().from("clients").select("first_name,last_name,phone,email").eq("id", who.clientId).single();
+  if (who.kind === "customer") {
+    // Their account details (the salon's own record, if any, is matched when they book).
+    const { data: c } = await createAdminClient().from("customers").select("first_name,last_name,phone,email").eq("id", who.customerId).single();
     if (c) prefill = { firstName: c.first_name ?? "", lastName: c.last_name ?? "", phone: c.phone ?? "", email: c.email ?? who.user.email ?? "" };
   }
   return (

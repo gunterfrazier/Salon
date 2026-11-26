@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   const who = await whoAmI();
   if (who.kind === "staff") redirect("/today");
-  if (who.kind === "client") redirect("/me");
+  if (who.kind === "customer") redirect("/me");
   if (who.kind === "none") redirect("/login?error=noaccess");
   redirect("/login");
 }
