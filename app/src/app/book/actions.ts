@@ -10,17 +10,15 @@ import { paymentRequest } from "@/lib/payments/methods";
 import { depositMethods, mergeMethods } from "@/lib/payments/settings";
 import { policyText, policyVersion } from "@/lib/policy/text";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { addDays, formatDay, formatTime, isDateStr, parseHHMM, todayIn, toHHMM, zonedToUtc } from "@/lib/time/zone";
-import { cleanFavorites, findOpenings, searchWindow, type Opening, type SearchCriteria } from "@/lib/booking/search";
-import { loadBusyRange } from "@/lib/data/schedule";
+import { formatDay, formatTime, isDateStr, parseHHMM, todayIn, toHHMM, zonedToUtc } from "@/lib/time/zone";
+import { cleanFavorites, type Opening, type SearchCriteria } from "@/lib/booking/search";
 import { hoursFor, whoOffers, type Stylist } from "@/lib/staff/stylists";
 import type { BookableService } from "@/lib/booking/build";
-import type { PublicBusiness } from "@/lib/data/public-booking";
+import type { PublicBusiness, PublicService } from "@/lib/data/public-booking";
+import { salonOpenings } from "@/lib/discovery/openings";
 import { notifyAppointment } from "@/lib/notify/events";
 import { whoAmI } from "@/lib/auth/whoami";
-import { suggestOrder } from "@/lib/schedule/plan";
 
-const STAGES = { consult: 0, chemical: 1, treatment: 2, cut: 3, style: 4, wax: 5, fee: 9 };
 import { NEW_CLIENT_STATE } from "@/lib/ui/standing";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -235,25 +233,11 @@ export async function submitOnlineBooking(req: OnlineBookingRequest): Promise<On
 export async function findPublicOpenings(salon: string, serviceIds: string[], criteria: SearchCriteria, staffId?: string | null): Promise<{ ok: true; openings: Opening[] } | { ok: false; error: string }> {
   const b = await loadPublicBusiness({ slug: salon });
   if (!b) return { ok: false, error: "Online booking isn't open yet." };
-  const services = await servicesFor(b.id, serviceIds);
-  if (!services) return { ok: false, error: "Pick your services again." };
-  const tz = b.timezone;
-  const today = todayIn(tz);
-  const horizonDays = b.settings.maxDaysAhead;
-  const { first, last } = searchWindow(criteria.start, today, horizonDays);
-  const from = zonedToUtc(first, 0, tz);
-  const to = zonedToUtc(addDays(last, 1), 0, tz);
-  const who = eligible(b, serviceIds, staffId);
-  if (!who.length) return { ok: false, error: "No one offers all of these services. Try fewer services or another stylist." };
-  const isClosed = await loadClosedChecker(b);
-  const ordered = suggestOrder(services, STAGES);
-  const seen = new Map<string, Opening>();
-  for (const st of who) {
-    const busy = await loadBusyRange(createAdminClient(), b.id, st.id, from, to);
-    for (const o of findOpenings({ services: ordered, criteria, today, tz, hours: hoursFor(st, b.hours), isClosed, busy, now: new Date(), settings: b.settings, horizonDays, limit: 24, perDay: 4 })) {
-      seen.set(`${o.date} ${o.minutes}`, o);
-    }
-  }
-  const openings = [...seen.values()].sort((x, y) => x.date.localeCompare(y.date) || x.minutes - y.minutes).slice(0, 24);
+  if (!Array.isArray(serviceIds) || serviceIds.length === 0 || serviceIds.length > 8) return { ok: false, error: "Pick your services again." };
+  const menu = await loadPublicServices(b.id);
+  const services = serviceIds.map((id) => menu.find((m) => m.id === id));
+  if (services.some((x) => !x)) return { ok: false, error: "Pick your services again." };
+  if (!eligible(b, serviceIds, staffId).length) return { ok: false, error: "No one offers all of these services. Try fewer services or another stylist." };
+  const openings = await salonOpenings(b, services as PublicService[], criteria, staffId);
   return { ok: true, openings };
 }

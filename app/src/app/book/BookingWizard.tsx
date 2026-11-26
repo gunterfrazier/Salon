@@ -36,7 +36,7 @@ const input = "w-full rounded-xl border border-line bg-surface px-4 py-3 text-ba
 const STAGES = { consult: 0, chemical: 1, treatment: 2, cut: 3, style: 4, wax: 5, fee: 9 };
 
 export default function BookingWizard({
-  salon, business, services, dates, policyLines, initialPicked = [], prefill, stylists = [], initialStaff = null,
+  salon, business, services, dates, policyLines, initialPicked = [], prefill, stylists = [], initialStaff = null, initialSlot = null,
 }: {
   /** The salon's web address (slug). */
   salon: string;
@@ -51,13 +51,15 @@ export default function BookingWizard({
   /** Stylists to choose from (shown when there's more than one). */
   stylists?: { id: string; name: string; title: string | null; serviceIds: string[] | null }[];
   initialStaff?: string | null;
+  /** An opening chosen elsewhere (Find): go straight to details. */
+  initialSlot?: { date: string; time: string } | null;
 }) {
   const [staffId, setStaffId] = useState<string>(initialStaff ?? "any");
-  const [step, setStep] = useState<Step>("services");
+  const [step, setStep] = useState<Step>(initialSlot && initialPicked.length ? "details" : "services");
   const [picked, setPicked] = useState<string[]>(() => initialPicked.filter((id) => services.some((s) => s.id === id)));
-  const [date, setDate] = useState<string | null>(null);
+  const [date, setDate] = useState<string | null>(initialSlot && initialPicked.length ? initialSlot.date : null);
   const [times, setTimes] = useState<string[] | null>(null);
-  const [time, setTime] = useState<string | null>(null);
+  const [time, setTime] = useState<string | null>(initialSlot && initialPicked.length ? initialSlot.time : null);
   const [f, setF] = useState({ firstName: prefill?.firstName ?? "", lastName: prefill?.lastName ?? "", phone: prefill?.phone ?? "", email: prefill?.email ?? "", notes: "", website: "" });
   const [agreed, setAgreed] = useState(false);
   const [criteria, setCriteria] = useState<SearchCriteria>({ weekdays: [], block: "any", start: { kind: "next" } });

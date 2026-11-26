@@ -5,7 +5,9 @@ import { useEffect, useState, useTransition } from "react";
 import type { PortalAppt, PortalData } from "@/lib/data/portal";
 import { money } from "@/lib/format";
 import { formatDay, formatMinutes, formatTimeRange, parseHHMM, tzAbbrev, wallParts, zoneLabel, zonedToUtc } from "@/lib/time/zone";
-import { portalCancel, portalMove, portalMoveOptions, portalUpdateContact, savePreferences } from "./actions";
+import { myOpenings, portalCancel, portalMove, portalMoveOptions, portalUpdateContact, savePreferences, type Level } from "./actions";
+import { OpeningsCard } from "@/app/find/FindView";
+import type { SalonResult } from "@/lib/discovery/openings";
 import type { CustomerHome } from "@/lib/data/customer";
 
 const card = "rounded-xl border border-line bg-surface p-4";
@@ -65,6 +67,8 @@ export default function MeView({ me, salons }: { me: CustomerHome; salons: Porta
           ))}
         </section>
 
+        <OpeningsForYou me={me} />
+
         <Preferences me={me} />
 
         {past.length > 0 && (
@@ -92,6 +96,77 @@ export default function MeView({ me, salons }: { me: CustomerHome; salons: Porta
         <Contact phone={me.phone ?? ""} smsOptIn={me.smsOptIn} email={me.email} />
       </main>
     </>
+  );
+}
+
+/** Openings with my stylist → anyone at my salon → salons near me. */
+function OpeningsForYou({ me }: { me: CustomerHome }) {
+  const levels = ([
+    me.preferredStylistId ? ["stylist", `With ${me.preferredSalon?.stylists.find((s) => s.id === me.preferredStylistId)?.name.split(" ")[0] ?? "my stylist"}`] : null,
+    me.preferredSalon ? ["salon", `Anyone at ${me.preferredSalon.name}`] : null,
+    me.hasHome ? ["area", `Within ${me.searchMiles} mi`] : null,
+  ].filter(Boolean) as [Level, string][]);
+  const [level, setLevel] = useState<Level | null>(levels[0]?.[0] ?? null);
+  const [service, setService] = useState("");
+  const [res, setRes] = useState<{ results: SalonResult[]; services: string[] } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+
+  const load = (l: Level, text = service) =>
+    start(async () => {
+      setError(null);
+      const r = await myOpenings(l, text);
+      if (r.ok) {
+        setRes(r);
+        if (!text) setService(r.services.join(" + "));
+      } else {
+        setRes(null);
+        setError(r.error);
+      }
+    });
+
+  useEffect(() => {
+    if (levels[0]) load(levels[0][0], "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (!levels.length) {
+    return (
+      <section className={card}>
+        <h2 className="font-semibold">Openings for you</h2>
+        <p className="mt-1 text-sm text-muted">Pick your salon or add your home ZIP below and we&apos;ll show openings here. Or <Link href="/find" className="underline">search near you</Link>.</p>
+      </section>
+    );
+  }
+  const idx = levels.findIndex(([l]) => l === level);
+  const wider = idx >= 0 && idx < levels.length - 1 ? levels[idx + 1] : null;
+
+  return (
+    <section className="space-y-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-lg font-semibold">Openings for you</h2>
+        <div className="flex flex-wrap gap-1" role="tablist" aria-label="How wide to look">
+          {levels.map(([l, label]) => (
+            <button key={l} type="button" role="tab" aria-selected={level === l} onClick={() => { setLevel(l); load(l); }} className={`rounded-lg px-3 py-1.5 text-sm ${level === l ? "bg-foreground font-semibold text-background" : "border border-line"}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (level) load(level); }}>
+        <input className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-base" value={service} onChange={(e) => setService(e.target.value)} placeholder="What you'd like, e.g. Women's Cut" aria-label="Services" />
+        <button className={btn} disabled={pending}>Search</button>
+      </form>
+      {pending && <p className="text-sm text-muted">Looking…</p>}
+      {!pending && error && <p className="text-sm">{error}</p>}
+      {!pending && res && res.results.map((r) => <OpeningsCard key={r.salon.id} r={r} />)}
+      {!pending && res && res.results.length === 0 && <p className="text-sm">No openings found{level === "area" ? " nearby" : ""} for {res.services.join(" + ")}.</p>}
+      {!pending && wider && (
+        <button type="button" className="text-sm underline" onClick={() => { setLevel(wider[0]); load(wider[0]); }}>
+          Look wider: {wider[1]}
+        </button>
+      )}
+    </section>
   );
 }
 

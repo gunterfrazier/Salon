@@ -9,7 +9,7 @@ import { todayIn } from "@/lib/time/zone";
 
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ services?: string; staff?: string }> };
+type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ services?: string; staff?: string; date?: string; time?: string }> };
 
 export async function generateMetadata({ params }: Props) {
   const b = await loadPublicBusiness({ slug: (await params).slug });
@@ -41,6 +41,7 @@ export default async function SalonBookPage({ params, searchParams }: Props) {
       prefill={prefill}
       stylists={b.stylists.map((s) => ({ id: s.id, name: s.name, title: s.title, serviceIds: s.serviceIds }))}
       initialStaff={b.stylists.some((s) => s.id === sp.staff) ? sp.staff! : null}
+      initialSlot={sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) && sp.time && /^\d{2}:\d{2}$/.test(sp.time) ? { date: sp.date, time: sp.time } : null}
     />
   );
 }

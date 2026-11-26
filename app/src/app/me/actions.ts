@@ -14,6 +14,7 @@ import { notifyAppointment } from "@/lib/notify/events";
 import { cancelDefaults } from "@/lib/policy/engine";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { locatePlace, parsePlace } from "@/lib/geo";
+import { openingsAcross, salonsNear, type SalonResult } from "@/lib/discovery/openings";
 import { addDays, isDateStr, parseHHMM, todayIn, toHHMM, zonedToUtc } from "@/lib/time/zone";
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -176,4 +177,50 @@ export async function savePreferences(p: { businessId: string | null; staffId: s
   if (error) return { ok: false, error: "Couldn't save. Try again." };
   revalidatePath("/me");
   return { ok: true };
+}
+
+export type Level = "stylist" | "salon" | "area";
+
+/**
+ * Openings for the customer: with their stylist, anyone at their salon, or any
+ * salon within their distance. Services default to their last visit's.
+ */
+export async function myOpenings(level: Level, serviceText?: string): Promise<{ ok: true; results: SalonResult[]; services: string[] } | { ok: false; error: string }> {
+  const who = await whoAmI();
+  if (who.kind !== "customer") return { ok: false, error: "Please sign in again." };
+  const db = createAdminClient();
+  const { data: c } = await db.from("customers").select("preferred_business_id,preferred_staff_id,home_lat,home_lng,search_miles").eq("id", who.customerId).single();
+  if (!c) return { ok: false, error: "Please sign in again." };
+
+  let wanted = (serviceText ?? "").split(/\s*\+\s*|,\s*/).map((x) => x.trim()).filter(Boolean).slice(0, 4);
+  if (!wanted.length) {
+    // Last completed visit, preferring their salon.
+    const ids = who.links.map((l) => l.clientId);
+    if (ids.length) {
+      const { data: last } = await db
+        .from("appointments")
+        .select("business_id,appointment_services(sort,services(name))")
+        .in("client_id", ids)
+        .eq("status", "completed")
+        .order("start_at", { ascending: false })
+        .limit(10);
+      const pick = (last ?? []).find((a) => a.business_id === c.preferred_business_id) ?? last?.[0];
+      wanted = ((pick?.appointment_services ?? []) as unknown as { sort: number; services: { name: string } | null }[]).sort((x, y) => x.sort - y.sort).map((l) => l.services?.name ?? "").filter(Boolean);
+    }
+  }
+  if (!wanted.length) return { ok: false, error: "Tell us what you'd like (e.g. Women's Cut) to see openings." };
+
+  const criteria = { weekdays: [], block: "any" as const, start: { kind: "next" as const } };
+  if (level === "area") {
+    if (c.home_lat == null) return { ok: false, error: "Add your home ZIP below to look nearby." };
+    const near = await salonsNear({ lat: c.home_lat, lng: c.home_lng }, c.search_miles);
+    if (!near.length) return { ok: true, results: [], services: wanted };
+    return { ok: true, results: await openingsAcross(near.slice(0, 15), wanted, criteria), services: wanted };
+  }
+  if (!c.preferred_business_id) return { ok: false, error: "Pick your salon below first." };
+  const { data: b } = await db.from("businesses").select("slug").eq("id", c.preferred_business_id).single();
+  if (!b) return { ok: false, error: "Your salon isn't available right now." };
+  const staff = level === "stylist" ? c.preferred_staff_id : null;
+  if (level === "stylist" && !staff) return { ok: false, error: "Pick your stylist below first." };
+  return { ok: true, results: await openingsAcross([{ slug: b.slug }], wanted, criteria, { [c.preferred_business_id]: staff }, 8), services: wanted };
 }
