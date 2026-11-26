@@ -8,6 +8,8 @@ import { getContext } from "@/lib/context";
 import { loadClientStates, reviveClientState, type ClientStateJSON } from "@/lib/data/clients";
 import { isDateStr, parseHHMM, zonedToUtc } from "@/lib/time/zone";
 import { NEW_CLIENT_STATE } from "@/lib/ui/standing";
+import { loadDaysOff } from "@/lib/data/schedule";
+import { blockedDuring, closureForDate, mergeHolidays } from "@/lib/schedule/holidays";
 
 export async function fetchClientState(clientId: string): Promise<ClientStateJSON | null> {
   const ctx = await getContext();
@@ -23,9 +25,13 @@ export interface BookingRequest {
   time: string;
   depositCents?: number;
   notes?: string;
+  /** Stylist confirmed booking on a day the salon is scheduled to be closed. */
+  confirmClosed?: boolean;
 }
 
-export type BookingResponse = { ok: true; appointmentId: string } | { ok: false; error: string };
+export type BookingResponse =
+  | { ok: true; appointmentId: string }
+  | { ok: false; error: string; closed?: { label: string; kind: "holiday" | "day_off" | "blocked_hours" } };
 
 const clean = (s?: string) => (s ?? "").trim() || null;
 
@@ -77,6 +83,16 @@ export async function createAppointment(req: BookingRequest): Promise<BookingRes
     depositCents: req.depositCents,
   });
   if (result.errors.length) return { ok: false, error: result.errors[0] };
+
+  // Scheduled closure? Needs the stylist's confirmation (they may override).
+  if (!req.confirmClosed) {
+    const daysOff = await loadDaysOff(supabase, business.id, result.plan.start, result.plan.end);
+    const rules = mergeHolidays(business.holidays);
+    const day = closureForDate(req.date, business.timezone, rules, daysOff);
+    const blocked = blockedDuring(result.plan.start, result.plan.end, daysOff);
+    if (day && day.kind !== "blocked_hours") return { ok: false, error: `The salon is scheduled to be closed: ${day.label}.`, closed: day };
+    if (blocked) return { ok: false, error: `That time is blocked: ${blocked.reason || "Blocked time"}.`, closed: { kind: "blocked_hours", label: blocked.reason || "Blocked time" } };
+  }
 
   if (!clientId) {
     const n = req.newClient!;

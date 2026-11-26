@@ -4,6 +4,8 @@ import type { ServiceRow } from "../booking/build";
 import type { StoredMethods } from "../payments/settings";
 import type { PolicySettings } from "../policy/types";
 import type { BundleRule } from "../pricing/discounts";
+import { isClosedDay, mergeHolidays, type DayOff, type HolidayRule } from "../schedule/holidays";
+import { loadDaysOff } from "./schedule";
 import { createAdminClient } from "../supabase/admin";
 import { parseRange } from "./calendar";
 import { addDays, zonedToUtc } from "../time/zone";
@@ -21,6 +23,7 @@ export interface PublicBusiness {
   rules: BundleRule[];
   settings: BookingSettings;
   paymentMethods: StoredMethods;
+  holidays: HolidayRule[];
   staffId: string;
 }
 
@@ -30,7 +33,7 @@ export async function loadPublicBusiness(): Promise<PublicBusiness | null> {
   const admin = createAdminClient();
   const { data: b } = await admin
     .from("businesses")
-    .select("id,name,timezone,business_hours,policy_settings,pricing_rules,booking_settings,payment_methods")
+    .select("id,name,timezone,business_hours,policy_settings,pricing_rules,booking_settings,payment_methods,holidays")
     .order("created_at")
     .limit(1)
     .maybeSingle();
@@ -46,6 +49,7 @@ export async function loadPublicBusiness(): Promise<PublicBusiness | null> {
     rules: (b.pricing_rules as { bundles?: BundleRule[] })?.bundles ?? [],
     settings: bookingSettings(b.booking_settings),
     paymentMethods: b.payment_methods as StoredMethods,
+    holidays: mergeHolidays(b.holidays as { rules?: HolidayRule[] }),
     staffId: staff.id,
   };
 }
@@ -80,4 +84,12 @@ export async function loadBusy(b: PublicBusiness, date: string): Promise<{ start
       const r = parseRange(x.during as string);
       return { start: new Date(r.start), end: new Date(r.end) };
     }), ...(off.data ?? []).map((t) => ({ start: new Date(t.start_at), end: new Date(t.end_at) }))];
+}
+
+/** Closed-day check for the bookable window: holidays plus full days off. */
+export async function loadClosedChecker(b: PublicBusiness): Promise<(date: string) => boolean> {
+  const from = new Date();
+  const to = new Date(from.getTime() + (b.settings.maxDaysAhead + 2) * 86_400_000);
+  const daysOff: DayOff[] = await loadDaysOff(createAdminClient(), b.id, from, to);
+  return (date) => isClosedDay(date, b.timezone, b.holidays, daysOff);
 }

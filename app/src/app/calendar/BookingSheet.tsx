@@ -10,6 +10,7 @@ import { suggestOrder } from "@/lib/schedule/plan";
 import { formatDay, formatSlot, formatTimeRange, isDateStr, parseHHMM, tzAbbrev, weekday, WEEKDAY_KEYS, zonedToUtc } from "@/lib/time/zone";
 import { clientChips, NEW_CLIENT_STATE } from "@/lib/ui/standing";
 import { createAppointment, fetchClientState } from "./actions";
+import { blockedDuring, closureForDate } from "@/lib/schedule/holidays";
 
 const input = "w-full rounded-lg border border-line bg-background px-3 py-2.5 text-base";
 const label = "block text-sm font-semibold";
@@ -32,6 +33,10 @@ export default function BookingSheet({
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, startSaving] = useTransition();
+  /** Dates (and blocked windows) the stylist has chosen to book anyway. */
+  const [overridden, setOverridden] = useState<Set<string>>(new Set());
+  const [prompt, setPrompt] = useState<{ key: string; label: string; kind: string } | null>(null);
+  const dateInputId = "booking-date";
 
   useEffect(() => {
     const k = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -82,6 +87,26 @@ export default function BookingSheet({
     }
   }, [serviceIds, minutes, date, deposit, svcById, tz, data.rules, data.policy, state]);
 
+  // Scheduled closures: holidays, days off, blocked hours.
+  const dayClosure = isDateStr(date) ? closureForDate(date, tz, data.holidays, data.daysOff) : null;
+  const blocked = preview ? blockedDuring(preview.plan.start, preview.plan.end, data.daysOff) : null;
+  const closure =
+    dayClosure && dayClosure.kind !== "blocked_hours"
+      ? { key: `day:${date}`, label: dayClosure.label, kind: dayClosure.kind }
+      : blocked
+        ? { key: `block:${blocked.id}`, label: blocked.reason || "Blocked time", kind: "blocked_hours" }
+        : null;
+  const closureOk = !closure || overridden.has(closure.key);
+
+  // Ask as soon as a closed day is picked (once per day).
+  useEffect(() => {
+    if (dayClosure && dayClosure.kind !== "blocked_hours" && !overridden.has(`day:${date}`)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPrompt({ key: `day:${date}`, label: dayClosure.label, kind: dayClosure.kind });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date]);
+
   // Heads-ups (the server makes the final call on overlaps).
   const notices: string[] = [];
   if (preview && minutes !== null) {
@@ -94,6 +119,7 @@ export default function BookingSheet({
       a.busy.some((b) => mine.some((m) => new Date(m.start) < new Date(b.end) && new Date(b.start) < new Date(m.end))),
     );
     if (clash) notices.push("Overlaps another appointment's hands-on time.");
+    if (closure) notices.push(closure.kind === "blocked_hours" ? `During blocked time: ${closure.label}.` : `The salon is scheduled to be closed: ${closure.label}.`);
   }
 
   const toggle = (id: string) => setServiceIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
@@ -109,6 +135,7 @@ export default function BookingSheet({
 
   function save() {
     setError(null);
+    if (closure && !closureOk) return setPrompt(closure);
     startSaving(async () => {
       const res = await createAppointment({
         clientId: mode === "existing" ? clientId ?? undefined : undefined,
@@ -118,8 +145,10 @@ export default function BookingSheet({
         time,
         depositCents: preview?.deposit.required ? preview.depositCents : undefined,
         notes,
+        confirmClosed: !!closure && closureOk,
       });
       if (res.ok) onSaved();
+      else if (res.closed) setPrompt({ key: closure?.key ?? `day:${date}`, label: res.closed.label, kind: res.closed.kind });
       else setError(res.error);
     });
   }
@@ -234,7 +263,7 @@ export default function BookingSheet({
           <section className="grid gap-2 sm:grid-cols-2">
             <label className="space-y-1">
               <span className={label}>Date</span>
-              <input type="date" className={input} value={date} onChange={(e) => setDate(e.target.value)} required />
+              <input id={dateInputId} type="date" className={input} value={date} onChange={(e) => setDate(e.target.value)} required />
             </label>
             <label className="space-y-1">
               <span className={label}>Start time ({tzAbbrev(isDateStr(date) ? zonedToUtc(date, 12 * 60, tz) : new Date(), tz)})</span>
@@ -321,6 +350,46 @@ export default function BookingSheet({
           </div>
         </div>
       </div>
+      {prompt && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={(e) => e.stopPropagation()}>
+          <div role="alertdialog" aria-modal="true" aria-labelledby="closed-title" aria-describedby="closed-desc" className="w-full max-w-sm rounded-2xl bg-surface p-5 shadow-xl">
+            <h3 id="closed-title" className="text-lg font-bold">
+              {prompt.kind === "blocked_hours" ? "That time is blocked off" : "Scheduled to be closed"}
+            </h3>
+            <p id="closed-desc" className="mt-2 text-sm">
+              {prompt.kind === "blocked_hours" ? (
+                <>You blocked this time on {formatDay(date, { weekday: "long", month: "short", day: "numeric" })} ({prompt.label}).</>
+              ) : (
+                <>
+                  {data.businessName} is scheduled to be closed on <strong>{formatDay(date, { weekday: "long", month: "short", day: "numeric" })}</strong> ({prompt.label}).
+                </>
+              )}{" "}
+              Do you want to book this appointment anyway?
+            </p>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row-reverse">
+              <button
+                autoFocus
+                className="rounded-lg bg-accent px-4 py-2.5 font-semibold text-on-accent"
+                onClick={() => {
+                  setOverridden((o) => new Set(o).add(prompt.key));
+                  setPrompt(null);
+                }}
+              >
+                Book this day anyway
+              </button>
+              <button
+                className="rounded-lg border border-line px-4 py-2.5"
+                onClick={() => {
+                  setPrompt(null);
+                  setTimeout(() => (document.getElementById(dateInputId) as HTMLInputElement | null)?.focus(), 0);
+                }}
+              >
+                Pick another day
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

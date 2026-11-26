@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { PolicySettings } from "./policy/types";
 import type { StoredMethods } from "./payments/settings";
 import type { BundleRule } from "./pricing/discounts";
+import type { HolidayRule } from "./schedule/holidays";
 import { ensureBusinessFor } from "./setup/bootstrap";
 import { createClient } from "./supabase/server";
 
@@ -17,6 +18,7 @@ export interface Business {
   pricing_rules: { bundles?: BundleRule[] };
   payment_methods: StoredMethods;
   booking_settings: Record<string, unknown>;
+  holidays: { rules?: HolidayRule[] } | null;
 }
 
 /**
@@ -34,7 +36,7 @@ export async function getContext() {
   if (!businessId) redirect("/dashboard"); // shows "not set up" message
 
   const [{ data: business, error }, { data: staff }] = await Promise.all([
-    supabase.from("businesses").select("id,name,timezone,business_hours,policy_settings,pricing_rules,payment_methods,booking_settings").eq("id", businessId).single(),
+    supabase.from("businesses").select("id,name,timezone,business_hours,policy_settings,pricing_rules,payment_methods,booking_settings,holidays").eq("id", businessId).single(),
     supabase.from("staff").select("id,display_name,role").eq("business_id", businessId).eq("auth_user_id", user.id).single(),
   ]);
   if (error || !business || !staff) throw new Error(`Couldn't load salon: ${error?.message ?? "missing staff record"}`);

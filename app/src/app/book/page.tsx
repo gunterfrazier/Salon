@@ -1,5 +1,5 @@
 import { bookableDates } from "@/lib/booking/availability";
-import { loadPublicBusiness, loadPublicServices } from "@/lib/data/public-booking";
+import { loadClosedChecker, loadPublicBusiness, loadPublicServices } from "@/lib/data/public-booking";
 import { policyText } from "@/lib/policy/text";
 import { todayIn } from "@/lib/time/zone";
 import BookingWizard from "./BookingWizard";
@@ -25,7 +25,7 @@ export default async function BookPage() {
     <BookingWizard
       business={{ name: b.name, timezone: b.timezone, hours: b.hours, policy: b.policy, rules: b.rules }}
       services={services}
-      dates={bookableDates(todayIn(b.timezone), b.hours, b.settings)}
+      dates={bookableDates(todayIn(b.timezone), b.hours, b.settings, await loadClosedChecker(b))}
       policyLines={policyText(b.policy)}
     />
   );

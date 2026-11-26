@@ -5,7 +5,7 @@ import { availableStarts, bookableDates } from "@/lib/booking/availability";
 import { buildBooking, toBookable } from "@/lib/booking/build";
 import { phoneKey } from "@/lib/clients/import";
 import { loadClientStates, reviveClientState } from "@/lib/data/clients";
-import { loadBusy, loadPublicBusiness, loadPublicServices } from "@/lib/data/public-booking";
+import { loadBusy, loadClosedChecker, loadPublicBusiness, loadPublicServices } from "@/lib/data/public-booking";
 import { paymentRequest } from "@/lib/payments/methods";
 import { depositMethods, mergeMethods } from "@/lib/payments/settings";
 import { policyText, policyVersion } from "@/lib/policy/text";
@@ -28,7 +28,7 @@ async function servicesFor(businessId: string, ids: string[]) {
 export async function getTimes(date: string, serviceIds: string[]): Promise<{ ok: true; times: string[] } | { ok: false; error: string }> {
   const b = await loadPublicBusiness();
   if (!b) return { ok: false, error: "Online booking isn't open yet." };
-  if (!isDateStr(date) || !bookableDates(todayIn(b.timezone), b.hours, b.settings).includes(date)) return { ok: false, error: "Pick another day." };
+  if (!isDateStr(date) || !bookableDates(todayIn(b.timezone), b.hours, b.settings, await loadClosedChecker(b)).includes(date)) return { ok: false, error: "The salon is closed that day. Pick another day." };
   const services = await servicesFor(b.id, serviceIds);
   if (!services) return { ok: false, error: "Pick your services again." };
   const busy = await loadBusy(b, date);
@@ -77,7 +77,7 @@ export async function submitOnlineBooking(req: OnlineBookingRequest): Promise<On
   if (email && !EMAIL.test(email)) return { ok: false, error: "That email doesn't look right." };
   if (!req.agreed) return { ok: false, error: "Please agree to the booking policy." };
 
-  if (!isDateStr(req.date) || !bookableDates(todayIn(b.timezone), b.hours, b.settings).includes(req.date)) return { ok: false, error: "Pick another day." };
+  if (!isDateStr(req.date) || !bookableDates(todayIn(b.timezone), b.hours, b.settings, await loadClosedChecker(b)).includes(req.date)) return { ok: false, error: "The salon is closed that day. Pick another day." };
   let minutes: number;
   try {
     minutes = parseHHMM(req.time);

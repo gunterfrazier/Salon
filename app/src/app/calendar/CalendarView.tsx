@@ -17,6 +17,7 @@ const OPEN_STATUSES = new Set(["pending", "booked", "confirmed", "checked_in", "
 const STATUS_LABEL: Record<string, string> = { completed: "Completed", no_show: "No-show", cancelled: "Cancelled", pending: "Pending deposit" };
 import { markDepositReceived } from "./actions";
 import BookingSheet from "./BookingSheet";
+import { closureForDate } from "@/lib/schedule/holidays";
 import CheckoutSheet from "./CheckoutSheet";
 import CloseSheet from "./CloseSheet";
 
@@ -144,7 +145,12 @@ export default function CalendarView({ data, focusDate }: { data: CalendarData; 
               return (
                 <div key={d} className="flex-1 border-l border-line px-2 py-2 text-sm">
                   {data.view === "week" ? <Link href={href(d, "day")} className="hover:underline">{label}</Link> : label}
-                  <p className="text-xs text-muted">{w ? formatTimeRange(zonedToUtc(d, w[0], tz), zonedToUtc(d, w[1], tz), tz) : "Closed"}</p>
+                  {(() => {
+                    const c = closureForDate(d, tz, data.holidays, data.daysOff);
+                    if (c && c.kind !== "blocked_hours")
+                      return <p className="text-xs font-semibold text-red-700 dark:text-red-300">Closed: {c.label}</p>;
+                    return <p className="text-xs text-muted">{w ? formatTimeRange(zonedToUtc(d, w[0], tz), zonedToUtc(d, w[1], tz), tz) : "Closed"}</p>;
+                  })()}
                 </div>
               );
             })}
@@ -160,7 +166,11 @@ export default function CalendarView({ data, focusDate }: { data: CalendarData; 
               ))}
             </div>
             {dates.map((d) => {
-              const w = openWindow(data, d);
+              const dayClosure = closureForDate(d, tz, data.holidays, data.daysOff);
+              const w = dayClosure && dayClosure.kind !== "blocked_hours" ? null : openWindow(data, d);
+              const dayStart = zonedToUtc(d, 0, tz);
+              const dayEnd = zonedToUtc(addDays(d, 1), 0, tz);
+              const blocks = data.daysOff.filter((o) => new Date(o.start) < dayEnd && new Date(o.end) > dayStart && !(new Date(o.start) <= dayStart && new Date(o.end) >= dayEnd));
               const dayAppts = data.appointments.filter((a) => wallParts(new Date(a.start), tz).date === d);
               // Appointments booked inside another's processing time get their own lane.
               const lanes = dayAppts.map((a, i) =>
@@ -176,6 +186,17 @@ export default function CalendarView({ data, focusDate }: { data: CalendarData; 
                   aria-label={`${formatDay(d)}: tap an empty time to book`}
                 >
                   {w && <div className="absolute inset-x-0 bg-surface" style={{ top: (w[0] - startMin) * pxPerMin, height: (w[1] - w[0]) * pxPerMin }} />}
+                  {blocks.map((o) => {
+                    const from = Math.max(startMin, wallParts(new Date(Math.max(new Date(o.start).getTime(), dayStart.getTime())), tz).minutes);
+                    const toRaw = new Date(o.end) >= dayEnd ? 1440 : wallParts(new Date(o.end), tz).minutes;
+                    const to = Math.min(endMin, toRaw);
+                    if (to <= from) return null;
+                    return (
+                      <div key={o.id} className="processing-stripes pointer-events-none absolute inset-x-0 bg-closed px-2 py-1 text-[11px] font-semibold text-muted" style={{ top: (from - startMin) * pxPerMin, height: (to - from) * pxPerMin }}>
+                        {o.reason || "Blocked"} · {formatTimeRange(new Date(Math.max(new Date(o.start).getTime(), dayStart.getTime())), new Date(Math.min(new Date(o.end).getTime(), dayEnd.getTime())), tz)}
+                      </div>
+                    );
+                  })}
                   {hoursMarks.map((m) => (
                     <div key={m} className="pointer-events-none absolute inset-x-0 border-t border-line" style={{ top: (m - startMin) * pxPerMin }} />
                   ))}

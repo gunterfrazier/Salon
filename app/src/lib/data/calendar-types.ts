@@ -2,6 +2,7 @@ import type { ServiceRow } from "../booking/build";
 import type { Hours } from "../context";
 import type { PolicySettings } from "../policy/types";
 import type { BundleRule } from "../pricing/discounts";
+import type { DayOff, HolidayRule } from "../schedule/holidays";
 import type { ClientStateJSON } from "./clients-shared";
 
 /** Shapes passed from the server to the calendar screens (JSON-safe). */
@@ -52,4 +53,8 @@ export interface CalendarData {
   services: (ServiceRow & { category: string; categorySort: number; sort: number; bookable_online: boolean })[];
   clients: CalClient[];
   paymentMethods: ManualMethod[];
+  /** Holiday rules (merged with defaults). */
+  holidays: HolidayRule[];
+  /** One-time days off / blocked hours from the visible range through the next year. */
+  daysOff: DayOff[];
 }

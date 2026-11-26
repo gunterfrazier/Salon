@@ -62,12 +62,12 @@ export function availableStarts(i: AvailabilityInput): number[] {
   return out;
 }
 
-/** Days clients may pick: open days from tomorrow-ish up to maxDaysAhead. */
-export function bookableDates(today: DateStr, hours: Hours, settings: BookingSettings): DateStr[] {
+/** Days clients may pick: open days up to maxDaysAhead, minus holidays and days off. */
+export function bookableDates(today: DateStr, hours: Hours, settings: BookingSettings, isClosed: (d: DateStr) => boolean = () => false): DateStr[] {
   const out: DateStr[] = [];
   for (let d = 0; d <= settings.maxDaysAhead; d++) {
     const date = addDays(today, d);
-    if (hours[WEEKDAY_KEYS[weekday(date)]]) out.push(date);
+    if (hours[WEEKDAY_KEYS[weekday(date)]] && !isClosed(date)) out.push(date);
   }
   return out;
 }

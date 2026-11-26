@@ -8,6 +8,7 @@ import type { PolicySettings } from "@/lib/policy/types";
 import type { BundleRule } from "@/lib/pricing/discounts";
 import { isDateStr, parseHHMM, startOfWeek, zonedToUtc } from "@/lib/time/zone";
 import { NEW_CLIENT_STATE } from "@/lib/ui/standing";
+import { mergeHolidays } from "@/lib/schedule/holidays";
 import policyJson from "../../../../seed/policies.json";
 import rulesJson from "../../../../seed/pricing-rules.json";
 import menuJson from "../../../../seed/service-menu.json";
@@ -63,6 +64,11 @@ export default async function DevCalendar({ searchParams }: { searchParams: Prom
       })),
     ),
     paymentMethods: MANUAL_METHODS,
+    holidays: mergeHolidays(null),
+    daysOff: [
+      { id: "t1", start: "2026-12-04T15:00:00.000Z", end: "2026-12-04T17:00:00.000Z", reason: "Dentist", allDay: false },
+      { id: "t2", start: "2026-12-24T06:00:00.000Z", end: "2026-12-27T06:00:00.000Z", reason: "Christmas break", allDay: true },
+    ],
     clients: [
       { id: "c1", firstName: "Jamie", lastName: "R.", phone: "(555) 010-0101", email: null },
       { id: "c2", firstName: "Morgan", lastName: "T.", phone: "(555) 010-0102", email: null },

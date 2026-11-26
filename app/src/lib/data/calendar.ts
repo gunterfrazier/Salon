@@ -4,6 +4,8 @@ import { menu } from "../menu";
 import { addDays, todayIn, zonedToUtc } from "../time/zone";
 import type { CalAppointment, CalendarData, CalClient } from "./calendar-types";
 import { loadClientStates } from "./clients";
+import { mergeHolidays } from "../schedule/holidays";
+import { loadDaysOff } from "./schedule";
 
 type Ctx = Awaited<ReturnType<typeof getContext>>;
 
@@ -129,5 +131,12 @@ export async function loadCalendar(ctx: Ctx, opts: { from: string; view: "day" |
     services: svcList,
     clients: clientList,
     paymentMethods: MANUAL_METHODS,
+    holidays: mergeHolidays(business.holidays),
+    daysOff: await loadDaysOff(
+      supabase,
+      business.id,
+      new Date(Math.min(new Date(rangeStart).getTime(), Date.now())),
+      new Date(Math.max(new Date(rangeEnd).getTime(), Date.now() + 400 * 86_400_000)),
+    ),
   };
 }
