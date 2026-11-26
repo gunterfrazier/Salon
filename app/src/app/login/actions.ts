@@ -1,7 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
-import { isOwnerEmail } from "@/lib/auth/owners";
+import { isOwnerEmail, ownerEmails } from "@/lib/auth/owners";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -24,6 +24,12 @@ export async function sendSignInLink(_: LoginState, form: FormData): Promise<Log
     return { status: "error", message: "Enter a valid email address." };
   }
   const sent: LoginState = { status: "sent", message: email };
+  // Setup not finished: say so instead of silently sending nothing. This
+  // reveals only that no owner is configured, not who is allowed.
+  if (ownerEmails().length === 0) {
+    console.error("[login] OWNER_EMAILS is not set; no one can sign in");
+    return { status: "error", message: "Sign-in isn't set up yet: no owner email has been added to the app's settings." };
+  }
   if (!isOwnerEmail(email)) return sent;
 
   // Make sure the owner has a login (public sign-ups stay off in Supabase).
