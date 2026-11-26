@@ -26,7 +26,7 @@ export default function BookingSheet({
   const [query, setQuery] = useState("");
   const [clientId, setClientId] = useState<string | null>(initialClientId ?? null);
   const [clientState, setClientState] = useState<ClientStateJSON | null>(initialClientId ? data.clientStates[initialClientId] ?? null : null);
-  const [nc, setNc] = useState({ firstName: "", lastName: "", phone: "", email: "" });
+  const [nc, setNc] = useState({ firstName: "", lastName: "", phone: "", email: "", smsOptIn: false });
   const [serviceIds, setServiceIds] = useState<string[]>(initialServiceIds ?? []);
   const [date, setDate] = useState(initialDate);
   const [time, setTime] = useState(initialTime);
@@ -217,6 +217,10 @@ export default function BookingSheet({
                 <input className={input} placeholder="Last name" value={nc.lastName} onChange={(e) => setNc({ ...nc, lastName: e.target.value })} aria-label="Last name" autoComplete="off" />
                 <input className={input} placeholder="Mobile phone" inputMode="tel" value={nc.phone} onChange={(e) => setNc({ ...nc, phone: e.target.value })} aria-label="Phone" autoComplete="off" />
                 <input className={input} placeholder="Email" inputMode="email" value={nc.email} onChange={(e) => setNc({ ...nc, email: e.target.value })} aria-label="Email" autoComplete="off" />
+                <label className="flex items-center gap-2 text-sm sm:col-span-2">
+                  <input type="checkbox" className="h-4 w-4" checked={nc.smsOptIn} onChange={(e) => setNc({ ...nc, smsOptIn: e.target.checked })} />
+                  OK to text appointment reminders
+                </label>
               </div>
             )}
             {standingChips.length > 0 && <div className="flex flex-wrap gap-1.5">{standingChips.map((c, i) => <StatusChip key={i} status={c.status} text={"text" in c ? c.text : undefined} />)}</div>}

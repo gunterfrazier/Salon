@@ -21,3 +21,16 @@ export async function saveNotificationSettings(input: NotificationSettings): Pro
   revalidatePath("/settings/notifications");
   return { ok: true };
 }
+
+/** Where the stylist's own alerts go (their staff record). */
+export async function saveAlertContact(phone: string, email: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const p = phone.trim().slice(0, 40);
+  const e = email.trim().toLowerCase().slice(0, 200);
+  if (p && p.replace(/\D/g, "").length < 10) return { ok: false, error: "Enter a 10-digit mobile number." };
+  if (e && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return { ok: false, error: "That email doesn't look right." };
+  const ctx = await getContext();
+  const { error } = await ctx.supabase.from("staff").update({ phone: p || null, email: e || null }).eq("id", ctx.staff.id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/settings/notifications");
+  return { ok: true };
+}

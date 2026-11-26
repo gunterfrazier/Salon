@@ -13,6 +13,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { addDays, formatDay, formatTime, isDateStr, parseHHMM, todayIn, toHHMM, zonedToUtc } from "@/lib/time/zone";
 import { cleanFavorites, findOpenings, searchWindow, type Opening, type SearchCriteria } from "@/lib/booking/search";
 import { loadBusyRange } from "@/lib/data/schedule";
+import { notifyAppointment } from "@/lib/notify/events";
 import { suggestOrder } from "@/lib/schedule/plan";
 
 const STAGES = { consult: 0, chemical: 1, treatment: 2, cut: 3, style: 4, wax: 5, fee: 9 };
@@ -152,7 +153,7 @@ export async function submitOnlineBooking(req: OnlineBookingRequest): Promise<On
 
   const deposit = result.depositCents;
   const status = deposit > 0 ? "pending" : "booked";
-  const { error } = await admin.rpc("book_appointment", {
+  const { data: newId, error } = await admin.rpc("book_appointment", {
     p: {
       ...result.payload,
       business_id: b.id,
@@ -168,6 +169,7 @@ export async function submitOnlineBooking(req: OnlineBookingRequest): Promise<On
     if (error.code === "23P01") return { ok: false, error: "That time was just taken. Please pick another." };
     return { ok: false, error: "Couldn't save your booking. Please try again." };
   }
+  await notifyAppointment(b.id, newId as string, "booked_online");
 
   const when = `${formatDay(req.date, { weekday: "long", month: "long", day: "numeric" })} at ${formatTime(result.plan.start, b.timezone)}`;
   const note = `Deposit ${formatDay(req.date, { month: "short", day: "numeric" })} ${firstName} ${lastName}`;

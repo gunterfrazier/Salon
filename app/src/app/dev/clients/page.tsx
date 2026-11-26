@@ -24,7 +24,7 @@ const profile: ClientProfileData = {
   paymentMethods: [{ key: "cash", label: "Cash" }, { key: "venmo_direct", label: "Venmo" }, { key: "zelle", label: "Zelle" }],
   client: {
     id: "00000000-0000-0000-0000-000000000001", firstName: "Jamie", lastName: "Rivers", phone: "(256) 555-0101", email: "jamie@example.com",
-    notes: "Prefers cooler tones. Sensitive scalp: use barrier cream.", priorVisitCount: 6, source: "styleseat_import", createdAt: "2024-03-02T15:00:00Z",
+    notes: "Prefers cooler tones. Sensitive scalp: use barrier cream.", priorVisitCount: 6, source: "styleseat_import", smsOptIn: true, createdAt: "2024-03-02T15:00:00Z",
     depositOverride: "none", depositOverrideCents: null,
     favorites: { serviceIds: ["s1"], weekdays: [5], block: "morning" },
   },

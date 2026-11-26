@@ -29,6 +29,8 @@ export interface ClientFields {
   email?: string;
   notes?: string;
   priorVisitCount?: number;
+  /** The client agreed to get texts from the salon. */
+  smsOptIn?: boolean;
 }
 
 function validate(f: ClientFields): string | null {
@@ -46,6 +48,7 @@ const row = (f: ClientFields) => ({
   email: clean(f.email)?.toLowerCase() ?? null,
   notes: clean(f.notes),
   ...(f.priorVisitCount !== undefined ? { prior_visit_count: f.priorVisitCount } : {}),
+  ...(f.smsOptIn !== undefined ? { sms_opt_in: f.smsOptIn } : {}),
 });
 
 export async function createClientRecord(f: ClientFields): Promise<Result<{ id: string }>> {

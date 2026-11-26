@@ -14,6 +14,7 @@ import { bookingSettings } from "@/lib/booking/availability";
 import { findOpenings, searchWindow, type Opening, type SearchCriteria } from "@/lib/booking/search";
 import { menu } from "@/lib/menu";
 import { suggestOrder } from "@/lib/schedule/plan";
+import { notifyAppointment } from "@/lib/notify/events";
 
 export async function fetchClientState(clientId: string): Promise<ClientStateJSON | null> {
   const ctx = await getContext();
@@ -23,7 +24,7 @@ export async function fetchClientState(clientId: string): Promise<ClientStateJSO
 
 export interface BookingRequest {
   clientId?: string;
-  newClient?: { firstName: string; lastName?: string; phone?: string; email?: string };
+  newClient?: { firstName: string; lastName?: string; phone?: string; email?: string; smsOptIn?: boolean };
   serviceIds: string[];
   date: string;
   time: string;
@@ -102,7 +103,7 @@ export async function createAppointment(req: BookingRequest): Promise<BookingRes
     const n = req.newClient!;
     const { data: created, error } = await supabase
       .from("clients")
-      .insert({ business_id: business.id, first_name: clean(n.firstName), last_name: clean(n.lastName), phone: clean(n.phone), email: clean(n.email)?.toLowerCase() ?? null, source: "manual" })
+      .insert({ business_id: business.id, first_name: clean(n.firstName), last_name: clean(n.lastName), phone: clean(n.phone), email: clean(n.email)?.toLowerCase() ?? null, sms_opt_in: !!n.smsOptIn && !!clean(n.phone), source: "manual" })
       .select("id")
       .single();
     if (error) return { ok: false, error: `Couldn't add client: ${error.message}` };
@@ -117,6 +118,7 @@ export async function createAppointment(req: BookingRequest): Promise<BookingRes
     return { ok: false, error: `Couldn't save: ${error.message}` };
   }
 
+  await notifyAppointment(business.id, id as string, "booked_by_stylist");
   revalidatePath("/calendar");
   return { ok: true, appointmentId: id as string };
 }
@@ -163,6 +165,8 @@ export interface CloseRequest {
   flag: boolean;
   /** Collect what's owed now; otherwise it goes to the client's balance. */
   collect?: { method: string; reference?: string } | null;
+  /** Send the client a cancellation notice (default yes, if turned on in Settings › Messages). */
+  notifyClient?: boolean;
 }
 
 export async function closeAppointment(req: CloseRequest): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -200,6 +204,7 @@ export async function closeAppointment(req: CloseRequest): Promise<{ ok: true } 
     },
   });
   if (error) return { ok: false, error: error.code === "P0002" ? "This appointment is already closed." : `Couldn't save: ${error.message}` };
+  if (req.mode === "cancel" && req.notifyClient !== false) await notifyAppointment(ctx.business.id, req.appointmentId, "cancelled");
   revalidatePath("/calendar");
   return { ok: true };
 }

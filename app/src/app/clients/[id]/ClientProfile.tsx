@@ -121,7 +121,7 @@ function Contact({ data }: { data: ClientProfileData }) {
   const c = data.client;
   const { run, pending, error } = useAction();
   const [editing, setEditing] = useState(false);
-  const [f, setF] = useState({ firstName: c.firstName, lastName: c.lastName ?? "", phone: c.phone ?? "", email: c.email ?? "", notes: c.notes ?? "", priorVisitCount: String(c.priorVisitCount) });
+  const [f, setF] = useState({ firstName: c.firstName, lastName: c.lastName ?? "", phone: c.phone ?? "", email: c.email ?? "", notes: c.notes ?? "", priorVisitCount: String(c.priorVisitCount), smsOptIn: c.smsOptIn });
   if (!editing) {
     return (
       <section className={card}>
@@ -147,6 +147,10 @@ function Contact({ data }: { data: ClientProfileData }) {
         Visits before Chairvana
         <input type="number" min={0} className="w-24 rounded-lg border border-line bg-background px-2 py-1.5" value={f.priorVisitCount} onChange={(e) => setF({ ...f, priorVisitCount: e.target.value })} aria-label="Visits before Chairvana" />
         <span className="text-xs text-muted">(regulars aren&rsquo;t treated as new clients)</span>
+      </label>
+      <label className="mt-2 flex items-center gap-2 text-sm">
+        <input type="checkbox" className="h-4 w-4" checked={f.smsOptIn} onChange={(e) => setF({ ...f, smsOptIn: e.target.checked })} />
+        OK to text (the client agreed to get appointment texts)
       </label>
       <Err msg={error} />
       <div className="mt-3 flex justify-end gap-2">

@@ -7,5 +7,5 @@ export const dynamic = "force-dynamic";
 
 export default function DevNotifications() {
   if (process.env.NODE_ENV === "production") notFound();
-  return <NotificationSettingsForm initial={DEFAULT_NOTIFICATIONS} salon="Intensity Salon" timezone="America/Chicago" smsConnected={false} />;
+  return <NotificationSettingsForm initial={DEFAULT_NOTIFICATIONS} salon="Intensity Salon" timezone="America/Chicago" connected={{ sms: false, email: false }} />;
 }

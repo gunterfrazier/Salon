@@ -79,7 +79,7 @@ function splitBefore(r: ReminderRule): { n: number; unit: Unit } {
   return m % 1440 === 0 ? { n: m / 1440, unit: "days" } : m % 60 === 0 ? { n: m / 60, unit: "hours" } : { n: m, unit: "minutes" };
 }
 
-export default function NotificationSettingsForm({ initial, salon, timezone, smsConnected }: { initial: NotificationSettings; salon: string; timezone: string; smsConnected: boolean }) {
+export default function NotificationSettingsForm({ initial, salon, timezone, connected }: { initial: NotificationSettings; salon: string; timezone: string; connected: { sms: boolean; email: boolean } }) {
   const [s, setS] = useState(initial);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const [saving, startSaving] = useTransition();
@@ -122,15 +122,18 @@ export default function NotificationSettingsForm({ initial, salon, timezone, sms
   const reminders = [...s.client.reminders].sort((a, b) => reminderMinutes(b) - reminderMinutes(a));
 
   return (
-    <main className="mx-auto max-w-3xl space-y-4 px-4 py-4 pb-28">
+    <main className="mx-auto max-w-3xl space-y-4 px-4 py-4">
       <div>
         <h1 className="text-2xl font-semibold">Messages</h1>
         <p className="text-sm text-muted">Reminders and notices for clients, and alerts for you. All times are salon time ({tz}).</p>
       </div>
 
-      {!smsConnected && (
+      {(!connected.sms || !connected.email) && (
         <p className="rounded-xl border border-line bg-surface p-3 text-sm">
-          <strong>Texting and email aren&apos;t connected yet.</strong> Your choices save now. Messages start going out once Twilio (texts) and email are set up.
+          <strong>
+            {!connected.sms && !connected.email ? "Texting and email aren't" : !connected.sms ? "Texting isn't" : "Email isn't"} connected yet.
+          </strong>{" "}
+          Your choices save now. Until it&apos;s set up, those messages are logged as &ldquo;not sent&rdquo; below instead of piling up.
         </p>
       )}
 

@@ -45,6 +45,7 @@ export default function CloseSheet({
   const [percent, setPercent] = useState(50);
   const [custom, setCustom] = useState("");
   const [flag, setFlag] = useState<boolean | null>(null);
+  const [notify, setNotify] = useState(true);
   const [collect, setCollect] = useState(false);
   const [method, setMethod] = useState("cash");
   const [reference, setReference] = useState("");
@@ -84,6 +85,7 @@ export default function CloseSheet({
         reasonKey: reasonKey ?? undefined,
         option,
         flag: flagOn,
+        notifyClient: mode === "cancel" ? notify : false,
         collect: collect ? { method, reference } : null,
       });
       if (res.ok) onDone();
@@ -214,6 +216,15 @@ export default function CloseSheet({
               </span>
             </span>
           </label>
+          {mode === "cancel" && (
+            <label className="flex items-start gap-3 rounded-lg border border-line px-3 py-2.5">
+              <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} className="mt-1 size-4 accent-[var(--accent)]" />
+              <span>
+                <span className="font-semibold">Let the client know</span>
+                <span className="block text-sm text-muted">Sends the cancellation message (Settings › Messages), if it&apos;s turned on.</span>
+              </span>
+            </label>
+          )}
         </>
       )}
     </Sheet>

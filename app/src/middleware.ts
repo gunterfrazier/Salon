@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { supabasePublicKeyOrNull, supabaseUrlOrNull } from "@/lib/supabase/env";
 
 /** Pages anyone can open without signing in. */
-const PUBLIC = [/^\/login(\/|$)/, /^\/auth\//, /^\/api\/health$/, /^\/book(\/|$)/];
+const PUBLIC = [/^\/login(\/|$)/, /^\/auth\//, /^\/api\/health$/, /^\/api\/cron\//, /^\/book(\/|$)/];
 
 /**
  * Edge middleware (not proxy.ts): the Cloudflare/OpenNext build supports Edge
