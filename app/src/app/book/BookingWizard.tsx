@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import SearchControls from "@/components/SearchControls";
+import { waterRipple } from "@/components/ripple";
 import { cleanFavorites, type Favorites, type Opening, type SearchCriteria } from "@/lib/booking/search";
 import type { Hours } from "@/lib/booking/availability";
 import { buildBooking, toBookable } from "@/lib/booking/build";
@@ -225,7 +226,12 @@ export default function BookingWizard({
       <main className="mx-auto max-w-lg px-4 py-8">
         {header}
         <section className="rounded-2xl border border-line bg-surface p-5" role="status">
-          <h2 className="text-xl font-bold">{done.status === "booked" ? "You're booked!" : "Almost done: send your deposit"}</h2>
+          {done.status === "booked" && (
+            <svg viewBox="0 0 24 24" className="mb-2 size-10 rounded-full border border-line p-2" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path className="check-stroke" d="M 5 12.5 C 7.5 15, 9 16.5, 10.5 17.5 C 13 13, 16 9, 19.5 6.5" />
+            </svg>
+          )}
+          <h2 className="text-xl font-bold">{done.status === "booked" ? "You’re all set. See you in the chair." : "Almost done: send your deposit"}</h2>
           <p className="mt-2">{done.when}</p>
           <p className="text-muted">{done.services.join(" + ")} · est. {money(done.total)}{done.priceMayVary ? "+" : ""}</p>
           {done.status === "pending" && (
@@ -535,8 +541,11 @@ export default function BookingWizard({
             {step === "details" && !waiting && (
               <button
                 disabled={saving || !agreed || !f.firstName.trim() || !f.lastName.trim() || f.phone.replace(/\D/g, "").length < 10}
-                onClick={submit}
-                className="rounded-xl bg-accent px-5 py-3 font-semibold text-on-accent disabled:opacity-40"
+                onClick={(e) => {
+                  waterRipple(e.currentTarget, e);
+                  submit();
+                }}
+                className="relative overflow-hidden rounded-xl bg-accent px-5 py-3 font-semibold text-on-accent disabled:opacity-40"
               >
                 {saving ? "Booking…" : "Book"}
               </button>

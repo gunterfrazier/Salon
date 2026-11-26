@@ -27,7 +27,7 @@
   "depositHold": { "releaseAfterHours": 24, "remindAfterHours": 12 },
   "templates": {
     "reminder": "Hi {first_name}! Reminder: {services} at {salon} on {date} at {time}. Need to change it? {manage_link}",
-    "confirmation": "You're booked, {first_name}! {services} at {salon} on {date} at {time}.",
+    "confirmation": "You're all set, {first_name}: {services} at {salon} on {date} at {time}. See you in the chair!",
     "change": "Hi {first_name}, your appointment at {salon} is now {date} at {time} ({services}).",
     "cancel": "Hi {first_name}, your {date} {time} appointment at {salon} has been cancelled. Book again: {book_link}",
     "depositRequest": "Hi {first_name}, to hold {date} at {time} please send your {deposit} deposit: {pay_link}. Unpaid holds are released after {hold_hours} hours.",

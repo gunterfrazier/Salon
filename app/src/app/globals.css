@@ -1,28 +1,31 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fafaf9;
+  /* Chairvana brand: Pearl Light / Soft Ivory / Obsidian, accented with water. */
+  --background: #f6f3ec;
   --surface: #ffffff;
-  --foreground: #1c1917;
-  --muted: #57534e;
-  --line: #e7e5e4;
-  --accent: #4338ca;
+  --foreground: #171513;
+  --muted: #5c5750;
+  --line: #e2dbcf;
+  --accent: #3f6a84;
   --on-accent: #ffffff;
-  --closed: #efedeb;
-  --chart-1: #257de0;
+  --closed: #ece7dd;
+  --chart-1: #3f6a84;
+  --water: #b9dcf2;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0c0a09;
-    --surface: #1c1917;
-    --foreground: #f5f5f4;
-    --muted: #a8a29e;
-    --line: #292524;
-    --accent: #a5b4fc;
-    --on-accent: #1e1b4b;
-    --closed: #141210;
-    --chart-1: #338ced;
+    --background: #0f0f11;
+    --surface: #17171b;
+    --foreground: #f5efe6;
+    --muted: #a8a39b;
+    --line: #2a2a30;
+    --accent: #b9dcf2;
+    --on-accent: #0f0f11;
+    --closed: #131316;
+    --chart-1: #b9dcf2;
+    --water: #b9dcf2;
   }
 }
 
@@ -35,12 +38,17 @@
   --color-accent: var(--accent);
   --color-on-accent: var(--on-accent);
   --color-closed: var(--closed);
+  --color-water: var(--water);
+  --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-wordmark: var(--font-cinzel), Georgia, serif;
+  --font-display: var(--font-cormorant), Georgia, serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
 }
 
 /* Status chips: colors come from src/lib/ui/status-colors.ts via CSS variables. */
@@ -86,4 +94,113 @@ body {
 /* Single-series charts (reports). */
 .chart-bar {
   fill: var(--chart-1);
+}
+
+/* ---- Brand motion (from the Chairvana motion kit) ---- */
+.tide-mark .tide-path {
+  fill: rgba(245, 239, 230, 0);
+  stroke: #f5efe6;
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.tide-mark .tide-path.filled {
+  fill: rgba(245, 239, 230, 0.98);
+  stroke-opacity: 0.25;
+}
+.wf-stream {
+  animation: wfPour 2.1s linear infinite;
+}
+@keyframes wfPour {
+  to {
+    stroke-dashoffset: -92;
+  }
+}
+.pool-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: poolRing 3.4s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+.pool-ring-2 {
+  animation-delay: 1.7s;
+}
+@keyframes poolRing {
+  0% {
+    transform: scale(0.35);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(1.75);
+    opacity: 0;
+  }
+}
+
+/* Confirm ripple: three rings from the tap point. */
+.ripple-wave {
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0);
+  border: 1.5px solid color-mix(in srgb, var(--water) 75%, transparent);
+  background: radial-gradient(circle, color-mix(in srgb, var(--water) 28%, transparent) 0%, color-mix(in srgb, var(--water) 6%, transparent) 55%, transparent 72%);
+  animation: chairvanaRipple 1.15s cubic-bezier(0.16, 0.84, 0.44, 1) forwards;
+}
+.ripple-wave.ring-2 {
+  animation-delay: 0.16s;
+  border-color: color-mix(in srgb, var(--foreground) 40%, transparent);
+  background: none;
+}
+.ripple-wave.ring-3 {
+  animation-delay: 0.32s;
+  border-color: color-mix(in srgb, var(--water) 32%, transparent);
+  background: none;
+}
+@keyframes chairvanaRipple {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(3.8);
+    opacity: 0;
+  }
+}
+.check-stroke {
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: checkDraw 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.15s forwards;
+}
+@keyframes checkDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wf-stream,
+  .pool-ring,
+  .ripple-wave {
+    animation: none;
+  }
+  .ripple-wave {
+    display: none;
+  }
+  .check-stroke {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Always-dark brand surface (home page), whatever the device setting. */
+.brand-dark {
+  --background: #0f0f11;
+  --surface: #17171b;
+  --foreground: #f5efe6;
+  --muted: #a8a39b;
+  --line: #2a2a30;
+  --accent: #b9dcf2;
+  --on-accent: #0f0f11;
+  --water: #b9dcf2;
+  color-scheme: dark;
+  background: var(--background);
+  color: var(--foreground);
 }
