@@ -12,7 +12,8 @@
     "receipt": { "enabled": true, "channels": ["email"] },
     "reviewRequest": { "enabled": false, "afterHours": 3, "channels": ["sms"], "url": "" },
     "rebookNudge": { "enabled": false, "afterWeeks": 6, "channels": ["sms"] },
-    "waitlist": { "enabled": true, "channels": ["sms", "email"] }
+    "waitlist": { "enabled": true, "channels": ["sms", "email"] },
+    "forms": { "enabled": true, "channels": ["sms", "email"] }
   },
   "stylist": {
     "newOnlineBooking": { "enabled": true },
@@ -35,7 +36,8 @@
     "receipt": "Thank you, {first_name}! Your {salon} receipt for {date}:\n{details}",
     "reviewRequest": "Thanks for coming in, {first_name}! If you loved your visit, a quick review means a lot: {review_link}",
     "rebookNudge": "Hi {first_name}, it's been {weeks} weeks since your last visit at {salon}. Ready for your next one? {book_link}",
-    "waitlistOffer": "Hi {first_name}! A time opened up at {salon} for {services}: {openings}. First to book gets it: {waitlist_link}"
+    "waitlistOffer": "Hi {first_name}! A time opened up at {salon} for {services}: {openings}. First to book gets it: {waitlist_link}",
+    "formRequest": "Hi {first_name}, before your {date} visit at {salon}, please fill out: {forms}. It takes a few minutes: {form_link}"
   },
   "footer": "Reply STOP to opt out."
 }

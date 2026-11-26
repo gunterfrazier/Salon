@@ -43,7 +43,7 @@ function useAction() {
 
 const Err = ({ msg }: { msg: string | null }) => (msg ? <p className="mt-2 text-sm text-red-700 dark:text-red-300" role="alert">{msg}</p> : null);
 
-export default function ClientProfile({ data }: { data: ClientProfileData }) {
+export default function ClientProfile({ data, formsSlot }: { data: ClientProfileData; formsSlot?: React.ReactNode }) {
   const { client, timezone: tz } = data;
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
@@ -74,6 +74,8 @@ export default function ClientProfile({ data }: { data: ClientProfileData }) {
       </div>
 
       {(openBalances.length > 0 || data.refundsOwed.length > 0) && (data.can.checkout || data.can.policy) && <Money data={data} date={date} />}
+
+      {formsSlot}
       {data.can.edit ? <Contact data={data} /> : data.client.notes && <section className={card}><h2 className="font-semibold">Notes</h2><p className="mt-2 whitespace-pre-wrap text-sm">{data.client.notes}</p></section>}
       {data.can.edit && <FavoritesCard data={data} />}
       {data.can.policy && <DepositRule data={data} />}

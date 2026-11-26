@@ -6,6 +6,7 @@ import { afterQuiet } from "./engine";
 import { clientRows, receiptDetails, stylistRow, type MessageRow, type ReceiptInfo } from "./outbox";
 import { configuredSender } from "./provider";
 import { contactFor, deliverQueued, loadBusinesses } from "./run";
+import { formsForBooking } from "../forms/server";
 
 export type AppointmentEvent = "booked_online" | "booked_by_stylist" | "cancelled" | "moved" | "checked_out" | "checked_in";
 
@@ -47,13 +48,18 @@ export async function notifyAppointment(businessId: string, appointmentId: strin
     const when = `${formatDay(wallParts(appt.start, salon.timezone).date, { weekday: "short", month: "short", day: "numeric" })} ${formatTime(appt.start, salon.timezone)}`;
     const now = new Date();
     const rows: MessageRow[] = [];
-    const client = (template: "confirmation" | "depositRequest" | "cancel" | "change" | "receipt" | "reviewRequest", channels: ("sms" | "email")[] | undefined, key: string, sendAfter = now, extra?: Record<string, string>) =>
+    const client = (template: "confirmation" | "depositRequest" | "cancel" | "change" | "receipt" | "reviewRequest" | "formRequest", channels: ("sms" | "email")[] | undefined, key: string, sendAfter = now, extra?: Record<string, string>) =>
       rows.push(...clientRows({ salon, settings: s, to, appt, template, channels: channels ?? ["sms"], key, sendAfter, extra }));
 
     if (event === "booked_online" || event === "booked_by_stylist") {
       if (a.status === "pending" && appt.depositDue > 0) {
         if (s.client.depositRequest.enabled) client("depositRequest", s.client.depositRequest.channels, `deposit-request:${a.id}`);
       } else if (s.client.confirmation.enabled) client("confirmation", s.client.confirmation.channels, `confirmation:${a.id}:${appt.start.toISOString()}`);
+      // Forms this visit needs (intake, color consent…): created now, link sent to the client.
+      const forms = await formsForBooking(db, businessId, a.id, a.client_id, now).catch(() => []);
+      if (forms.length && s.client.forms?.enabled) {
+        client("formRequest", s.client.forms.channels, `forms:${a.id}`, afterQuiet(now, salon.timezone, s.quietHours), { forms: forms.map((f) => f.title).join(", "), form_link: `${salon.siteUrl}/f/${forms[0].token}` });
+      }
       if (event === "booked_online" && s.stylist.newOnlineBooking.enabled) {
         const dep = appt.depositDue > 0 ? ` Deposit ${money(appt.depositDue)} due; the time is held ${s.depositHold.releaseAfterHours} hours.` : "";
         rows.push(stylistRow({ salon, staff: contactFor(b, a.staff_id), template: "stylistNewBooking", body: `New online booking: ${name}, ${appt.services.join(", ")}, ${when}.${dep}`, apptId: a.id, key: `new-booking:${a.id}`, sendAfter: now }));
@@ -111,5 +117,28 @@ export async function notifyStaff(businessId: string, staffId: string | null, te
     if (ids.length) await deliverQueued(db, configuredSender(), now, new Map([[b.salon.id, b.salon.name]]), ids);
   } catch (e) {
     console.error(`[messages] ${template}: ${(e as Error).message}`);
+  }
+}
+
+/** A one-off message to a client that isn't tied to an appointment (e.g. "please fill out this form"). Never throws. */
+export async function notifyClient(businessId: string, clientId: string, template: "formRequest", key: string, extra: Record<string, string>): Promise<{ sent: boolean; why?: string }> {
+  try {
+    const db = createAdminClient();
+    const [b] = await loadBusinesses(db, siteUrl(), businessId);
+    if (!b) return { sent: false, why: "Salon not found" };
+    const { data: c } = await db.from("clients").select("first_name,phone,email,sms_opt_in").eq("id", clientId).eq("business_id", businessId).single();
+    if (!c) return { sent: false, why: "Client not found" };
+    const now = new Date();
+    const toggle = b.settings.client.forms;
+    const rows = clientRows({ salon: b.salon, settings: b.settings, to: { clientId, firstName: c.first_name, phone: c.phone, email: c.email, smsOptIn: c.sms_opt_in }, appt: null, template, channels: toggle?.channels ?? ["sms", "email"], key, sendAfter: now, extra });
+    const queued = rows.filter((r) => r.status === "queued");
+    const { data: inserted, error } = await db.from("messages").upsert(rows, { onConflict: "business_id,dedupe_key,channel", ignoreDuplicates: true }).select("id");
+    if (error) throw new Error(error.message);
+    const ids = (inserted ?? []).map((r) => r.id as string);
+    if (ids.length) await deliverQueued(db, configuredSender(), now, new Map([[b.salon.id, b.salon.name]]), ids);
+    return queued.length ? { sent: true } : { sent: false, why: rows.map((r) => r.error).filter(Boolean).join("; ") || "No way to reach them" };
+  } catch (e) {
+    console.error(`[messages] ${template}: ${(e as Error).message}`);
+    return { sent: false, why: "Couldn't send" };
   }
 }

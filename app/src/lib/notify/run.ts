@@ -323,6 +323,7 @@ const SUBJECT: Record<string, string> = {
   reviewRequest: "Thanks for coming in",
   rebookNudge: "Time for your next visit?",
   waitlistOffer: "A time opened up",
+  formRequest: "Please fill out before your visit",
 };
 
 /** Sends queued messages that are due. Each one is claimed first, so two runs can't send the same message. */

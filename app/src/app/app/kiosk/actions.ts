@@ -1,5 +1,7 @@
 "use server";
 
+import { pendingForms } from "@/lib/forms/server";
+
 import { revalidatePath } from "next/cache";
 import { phoneKey } from "@/lib/clients/import";
 import { denied, getContext } from "@/lib/context";
@@ -54,7 +56,7 @@ export async function kioskLookup(phone: string): Promise<{ ok: true; matches: K
 }
 
 /** "I'm here": marks today's appointment checked in and alerts the stylist. The phone must match again. */
-export async function kioskCheckIn(appointmentId: string, phone: string): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function kioskCheckIn(appointmentId: string, phone: string): Promise<{ ok: true; forms: { token: string; title: string }[] } | { ok: false; error: string }> {
   const found = await kioskLookup(phone);
   if (!found.ok) return found;
   if (!found.matches.some((m) => m.appointmentId === appointmentId)) return { ok: false, error: "We couldn't find that appointment. Please let your stylist know you're here." };
@@ -70,5 +72,8 @@ export async function kioskCheckIn(appointmentId: string, phone: string): Promis
   if (data?.length) await notifyAppointment(ctx.business.id, appointmentId, "checked_in");
   revalidatePath("/app/calendar");
   revalidatePath("/app/today");
-  return { ok: true };
+  // Forms still to fill in (consent, intake…): offered right on the tablet.
+  const { data: a } = await ctx.supabase.from("appointments").select("client_id").eq("id", appointmentId).single();
+  const forms = a ? (await pendingForms(ctx.supabase, ctx.business.id, a.client_id)).map((f) => ({ token: f.token, title: f.title })) : [];
+  return { ok: true, forms };
 }

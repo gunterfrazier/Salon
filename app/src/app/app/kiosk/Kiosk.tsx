@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { kioskCheckIn, kioskLookup, type KioskMatch } from "./actions";
 
-type Step = { kind: "phone" } | { kind: "pick"; matches: KioskMatch[] } | { kind: "none" } | { kind: "done"; name: string; time: string } | { kind: "error"; text: string };
+type Step = { kind: "phone" } | { kind: "pick"; matches: KioskMatch[] } | { kind: "none" } | { kind: "done"; name: string; time: string; forms?: { token: string; title: string }[] } | { kind: "error"; text: string };
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"];
 
@@ -25,7 +25,7 @@ export default function Kiosk({ salon }: { salon: string }) {
     const t = setTimeout(() => {
       setStep({ kind: "phone" });
       setDigits("");
-    }, 20_000);
+    }, step.kind === "done" && step.forms?.length ? 60_000 : 20_000);
     return () => clearTimeout(t);
   }, [step]);
 
@@ -44,7 +44,7 @@ export default function Kiosk({ salon }: { salon: string }) {
   const checkIn = (m: KioskMatch) =>
     start(async () => {
       const r = await kioskCheckIn(m.appointmentId, digits);
-      setStep(r.ok ? { kind: "done", name: m.name, time: m.time } : { kind: "error", text: r.error });
+      setStep(r.ok ? { kind: "done", name: m.name, time: m.time, forms: r.forms } : { kind: "error", text: r.error });
     });
   const reset = () => {
     setDigits("");
@@ -95,7 +95,14 @@ export default function Kiosk({ salon }: { salon: string }) {
         <>
           <p className="text-5xl" aria-hidden>✓</p>
           <p className="text-2xl font-semibold">Thanks, {step.name.split(" ")[0]}! You&apos;re checked in for {step.time}.</p>
-          <p className="text-xl text-muted">Have a seat. We&apos;ll be right with you.</p>
+          {step.forms?.length ? (
+            <>
+              <p className="text-xl">Before your service, please fill out: <strong>{step.forms.map((f) => f.title).join(", ")}</strong></p>
+              <a href={`/f/${step.forms[0].token}?kiosk=1`} className={`${big} bg-accent px-8 py-4 text-on-accent`}>Fill it in now</a>
+            </>
+          ) : (
+            <p className="text-xl text-muted">Have a seat. We&apos;ll be right with you.</p>
+          )}
           <button type="button" onClick={reset} className={`${big} border border-line px-6 py-3`}>Done</button>
         </>
       )}

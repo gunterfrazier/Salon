@@ -25,7 +25,8 @@ export type TemplateKey =
   | "receipt"
   | "reviewRequest"
   | "rebookNudge"
-  | "waitlistOffer";
+  | "waitlistOffer"
+  | "formRequest";
 
 export interface NotificationSettings {
   /** Client texts/emails that would land inside this window ("HH:MM" salon time; may wrap midnight) are moved out of it. */
@@ -40,6 +41,7 @@ export interface NotificationSettings {
     reviewRequest: Toggle & { afterHours: number; url: string };
     rebookNudge: Toggle & { afterWeeks: number };
     waitlist: Toggle;
+    forms: Toggle;
   };
   stylist: {
     newOnlineBooking: Toggle;
