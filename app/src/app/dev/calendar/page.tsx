@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import CalendarView from "@/app/calendar/CalendarView";
 import { buildBooking, type BookableService } from "@/lib/booking/build";
+import { MANUAL_METHODS } from "@/lib/data/calendar";
 import type { CalAppointment, CalendarData } from "@/lib/data/calendar-types";
 import { menu, servicesByKey } from "@/lib/menu";
 import type { PolicySettings } from "@/lib/policy/types";
@@ -24,7 +25,7 @@ function appt(id: string, clientId: string, name: string, date: string, time: st
   return {
     id, clientId, clientName: name, clientPhone: "(555) 010-0100", start: r.payload.start_at, end: r.payload.end_at, status: "booked", notes: null,
     depositRequired: deposit, depositPaid: paid,
-    services: r.priced.lines.map((l) => ({ name: l.name, listPrice: l.listPrice, finalPrice: l.finalPrice, discounts: l.discounts.map((d) => ({ label: d.label, amount_cents: d.amount })) })),
+    services: r.priced.lines.map((l, i) => ({ id: `${id}-${i}`, name: l.name, priceType: servicesByKey[keys[i]].priceType, listPrice: l.listPrice, finalPrice: l.finalPrice, discounts: l.discounts.map((d) => ({ label: d.label, amount_cents: d.amount })) })),
     busy: r.payload.services.flatMap((s) => s.busy),
   };
 }
@@ -61,6 +62,7 @@ export default async function DevCalendar({ searchParams }: { searchParams: Prom
         includes: s.includes ?? [], is_add_on: !!s.isAddOn, category: c.name, categorySort: ci, sort: si, bookable_online: true,
       })),
     ),
+    paymentMethods: MANUAL_METHODS,
     clients: [
       { id: "c1", firstName: "Jamie", lastName: "R.", phone: "(555) 010-0101", email: null },
       { id: "c2", firstName: "Morgan", lastName: "T.", phone: "(555) 010-0102", email: null },

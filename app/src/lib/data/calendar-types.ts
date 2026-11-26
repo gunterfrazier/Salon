@@ -17,9 +17,15 @@ export interface CalAppointment {
   notes: string | null;
   depositRequired: number;
   depositPaid: number;
-  services: { name: string; listPrice: number; finalPrice: number; discounts: { label: string; amount_cents: number }[] }[];
+  services: { id: string; name: string; priceType: string; listPrice: number; finalPrice: number; discounts: { label: string; amount_cents: number }[] }[];
   /** Hands-on time; the rest of [start, end) is processing (open). */
   busy: { phase: string; start: string; end: string }[];
+}
+
+/** Payment methods the stylist can record by hand at checkout. */
+export interface ManualMethod {
+  key: string;
+  label: string;
 }
 
 export interface CalClient {
@@ -45,4 +51,5 @@ export interface CalendarData {
   clientStates: Record<string, ClientStateJSON>;
   services: (ServiceRow & { category: string; categorySort: number; sort: number; bookable_online: boolean })[];
   clients: CalClient[];
+  paymentMethods: ManualMethod[];
 }

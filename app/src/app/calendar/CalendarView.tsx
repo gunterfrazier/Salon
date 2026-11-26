@@ -12,7 +12,12 @@ import { clientChips, NEW_CLIENT_STATE } from "@/lib/ui/standing";
 import type { StatusKey } from "@/lib/ui/status-colors";
 
 type Chip = { status: StatusKey; text?: string };
+type CloseKind = "checkout" | "cancel" | "no_show";
+const OPEN_STATUSES = new Set(["pending", "booked", "confirmed", "checked_in", "in_service"]);
+const STATUS_LABEL: Record<string, string> = { completed: "Completed", no_show: "No-show", cancelled: "Cancelled" };
 import BookingSheet from "./BookingSheet";
+import CheckoutSheet from "./CheckoutSheet";
+import CloseSheet from "./CloseSheet";
 
 const SNAP = 15;
 
@@ -29,6 +34,12 @@ export default function CalendarView({ data, focusDate }: { data: CalendarData; 
   const [now, setNow] = useState<Date | null>(null);
   const [selected, setSelected] = useState<CalAppointment | null>(null);
   const [booking, setBooking] = useState<{ date: string; time: string } | null>(null);
+  const [closing, setClosing] = useState<{ a: CalAppointment; kind: CloseKind } | null>(null);
+  const done = () => {
+    setClosing(null);
+    setSelected(null);
+    router.refresh();
+  };
 
   useEffect(() => {
     // Client-only clock (avoids server/browser mismatch); refresh each minute.
@@ -189,7 +200,11 @@ export default function CalendarView({ data, focusDate }: { data: CalendarData; 
         Tap an empty time to book it. <span className="processing-stripes inline-block h-3 w-6 rounded align-middle" /> striped = processing time, open for a short service.
       </p>
 
-      {selected && <AppointmentDetails a={selected} tz={tz} chips={chipsFor(selected)} data={data} now={now} onClose={() => setSelected(null)} />}
+      {selected && !closing && (
+        <AppointmentDetails a={selected} tz={tz} chips={chipsFor(selected)} data={data} now={now} onClose={() => setSelected(null)} onAction={(kind) => setClosing({ a: selected, kind })} />
+      )}
+      {closing?.kind === "checkout" && <CheckoutSheet a={closing.a} data={data} onClose={() => setClosing(null)} onDone={done} />}
+      {closing && closing.kind !== "checkout" && <CloseSheet a={closing.a} data={data} mode={closing.kind} onClose={() => setClosing(null)} onDone={done} />}
       {booking && (
         <BookingSheet
           data={data}
@@ -223,7 +238,7 @@ function AppointmentBlock({
         e.stopPropagation();
         onOpen();
       }}
-      className="processing-stripes appt-block absolute right-1 flex flex-col items-stretch justify-start overflow-hidden rounded-lg border-l-4 text-left"
+      className={`processing-stripes appt-block absolute right-1 flex flex-col items-stretch justify-start overflow-hidden rounded-lg border-l-4 text-left ${OPEN_STATUSES.has(a.status) ? "" : "appt-done"}`}
       style={{ top, height: Math.max(h, 22), left: lane ? `${Math.min(25 + lane * 15, 60)}%` : 4, zIndex: 10 + lane }}
       aria-label={`${a.clientName}, ${formatTime(new Date(a.start), tz)} to ${formatTime(new Date(a.end), tz)}`}
     >
@@ -237,6 +252,7 @@ function AppointmentBlock({
       ))}
       <span className="relative block p-1.5 text-xs leading-tight">
         <span className="font-semibold">{a.clientName}</span>
+        {!OPEN_STATUSES.has(a.status) && <span className="ml-1 text-[11px] font-semibold uppercase text-muted">· {STATUS_LABEL[a.status] ?? a.status}</span>}
         <span className="block text-muted">{formatTime(new Date(a.start), tz)} · {a.services.map((s) => s.name).join(" + ")}</span>
         {!compact && chips.length > 0 && (
           <span className="mt-1 flex flex-wrap gap-1">
@@ -250,10 +266,10 @@ function AppointmentBlock({
 }
 
 function AppointmentDetails({
-  a, tz, chips, data, now, onClose,
+  a, tz, chips, data, now, onClose, onAction,
 }: {
   a: CalAppointment; tz: string; chips: Chip[];
-  data: CalendarData; now: Date | null; onClose: () => void;
+  data: CalendarData; now: Date | null; onClose: () => void; onAction: (k: CloseKind) => void;
 }) {
   useEffect(() => {
     const k = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -330,7 +346,22 @@ function AppointmentDetails({
           </p>
         )}
         {a.notes && <p className="mt-3 whitespace-pre-wrap rounded-lg bg-background p-3 text-sm">{a.notes}</p>}
-        <p className="mt-4 text-xs text-muted">Check-out, cancel and no-show are coming next.</p>
+        {OPEN_STATUSES.has(a.status) ? (
+          <div className="mt-5 flex flex-wrap gap-2">
+            <button onClick={() => onAction("checkout")} className="flex-1 rounded-lg bg-accent px-4 py-2.5 font-semibold text-on-accent">Check out</button>
+            <button onClick={() => onAction("cancel")} className="rounded-lg border border-line px-4 py-2.5">Cancel</button>
+            <button
+              onClick={() => onAction("no_show")}
+              disabled={!!now && now < new Date(a.start)}
+              title={now && now < new Date(a.start) ? "Available once the appointment has started" : undefined}
+              className="rounded-lg border border-line px-4 py-2.5 disabled:opacity-40"
+            >
+              No-show
+            </button>
+          </div>
+        ) : (
+          <p className="mt-4 rounded-lg bg-background px-3 py-2 text-sm font-semibold">{STATUS_LABEL[a.status] ?? a.status}</p>
+        )}
       </div>
     </div>
   );

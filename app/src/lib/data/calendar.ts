@@ -7,6 +7,17 @@ import { loadClientStates } from "./clients";
 
 type Ctx = Awaited<ReturnType<typeof getContext>>;
 
+/** Recorded-by-hand methods (no saved cards yet). Keys match the payment_method enum. */
+export const MANUAL_METHODS = [
+  { key: "cash", label: "Cash" },
+  { key: "venmo_direct", label: "Venmo" },
+  { key: "cash_app_direct", label: "Cash App" },
+  { key: "zelle", label: "Zelle" },
+  { key: "paypal_me", label: "PayPal" },
+  { key: "apple_cash", label: "Apple Cash" },
+  { key: "other", label: "Other / card" },
+];
+
 /** Postgres range text '["2026-12-01 21:00:00+00","2026-12-01 21:30:00+00")' → ISO pair. */
 export function parseRange(r: string): { start: string; end: string } {
   const m = /^[[(]"?([^",]+)"?,"?([^",)\]]+)"?[)\]]$/.exec(r.trim());
@@ -19,8 +30,8 @@ type ApptRow = {
   id: string; client_id: string; start_at: string; end_at: string; status: string; notes: string | null; deposit_required_cents: number;
   clients: { first_name: string; last_name: string | null; phone: string | null } | null;
   appointment_services: {
-    sort: number; list_price_cents: number; price_quoted_cents: number; discounts: { label: string; amount_cents: number }[];
-    services: { name: string } | null; staff_busy_blocks: { phase: string; during: string }[];
+    id: string; sort: number; list_price_cents: number; price_quoted_cents: number; discounts: { label: string; amount_cents: number }[];
+    services: { name: string; price_type: string } | null; staff_busy_blocks: { phase: string; during: string }[];
   }[];
 };
 
@@ -35,7 +46,7 @@ export async function loadCalendar(ctx: Ctx, opts: { from: string; view: "day" |
     supabase
       .from("appointments")
       .select(
-        "id,client_id,start_at,end_at,status,notes,deposit_required_cents,clients(first_name,last_name,phone),appointment_services(sort,list_price_cents,price_quoted_cents,discounts,services(name),staff_busy_blocks(phase,during))",
+        "id,client_id,start_at,end_at,status,notes,deposit_required_cents,clients(first_name,last_name,phone),appointment_services(id,sort,list_price_cents,price_quoted_cents,discounts,services(name,price_type),staff_busy_blocks(phase,during))",
       )
       .eq("business_id", business.id)
       .lt("start_at", rangeEnd)
@@ -81,7 +92,14 @@ export async function loadCalendar(ctx: Ctx, opts: { from: string; view: "day" |
       notes: a.notes,
       depositRequired: a.deposit_required_cents,
       depositPaid: paid[a.id] ?? 0,
-      services: lines.map((l) => ({ name: l.services?.name ?? "Service", listPrice: l.list_price_cents, finalPrice: l.price_quoted_cents, discounts: l.discounts ?? [] })),
+      services: lines.map((l) => ({
+        id: l.id,
+        name: l.services?.name ?? "Service",
+        priceType: l.services?.price_type ?? "fixed",
+        listPrice: l.list_price_cents,
+        finalPrice: l.price_quoted_cents,
+        discounts: l.discounts ?? [],
+      })),
       busy: lines
         .flatMap((l) => l.staff_busy_blocks.map((b) => ({ phase: b.phase, ...parseRange(b.during) })))
         .sort((x, y) => x.start.localeCompare(y.start)),
@@ -110,5 +128,6 @@ export async function loadCalendar(ctx: Ctx, opts: { from: string; view: "day" |
     clientStates: await loadClientStates(supabase, business.id, [...new Set(rows.map((a) => a.client_id))]),
     services: svcList,
     clients: clientList,
+    paymentMethods: MANUAL_METHODS,
   };
 }

@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { buildBooking, toBookable, type ServiceRow } from "@/lib/booking/build";
+import { checkoutTotals, settleCancel } from "@/lib/checkout/settle";
+import { cancelDefaults, type ChargeOption } from "@/lib/policy/engine";
 import { getContext } from "@/lib/context";
 import { loadClientStates, reviveClientState, type ClientStateJSON } from "@/lib/data/clients";
 import { isDateStr, parseHHMM, zonedToUtc } from "@/lib/time/zone";
@@ -97,4 +99,129 @@ export async function createAppointment(req: BookingRequest): Promise<BookingRes
 
   revalidatePath("/calendar");
   return { ok: true, appointmentId: id as string };
+}
+
+// ---------------------------------------------------------------------------
+// Close out: cancel, no-show, checkout
+// ---------------------------------------------------------------------------
+
+type Ctx = Awaited<ReturnType<typeof getContext>>;
+
+async function loadForClose(ctx: Ctx, appointmentId: string) {
+  const { supabase, business } = ctx;
+  const { data: appt, error } = await supabase
+    .from("appointments")
+    .select("id,status,start_at,client_id,appointment_services(id,price_quoted_cents)")
+    .eq("business_id", business.id)
+    .eq("id", appointmentId)
+    .single();
+  if (error || !appt) return null;
+  const { data: pays } = await supabase
+    .from("payments")
+    .select("amount_cents")
+    .eq("appointment_id", appointmentId)
+    .eq("kind", "deposit")
+    .eq("status", "succeeded");
+  const lines = (appt.appointment_services ?? []) as { id: string; price_quoted_cents: number }[];
+  return {
+    status: appt.status as string,
+    start: new Date(appt.start_at),
+    lines,
+    fullPrice: lines.reduce((s, l) => s + l.price_quoted_cents, 0),
+    depositPaid: (pays ?? []).reduce((s, p) => s + p.amount_cents, 0),
+  };
+}
+
+const OPEN = new Set(["pending", "booked", "confirmed", "checked_in", "in_service"]);
+const METHODS = new Set(["cash", "venmo_direct", "cash_app_direct", "zelle", "paypal_me", "apple_cash", "other"]);
+
+export interface CloseRequest {
+  appointmentId: string;
+  mode: "cancel" | "no_show";
+  reasonKey?: string;
+  option: ChargeOption;
+  flag: boolean;
+  /** Collect what's owed now; otherwise it goes to the client's balance. */
+  collect?: { method: string; reference?: string } | null;
+}
+
+export async function closeAppointment(req: CloseRequest): Promise<{ ok: true } | { ok: false; error: string }> {
+  const ctx = await getContext();
+  const policy = ctx.business.policy_settings;
+  const a = await loadForClose(ctx, req.appointmentId);
+  if (!a) return { ok: false, error: "Appointment not found." };
+  if (!OPEN.has(a.status)) return { ok: false, error: "This appointment is already closed." };
+  if (req.collect && !METHODS.has(req.collect.method)) return { ok: false, error: "Pick how the client paid." };
+
+  const reason = req.mode === "cancel" ? policy.stylistInitiatedCancel.reasons.find((r) => r.key === req.reasonKey) : null;
+  if (req.mode === "cancel" && !reason) return { ok: false, error: "Pick a reason for cancelling." };
+
+  const defaults = cancelDefaults(req.mode === "no_show" ? { by: "no_show" } : { by: "stylist", reasonKey: reason!.key }, a.start, new Date(), policy);
+  let s;
+  try {
+    s = settleCancel(req.option, a.fullPrice, a.depositPaid, { refundDepositIfNoCharge: defaults.refundDepositIfNoCharge, collectNow: !!req.collect });
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+  const flagType = req.mode === "no_show" ? "no_show" : "late_cancel";
+  const clientCaused = req.mode === "no_show" || reason!.defaultCharge === "full_if_inside_window_else_none";
+
+  const { error } = await ctx.supabase.rpc("cancel_appointment", {
+    p: {
+      appointment_id: req.appointmentId,
+      status: req.mode === "no_show" ? "no_show" : "cancelled",
+      cancelled_by: clientCaused ? "client" : "stylist",
+      reason: req.mode === "no_show" ? "No-show" : reason!.label,
+      fee_cents: s.fee,
+      flag_type: req.flag && policy.flags.createOn.includes(flagType) ? flagType : null,
+      collect: req.collect && s.collectNow > 0 ? { method: req.collect.method, amount_cents: s.collectNow, reference: clean(req.collect.reference) } : null,
+      balance_cents: s.balance,
+      refund_cents: s.refund,
+    },
+  });
+  if (error) return { ok: false, error: error.code === "P0002" ? "This appointment is already closed." : `Couldn't save: ${error.message}` };
+  revalidatePath("/calendar");
+  return { ok: true };
+}
+
+export interface CheckoutRequest {
+  appointmentId: string;
+  prices: { id: string; cents: number }[];
+  tipCents: number;
+  paidCents: number;
+  method: string;
+  reference?: string;
+}
+
+export async function checkoutAppointment(req: CheckoutRequest): Promise<{ ok: true } | { ok: false; error: string }> {
+  const ctx = await getContext();
+  const a = await loadForClose(ctx, req.appointmentId);
+  if (!a) return { ok: false, error: "Appointment not found." };
+  if (!OPEN.has(a.status)) return { ok: false, error: "This appointment is already closed." };
+  if (req.paidCents > 0 && !METHODS.has(req.method)) return { ok: false, error: "Pick how the client paid." };
+
+  const byId = new Map(req.prices.map((p) => [p.id, p.cents]));
+  if (a.lines.some((l) => !byId.has(l.id)) || req.prices.length !== a.lines.length) return { ok: false, error: "Services changed. Refresh and try again." };
+  const prices = a.lines.map((l) => byId.get(l.id)!);
+
+  let t;
+  try {
+    t = checkoutTotals({ prices, tip: req.tipCents, depositPaid: a.depositPaid, paid: req.paidCents });
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+
+  const { error } = await ctx.supabase.rpc("checkout_appointment", {
+    p: {
+      appointment_id: req.appointmentId,
+      lines: a.lines.map((l, i) => ({ id: l.id, price_cents: prices[i] })),
+      tip_cents: t.tip,
+      payment: t.paid > 0 ? { method: req.method, amount_cents: t.paid, tip_cents: t.tipPaid, reference: clean(req.reference) } : null,
+      balance_cents: t.balance,
+      refund_cents: t.refund,
+    },
+  });
+  if (error) return { ok: false, error: error.code === "P0002" ? "This appointment is already closed." : `Couldn't save: ${error.message}` };
+  revalidatePath("/calendar");
+  return { ok: true };
 }

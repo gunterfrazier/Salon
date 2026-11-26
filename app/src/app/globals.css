@@ -74,3 +74,9 @@ body {
 .appt-busy {
   background-color: color-mix(in srgb, var(--accent) 24%, var(--surface));
 }
+
+/* Finished (completed / no-show) appointments recede. */
+.appt-done {
+  opacity: 0.6;
+  border-left-color: var(--muted);
+}
