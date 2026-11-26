@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, formatMinutes, parseHHMM, startOfWeek, todayIn, wallParts, weekday, zonedToUtc } from "./zone";
+import { addDays, formatDateTime, formatMinutes, formatSlot, formatTime, formatTimeRange, parseHHMM, startOfWeek, todayIn, tzAbbrev, wallParts, weekday, zoneLabel, zonedToUtc } from "./zone";
 
 const TZ = "America/Chicago";
 
@@ -53,5 +53,29 @@ describe("date helpers", () => {
   it("rejects bad times", () => {
     expect(() => parseHHMM("25:00")).toThrow();
     expect(() => parseHHMM("abc")).toThrow();
+  });
+});
+
+describe("time zone labels", () => {
+  const winter = new Date("2026-12-01T21:30:00Z");
+  const summer = new Date("2026-07-10T14:00:00Z");
+  it("abbreviation follows daylight saving", () => {
+    expect(tzAbbrev(winter, TZ)).toBe("CST");
+    expect(tzAbbrev(summer, TZ)).toBe("CDT");
+  });
+  it("every formatted time carries its zone", () => {
+    expect(formatTime(winter, TZ)).toBe("3:30 PM CST");
+    expect(formatTime(summer, TZ)).toBe("9:00 AM CDT");
+    expect(formatTimeRange(winter, new Date("2026-12-02T00:20:00Z"), TZ)).toBe("3:30 PM – 6:20 PM CST");
+    expect(formatSlot("2026-07-10", parseHHMM("09:00"), TZ)).toBe("9:00 AM CDT");
+  });
+  it("date + time + zone", () => {
+    expect(formatDateTime(winter, TZ)).toBe("Dec 1, 2026, 3:30 PM CST");
+    expect(formatDateTime(winter, TZ, { weekday: true })).toBe("Tue, Dec 1, 2026, 3:30 PM CST");
+    // Late evening in Chicago is the next day in UTC: date follows the salon.
+    expect(formatDateTime(new Date("2026-12-02T02:30:00Z"), TZ)).toBe("Dec 1, 2026, 8:30 PM CST");
+  });
+  it("page label", () => {
+    expect(zoneLabel(TZ, winter)).toBe("Central Time (CST)");
   });
 });

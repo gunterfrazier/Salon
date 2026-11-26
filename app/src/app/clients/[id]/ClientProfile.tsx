@@ -7,6 +7,7 @@ import { StatusChip } from "@/components/StatusChip";
 import type { ClientProfileData } from "@/lib/clients/profile-types";
 import { reviveClientState } from "@/lib/data/clients-shared";
 import { fullName, money } from "@/lib/format";
+import { formatDateTime, zoneLabel } from "@/lib/time/zone";
 import { clientChips } from "@/lib/ui/standing";
 import { shrinkImage } from "@/lib/ui/resize";
 import { addFormula, deleteFormula, markRefundReturned, setDepositRule, settleBalance, updateClientRecord, updateFlag } from "../actions";
@@ -49,7 +50,7 @@ export default function ClientProfile({ data }: { data: ClientProfileData }) {
   }, []);
   const state = reviveClientState(data.state);
   const { chips, standing } = clientChips(state, data.policy, now ?? new Date(0));
-  const date = (iso: string, opts: Intl.DateTimeFormatOptions = { dateStyle: "medium" }) => new Date(iso).toLocaleString("en-US", { timeZone: tz, ...opts });
+  const date: DateFn = (iso, opts) => formatDateTime(new Date(iso), tz, opts);
   const openBalances = data.balances.filter((b) => !b.settled);
 
   return (
@@ -66,6 +67,7 @@ export default function ClientProfile({ data }: { data: ClientProfileData }) {
           {state.onTimeVisits.length + state.priorVisitCount} visits{state.priorVisitCount ? ` (${state.priorVisitCount} before Chairvana)` : ""} · client since {date(client.createdAt)}
         </p>
         {chips.length > 0 && <div className="mt-2 flex flex-wrap gap-1.5">{chips.map((c, i) => <StatusChip key={i} status={c.status} text={c.text} />)}</div>}
+        <p className="mt-1 text-xs text-muted">Times in {zoneLabel(tz)}</p>
       </div>
 
       {(openBalances.length > 0 || data.refundsOwed.length > 0) && <Money data={data} date={date} />}
@@ -78,7 +80,7 @@ export default function ClientProfile({ data }: { data: ClientProfileData }) {
   );
 }
 
-type DateFn = (iso: string, opts?: Intl.DateTimeFormatOptions) => string;
+type DateFn = (iso: string, opts?: { weekday?: boolean }) => string;
 
 function Money({ data, date }: { data: ClientProfileData; date: DateFn }) {
   const { run, pending, error } = useAction();
@@ -349,7 +351,7 @@ function Visits({ data, date }: { data: ClientProfileData; date: DateFn }) {
         {data.visits.map((v) => (
           <li key={v.id} className="flex flex-wrap items-start justify-between gap-2 py-2">
             <span>
-              <span className="font-semibold">{date(v.start, { dateStyle: "medium", timeStyle: "short" })}</span>
+              <span className="font-semibold">{date(v.start, { weekday: true })}</span>
               <span className="block text-muted">{v.services.join(" + ")}</span>
               {v.cancelReason && <span className="block text-muted">{v.cancelReason}</span>}
             </span>

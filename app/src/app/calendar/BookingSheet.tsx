@@ -7,7 +7,7 @@ import type { CalendarData } from "@/lib/data/calendar-types";
 import { reviveClientState, type ClientStateJSON } from "@/lib/data/clients-shared";
 import { duration, fullName, money } from "@/lib/format";
 import { suggestOrder } from "@/lib/schedule/plan";
-import { formatDay, formatMinutes, formatTime, isDateStr, parseHHMM, weekday, WEEKDAY_KEYS, zonedToUtc } from "@/lib/time/zone";
+import { formatDay, formatSlot, formatTimeRange, isDateStr, parseHHMM, tzAbbrev, weekday, WEEKDAY_KEYS, zonedToUtc } from "@/lib/time/zone";
 import { clientChips, NEW_CLIENT_STATE } from "@/lib/ui/standing";
 import { createAppointment, fetchClientState } from "./actions";
 
@@ -88,7 +88,7 @@ export default function BookingSheet({
     const hours = data.hours[WEEKDAY_KEYS[weekday(date)]];
     const endMin = minutes + preview.plan.totalMinutes;
     if (!hours) notices.push(`You're closed on ${formatDay(date, { weekday: "long" })}s.`);
-    else if (minutes < parseHHMM(hours[0]) || endMin > parseHHMM(hours[1])) notices.push(`Runs outside your hours (${formatMinutes(parseHHMM(hours[0]))}–${formatMinutes(parseHHMM(hours[1]))}).`);
+    else if (minutes < parseHHMM(hours[0]) || endMin > parseHHMM(hours[1])) notices.push(`Runs outside your hours (${formatSlot(date, parseHHMM(hours[0]), tz)} – ${formatSlot(date, parseHHMM(hours[1]), tz)}).`);
     const mine = preview.payload.services.flatMap((s) => s.busy);
     const clash = data.appointments.some((a) =>
       a.busy.some((b) => mine.some((m) => new Date(m.start) < new Date(b.end) && new Date(b.start) < new Date(m.end))),
@@ -237,7 +237,7 @@ export default function BookingSheet({
               <input type="date" className={input} value={date} onChange={(e) => setDate(e.target.value)} required />
             </label>
             <label className="space-y-1">
-              <span className={label}>Start time</span>
+              <span className={label}>Start time ({tzAbbrev(isDateStr(date) ? zonedToUtc(date, 12 * 60, tz) : new Date(), tz)})</span>
               <input type="time" step={900} className={input} value={time} onChange={(e) => setTime(e.target.value)} required />
             </label>
           </section>
@@ -246,11 +246,11 @@ export default function BookingSheet({
           {preview && (
             <section className="space-y-3 rounded-xl border border-line p-4">
               <p className="font-semibold">
-                {formatTime(preview.plan.start, tz)} – {formatTime(preview.plan.end, tz)} · {duration(preview.plan.totalMinutes)}
+                {formatTimeRange(preview.plan.start, preview.plan.end, tz)} · {duration(preview.plan.totalMinutes)}
               </p>
               {preview.plan.openGaps.length > 0 && (
                 <p className="text-sm text-muted">
-                  Open while processing: {preview.plan.openGaps.map((g) => `${formatTime(g.start, tz)}–${formatTime(g.end, tz)}`).join(", ")}
+                  Open while processing: {preview.plan.openGaps.map((g) => formatTimeRange(g.start, g.end, tz)).join(", ")}
                 </p>
               )}
               <ul className="divide-y divide-line text-sm">

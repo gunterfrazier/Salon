@@ -8,7 +8,7 @@ import { duration, money } from "@/lib/format";
 import type { PolicySettings } from "@/lib/policy/types";
 import type { BundleRule } from "@/lib/pricing/discounts";
 import { suggestOrder } from "@/lib/schedule/plan";
-import { formatDay, formatMinutes, parseHHMM } from "@/lib/time/zone";
+import { formatDay, formatSlot, parseHHMM, zonedToUtc, zoneLabel } from "@/lib/time/zone";
 import { NEW_CLIENT_STATE } from "@/lib/ui/standing";
 import { getTimes, submitOnlineBooking, type OnlineBookingResult } from "./actions";
 
@@ -183,6 +183,7 @@ export default function BookingWizard({
         <section className="space-y-4">
           <div>
             <h2 className="font-semibold">Pick a day</h2>
+            <p className="text-sm text-muted">All times are {zoneLabel(business.timezone, date ? zonedToUtc(date, 12 * 60, business.timezone) : new Date())}, the salon&rsquo;s local time.</p>
             <div className="mt-2 flex gap-2 overflow-x-auto pb-2">
               {dates.map((d) => (
                 <button
@@ -211,7 +212,7 @@ export default function BookingWizard({
                       aria-pressed={time === t}
                       className={`rounded-xl border py-2.5 font-semibold ${time === t ? "border-accent bg-accent text-on-accent" : "border-line bg-surface"}`}
                     >
-                      {formatMinutes(parseHHMM(t))}
+                      {formatSlot(date, parseHHMM(t), business.timezone)}
                     </button>
                   ))}
                 </div>
@@ -224,7 +225,7 @@ export default function BookingWizard({
       {step === "details" && date && time && (
         <section className="space-y-4">
           <div className="rounded-xl bg-surface p-4 text-sm">
-            <p className="font-semibold">{formatDay(date, { weekday: "long", month: "long", day: "numeric" })} at {formatMinutes(parseHHMM(time))}</p>
+            <p className="font-semibold">{formatDay(date, { weekday: "long", month: "long", day: "numeric" })} at {formatSlot(date, parseHHMM(time), business.timezone)}</p>
             <p className="text-muted">{ordered.map((s) => s.name).join(" + ")}</p>
           </div>
           <div className="grid gap-2 sm:grid-cols-2">

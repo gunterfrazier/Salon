@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { StatusChip } from "@/components/StatusChip";
 import { filterClients, FILTERS, matchesFilter, type ClientFilter, type ClientSummary } from "@/lib/clients/summary";
 import { fullName, money } from "@/lib/format";
+import { formatDateTime } from "@/lib/time/zone";
 import type { StatusKey } from "@/lib/ui/status-colors";
 import { createClientRecord } from "./actions";
 
@@ -35,7 +36,7 @@ export default function ClientsList({ clients, timezone }: { clients: ClientSumm
 
   const shown = useMemo(() => filterClients(clients, query, filter, now ?? new Date(0)), [clients, query, filter, now]);
   const count = (f: ClientFilter) => clients.filter((c) => matchesFilter(c, f, now ?? new Date(0))).length;
-  const date = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("en-US", { timeZone: timezone, month: "short", day: "numeric", year: "numeric" }) : "—");
+  const date = (iso: string | null) => (iso ? formatDateTime(new Date(iso), timezone) : "—");
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-6">

@@ -7,7 +7,7 @@ import { StatusChip } from "@/components/StatusChip";
 import type { CalAppointment, CalendarData } from "@/lib/data/calendar-types";
 import { reviveClientState } from "@/lib/data/clients-shared";
 import { duration, money } from "@/lib/format";
-import { addDays, formatDay, formatMinutes, formatTime, parseHHMM, toHHMM, wallParts, weekday, WEEKDAY_KEYS } from "@/lib/time/zone";
+import { addDays, formatDateTime, formatDay, formatMinutes, formatTime, formatTimeRange, parseHHMM, toHHMM, tzAbbrev, wallParts, weekday, WEEKDAY_KEYS, zonedToUtc, zoneLabel } from "@/lib/time/zone";
 import { clientChips, NEW_CLIENT_STATE } from "@/lib/ui/standing";
 import type { StatusKey } from "@/lib/ui/status-colors";
 
@@ -98,7 +98,10 @@ export default function CalendarView({ data, focusDate }: { data: CalendarData; 
           <Link aria-label="Previous" href={href(prevDate)} className="rounded-lg border border-line bg-surface px-3 py-2">‹</Link>
           <Link href={href(data.today)} className="rounded-lg border border-line bg-surface px-3 py-2 text-sm font-semibold">Today</Link>
           <Link aria-label="Next" href={href(nextDate)} className="rounded-lg border border-line bg-surface px-3 py-2">›</Link>
-          <h1 className="ml-1 text-lg font-bold sm:text-xl">{title}</h1>
+          <h1 className="ml-1 text-lg font-bold sm:text-xl">
+            {title}
+            <span className="block text-xs font-normal text-muted">{zoneLabel(tz, zonedToUtc(dates[0], 12 * 60, tz))}</span>
+          </h1>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex rounded-lg border border-line bg-surface p-0.5 text-sm" role="group" aria-label="View">
@@ -127,7 +130,9 @@ export default function CalendarView({ data, focusDate }: { data: CalendarData; 
         <div className={data.view === "week" ? "min-w-[760px]" : ""}>
           {/* Day headers */}
           <div className="flex border-b border-line">
-            <div className="w-14 shrink-0" />
+            <div className="flex w-14 shrink-0 items-end justify-end px-1 pb-2 text-[11px] font-semibold text-muted" title={zoneLabel(tz, zonedToUtc(dates[0], 12 * 60, tz))}>
+              {tzAbbrev(zonedToUtc(dates[0], 12 * 60, tz), tz)}
+            </div>
             {dates.map((d) => {
               const w = openWindow(data, d);
               const isToday = d === data.today;
@@ -139,7 +144,7 @@ export default function CalendarView({ data, focusDate }: { data: CalendarData; 
               return (
                 <div key={d} className="flex-1 border-l border-line px-2 py-2 text-sm">
                   {data.view === "week" ? <Link href={href(d, "day")} className="hover:underline">{label}</Link> : label}
-                  <p className="text-xs text-muted">{w ? `${formatMinutes(w[0])} – ${formatMinutes(w[1])}` : "Closed"}</p>
+                  <p className="text-xs text-muted">{w ? formatTimeRange(zonedToUtc(d, w[0], tz), zonedToUtc(d, w[1], tz), tz) : "Closed"}</p>
                 </div>
               );
             })}
@@ -241,7 +246,7 @@ function AppointmentBlock({
       }}
       className={`processing-stripes appt-block absolute right-1 flex flex-col items-stretch justify-start overflow-hidden rounded-lg border-l-4 text-left ${OPEN_STATUSES.has(a.status) ? "" : "appt-done"}`}
       style={{ top, height: Math.max(h, 22), left: lane ? `${Math.min(25 + lane * 15, 60)}%` : 4, zIndex: 10 + lane }}
-      aria-label={`${a.clientName}, ${formatTime(new Date(a.start), tz)} to ${formatTime(new Date(a.end), tz)}`}
+      aria-label={`${a.clientName}, ${formatTimeRange(new Date(a.start), new Date(a.end), tz)}`}
     >
       {a.busy.map((b, i) => (
         <span
@@ -330,7 +335,7 @@ function AppointmentDetails({
           <div>
             <h2 id="appt-title" className="text-xl font-bold">{a.clientName}</h2>
             <p className="text-sm text-muted">
-              {formatDay(wallParts(new Date(a.start), tz).date, { weekday: "long", month: "long", day: "numeric" })} · {formatTime(new Date(a.start), tz)} – {formatTime(new Date(a.end), tz)} ({duration(mins)})
+              {formatDay(wallParts(new Date(a.start), tz).date, { weekday: "long", month: "long", day: "numeric" })} · {formatTimeRange(new Date(a.start), new Date(a.end), tz)} ({duration(mins)})
             </p>
             <p className="text-sm">
               {a.clientPhone && <a className="underline" href={`tel:${a.clientPhone}`}>{a.clientPhone}</a>}
@@ -349,7 +354,7 @@ function AppointmentDetails({
             <ul className="mt-2 space-y-1">
               {history.map((h) => (
                 <li key={h.flag.id}>
-                  {h.flag.type === "no_show" ? "No-show" : "Late cancellation"} — {h.flag.appointmentStart.toLocaleDateString("en-US", { timeZone: tz, dateStyle: "medium" })}
+                  {h.flag.type === "no_show" ? "No-show" : "Late cancellation"} — {formatDateTime(h.flag.appointmentStart, tz)}
                   {h.flag.feeCharged ? ` · ${money(h.flag.feeCharged)} charged` : ""} ·{" "}
                   {h.state === "permanent" ? "permanent" : h.state === "active" ? `active${h.visitsRemaining !== null ? `, ${h.visitsRemaining} visits to clear` : ""}` : "cleared"}
                 </li>

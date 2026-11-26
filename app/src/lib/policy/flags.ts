@@ -1,3 +1,4 @@
+import { formatDateTime } from "../time/zone";
 import type { ClientFlag, ClientPolicyState, PolicySettings } from "./types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -91,8 +92,7 @@ export interface BookingAlert {
 
 const label = { no_show: "No-show", late_cancel: "Late cancellation" } as const;
 
-const fmtDate = (d: Date) =>
-  d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+
 
 /** Alert shown to the stylist when a client with any violation history books. */
 export function bookingAlert(
@@ -100,12 +100,13 @@ export function bookingAlert(
   client: ClientPolicyState,
   policy: PolicySettings,
   now: Date,
+  tz: string,
 ): BookingAlert | null {
   const s = clientStanding(client, policy, now);
   if (s.standing === "clear" || !policy.bookingAlerts.notifyOnBookingBy.includes(s.standing)) return null;
 
   const latest = s.history[0];
-  const what = `${label[latest.flag.type]} on ${fmtDate(latest.flag.appointmentStart)}`;
+  const what = `${label[latest.flag.type]} on ${formatDateTime(latest.flag.appointmentStart, tz)}`;
   const tally = [
     s.counts.noShows && `${s.counts.noShows} no-show${s.counts.noShows > 1 ? "s" : ""}`,
     s.counts.lateCancels && `${s.counts.lateCancels} late cancellation${s.counts.lateCancels > 1 ? "s" : ""}`,

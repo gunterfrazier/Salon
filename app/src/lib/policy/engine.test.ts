@@ -119,12 +119,12 @@ describe("flagged-client deposits", () => {
 
 describe("booking alerts", () => {
   it("no alert for clients who were never flagged", () => {
-    expect(bookingAlert("Ana", client(), policy, now)).toBeNull();
+    expect(bookingAlert("Ana", client(), policy, now, "America/Chicago")).toBeNull();
   });
 
   it("past violation still warns, with history", () => {
     const visits = [daysAgo(40), daysAgo(30), daysAgo(20), daysAgo(10)];
-    const a = bookingAlert("Ana", client({ onTimeVisits: visits, flags: [flag("no_show", 50)] }), policy, now)!;
+    const a = bookingAlert("Ana", client({ onTimeVisits: visits, flags: [flag("no_show", 50)] }), policy, now, "America/Chicago")!;
     expect(a.standing).toBe("history");
     expect(a.title).toBe("Ana was flagged in the past");
     expect(a.message).toMatch(/1 no-show/);
@@ -132,7 +132,7 @@ describe("booking alerts", () => {
   });
 
   it("active flag says how many visits are left", () => {
-    const a = bookingAlert("Ana", client({ flags: [flag("late_cancel", 20)] }), policy, now)!;
+    const a = bookingAlert("Ana", client({ flags: [flag("late_cancel", 20)] }), policy, now, "America/Chicago")!;
     expect(a.standing).toBe("active");
     expect(a.message).toMatch(/Full payment required/);
     expect(a.message).toMatch(/4 more on-time visits/);

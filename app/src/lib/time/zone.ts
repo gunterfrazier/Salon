@@ -111,9 +111,57 @@ export const isDateStr = (s: unknown): s is DateStr => typeof s === "string" && 
 /** Today's date in tz. */
 export const todayIn = (tz: string, now = new Date()): DateStr => wallParts(now, tz).date;
 
-/** "3:30 PM" in tz. */
-export function formatTime(d: Date, tz: string): string {
+/** Zone abbreviation in force at an instant: "CST" in winter, "CDT" in summer. */
+export function tzAbbrev(d: Date, tz: string): string {
+  const part = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "short" }).formatToParts(d).find((p) => p.type === "timeZoneName");
+  return part?.value ?? tz;
+}
+
+/** "Central Time" (no daylight-saving distinction). */
+export function tzLongName(tz: string, d = new Date()): string {
+  try {
+    const part = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "longGeneric" }).formatToParts(d).find((p) => p.type === "timeZoneName");
+    if (part) return part.value;
+  } catch {
+    /* older engines: fall through */
+  }
+  return tz.replace(/^.*\//, "").replace(/_/g, " ");
+}
+
+/** "Central Time (CST)": label for pages/sections showing salon times. */
+export const zoneLabel = (tz: string, d = new Date()) => `${tzLongName(tz, d)} (${tzAbbrev(d, tz)})`;
+
+/** "3:30 PM" in tz, without the zone (only next to something that shows it). */
+export function formatClock(d: Date, tz: string): string {
   return d.toLocaleTimeString("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit" });
+}
+
+/** "3:30 PM CST": every time shown on its own carries its zone. */
+export function formatTime(d: Date, tz: string): string {
+  return `${formatClock(d, tz)} ${tzAbbrev(d, tz)}`;
+}
+
+/** "3:30 – 6:20 PM CST" (or "11:30 AM – 1 PM CDT"); zone shown once, at the end. */
+export function formatTimeRange(start: Date, end: Date, tz: string): string {
+  return `${formatClock(start, tz)} – ${formatTime(end, tz)}`;
+}
+
+/** A salon-local wall time on a date, with its zone: "3:30 PM CST". */
+export const formatSlot = (date: DateStr, minutes: number, tz: string) => formatTime(zonedToUtc(date, minutes, tz), tz);
+
+/**
+ * "Tue, Dec 1, 2026, 3:30 PM CST". Built from fields (Intl refuses to mix
+ * dateStyle/timeStyle with a zone name).
+ */
+export function formatDateTime(d: Date, tz: string, opts: { weekday?: boolean; year?: boolean } = {}): string {
+  const date = d.toLocaleDateString("en-US", {
+    timeZone: tz,
+    month: "short",
+    day: "numeric",
+    ...(opts.year !== false ? { year: "numeric" } : {}),
+    ...(opts.weekday ? { weekday: "short" } : {}),
+  });
+  return `${date}, ${formatTime(d, tz)}`;
 }
 
 /** "Tue, Dec 1" for a date string. */

@@ -4,10 +4,12 @@ import { bookingAlert, type BookingAlert } from "@/lib/policy/flags";
 import type { PolicySettings } from "@/lib/policy/types";
 import { planAppointment } from "@/lib/schedule/plan";
 import { servicesByKey as services } from "@/lib/menu";
+import { formatDateTime, formatTime } from "@/lib/time/zone";
 import { PHASE_CHART, STATUS_CHART, type StatusKey } from "@/lib/ui/status-colors";
 
 export const metadata = { title: "Color Chart" };
 
+const TZ = "America/Chicago";
 const policy = policyJson as unknown as PolicySettings;
 
 const familyTitle = {
@@ -27,20 +29,20 @@ const sampleAlerts: { status: StatusKey; alert: BookingAlert }[] = [
     alert: bookingAlert("Jamie R.", {
       onTimeVisits: [d("2026-10-10T15:00:00Z")], priorVisitCount: 6, outstandingBalance: 0,
       flags: [{ id: "f1", type: "no_show", createdAt: d("2026-09-12T16:00:00Z"), appointmentStart: d("2026-09-12T15:00:00Z"), appointmentSummary: "Full Highlights", feeCharged: 12500, permanent: false }],
-    }, policy, now)!,
+    }, policy, now, TZ)!,
   },
   {
     status: "past_violation",
     alert: bookingAlert("Morgan T.", {
       onTimeVisits: ["2026-03-01", "2026-04-12", "2026-05-24", "2026-07-05"].map((x) => d(`${x}T15:00:00Z`)), priorVisitCount: 10, outstandingBalance: 0,
       flags: [{ id: "f2", type: "late_cancel", createdAt: d("2026-02-10T12:00:00Z"), appointmentStart: d("2026-02-11T15:00:00Z"), permanent: false }],
-    }, policy, now)!,
+    }, policy, now, TZ)!,
   },
 ];
 
 const start = d("2026-11-28T15:00:00Z");
 const plan = planAppointment(start, [services.all_over_color, services.olaplex]);
-const t = (x: Date) => x.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Chicago" });
+const t = (x: Date) => formatTime(x, TZ);
 
 export default function LegendPage() {
   const families = ["violation", "warning", "money", "action", "info"] as const;
@@ -79,7 +81,7 @@ export default function LegendPage() {
                   {alert.history.map((h) => (
                     <li key={h.flag.id}>
                       {h.flag.type === "no_show" ? "No-show" : "Late cancellation"} —{" "}
-                      {h.flag.appointmentStart.toLocaleDateString("en-US", { dateStyle: "medium", timeZone: "UTC" })}
+                      {formatDateTime(h.flag.appointmentStart, TZ)}
                       {h.flag.appointmentSummary ? ` · ${h.flag.appointmentSummary}` : ""}
                       {h.flag.feeCharged ? ` · $${(h.flag.feeCharged / 100).toFixed(2)} charged` : ""}
                       {" · "}
