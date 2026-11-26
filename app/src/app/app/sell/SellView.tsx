@@ -5,6 +5,8 @@ import { useState, useTransition } from "react";
 import BarcodeScanner from "@/app/app/inventory/BarcodeScanner";
 import { money } from "@/lib/format";
 import { quickSale } from "./actions";
+import { lookupGiftCard } from "../calendar/actions";
+import { GiftCardSaleForm, PackageSaleForm, type SellTemplate } from "./PrepaidSale";
 
 interface P {
   id: string;
@@ -24,7 +26,11 @@ const input = "rounded-lg border border-line bg-background px-3 py-2 text-base";
 const toCents = (s: string) => (s.trim() === "" ? NaN : Math.round(Number(s) * 100));
 
 /** Quick retail sale: pick or scan products, optional client, payment method. */
-export default function SellView({ products, clients, methods }: { products: P[]; clients: { id: string; name: string; phone: string | null }[]; methods: { key: string; label: string }[] }) {
+export default function SellView({ products, clients, methods, templates = [] }: { products: P[]; clients: { id: string; name: string; phone: string | null }[]; methods: { key: string; label: string }[]; templates?: SellTemplate[] }) {
+  const [mode, setMode] = useState<"products" | "gift" | "package">("products");
+  const [giftCode, setGiftCode] = useState("");
+  const [gift, setGift] = useState<{ id: string; code: string; balanceCents: number } | null>(null);
+  const [giftMsg, setGiftMsg] = useState<string | null>(null);
   const [lines, setLines] = useState<Line[]>([]);
   const [search, setSearch] = useState("");
   const [clientQ, setClientQ] = useState("");
@@ -45,27 +51,49 @@ export default function SellView({ products, clients, methods }: { products: P[]
     setSearch("");
   };
   const total = lines.reduce((n, l) => n + l.qty * toCents(l.price || "0"), 0);
+  const giftCents = gift && Number.isFinite(total) ? Math.min(gift.balanceCents, total) : 0;
   const valid = lines.length > 0 && lines.every((l) => l.qty > 0 && Number.isFinite(toCents(l.price)));
   const matches = search.trim() ? products.filter((p) => p.label.toLowerCase().includes(search.toLowerCase())).slice(0, 8) : [];
   const clientMatches = clientQ.trim() && !client ? clients.filter((c) => `${c.name} ${c.phone ?? ""}`.toLowerCase().includes(clientQ.toLowerCase())).slice(0, 6) : [];
 
   const save = () =>
     start(async () => {
-      const r = await quickSale({ clientId: client?.id ?? null, items: lines.map((l) => ({ productId: l.productId, qty: l.qty, priceCents: toCents(l.price) })), method, reference });
+      const r = await quickSale({ clientId: client?.id ?? null, items: lines.map((l) => ({ productId: l.productId, qty: l.qty, priceCents: toCents(l.price) })), method, reference, gift: gift && giftCents > 0 ? { cardId: gift.id, cents: giftCents } : null });
       if (!r.ok) return setMsg({ ok: false, text: r.error });
       setMsg({ ok: true, text: `Sale recorded: ${money(total)}.`, saleId: r.saleId });
       setLines([]);
       setClient(null);
       setClientQ("");
       setReference("");
+      setGift(null);
+      setGiftCode("");
     });
 
   return (
     <main className="mx-auto max-w-2xl space-y-4 px-4 py-4">
       <div>
         <h1 className="text-2xl font-semibold">Sell</h1>
-        <p className="text-sm text-muted">Retail without an appointment. To add products to a visit, use Check out on the calendar.</p>
+        <p className="text-sm text-muted">Retail, gift cards and packages without an appointment. To add products to a visit, use Check out on the calendar.</p>
+        <div className="mt-3 flex flex-wrap items-center gap-2" role="tablist">
+          {(
+            [
+              ["products", "Products"],
+              ["gift", "Gift card"],
+              ["package", "Package"],
+            ] as const
+          ).map(([k, label]) => (
+            <button key={k} role="tab" aria-selected={mode === k} onClick={() => setMode(k)} className={`rounded-full border px-4 py-1.5 text-sm ${mode === k ? "border-accent bg-accent text-on-accent" : "border-line"}`}>
+              {label}
+            </button>
+          ))}
+          <Link href="/app/sell/gift-cards" className="ml-auto text-sm underline">Gift cards &amp; packages</Link>
+        </div>
       </div>
+
+      {mode === "gift" && <GiftCardSaleForm clients={clients} methods={methods} />}
+      {mode === "package" && <PackageSaleForm clients={clients} methods={methods} templates={templates} />}
+      {mode === "products" && (
+      <>
 
       {msg?.ok && (
         <p role="status" className="rounded-xl border border-line bg-surface p-3 text-sm">
@@ -142,6 +170,32 @@ export default function SellView({ products, clients, methods }: { products: P[]
               </>
             )}
           </div>
+          <div className="text-sm">
+            {gift ? (
+              <p>
+                Gift card {gift.code}: <strong>{money(giftCents)}</strong> of {money(gift.balanceCents)}{" "}
+                <button type="button" className="underline" onClick={() => setGift(null)}>Remove</button>
+              </p>
+            ) : (
+              <div className="flex gap-2">
+                <input className={`${input} min-w-0 flex-1`} placeholder="Gift card code (optional)" value={giftCode} onChange={(e) => setGiftCode(e.target.value)} aria-label="Gift card code" />
+                <button
+                  type="button"
+                  className="rounded-lg border border-line px-3 py-2 text-sm disabled:opacity-50"
+                  disabled={giftCode.trim().length < 6}
+                  onClick={async () => {
+                    setGiftMsg(null);
+                    const r = await lookupGiftCard(giftCode);
+                    if (r.ok) setGift(r.card);
+                    else setGiftMsg(r.error);
+                  }}
+                >
+                  Apply
+                </button>
+              </div>
+            )}
+            {giftMsg && <p role="alert" className="mt-1 text-red-700 dark:text-red-300">{giftMsg}</p>}
+          </div>
           <div className="grid gap-2 sm:grid-cols-2">
             <select className={input} value={method} onChange={(e) => setMethod(e.target.value)} aria-label="Payment method">
               {methods.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
@@ -153,6 +207,9 @@ export default function SellView({ products, clients, methods }: { products: P[]
             {saving ? "Saving…" : `Record ${Number.isFinite(total) ? money(total) : ""} sale`}
           </button>
         </section>
+      )}
+
+      </>
       )}
 
       {scan && (

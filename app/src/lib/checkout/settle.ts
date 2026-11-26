@@ -97,3 +97,24 @@ export function checkoutTotals(i: CheckoutInput): CheckoutTotals {
 
 /** Tip presets as amounts, on the services total. */
 export const tipPresets = (services: Cents, percents = [15, 20, 25]) => percents.map((p) => ({ percent: p, amount: Math.round((services * p) / 100) }));
+
+export interface GiftSplit {
+  /** Paid from the gift card, by part. */
+  gift: { service: Cents; retail: Cents; tip: Cents };
+  /** Paid another way (cash, Venmo…), by part. */
+  other: { amount: Cents; tipPaid: Cents; retailPaid: Cents };
+}
+
+/**
+ * Split today's payment between a gift card and another method. The gift card
+ * covers services first, then retail, then the tip; the rest is the other method.
+ */
+export function splitGift(t: Pick<CheckoutTotals, "paid" | "tipPaid" | "retailPaid">, giftCents: Cents): GiftSplit {
+  if (!Number.isInteger(giftCents) || giftCents < 0) throw new Error("Gift card amount must be zero or more.");
+  if (giftCents > t.paid) throw new Error("The gift card amount is more than the payment.");
+  const servicePaid = t.paid - t.tipPaid - t.retailPaid;
+  const service = Math.min(giftCents, servicePaid);
+  const retail = Math.min(giftCents - service, t.retailPaid);
+  const tip = giftCents - service - retail;
+  return { gift: { service, retail, tip }, other: { amount: t.paid - giftCents, tipPaid: t.tipPaid - tip, retailPaid: t.retailPaid - retail } };
+}

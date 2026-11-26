@@ -47,6 +47,22 @@ describe("buildReport", () => {
     expect(r.money.byMethod.map((m) => [m.method, m.cents, m.count])).toEqual([["cash", 13500, 2], ["venmo_direct", 6600, 2], ["zelle", 5000, 1]]);
   });
 
+  it("counts gift card sales as money in, and gift card spending only once", () => {
+    const g = buildReport({
+      ...input,
+      payments: [
+        { kind: "gift_card", method: "cash", cents: 5000, at: ct("2026-12-01T10:00"), status: "succeeded" },
+        { kind: "service", method: "gift_card", cents: 4000, at: ct("2026-12-02T10:00"), status: "succeeded" },
+        { kind: "tip", method: "gift_card", cents: 500, at: ct("2026-12-02T10:00"), status: "succeeded" },
+      ],
+    });
+    expect(g.money.collected).toBe(5000);
+    expect(g.money.byKind).toEqual({ gift_card: 5000 });
+    expect(g.money.byMethod.map((m) => m.method)).toEqual(["cash"]);
+    expect(g.money.giftCardsRedeemed).toBe(4500);
+    expect(g.money.tips).toBe(500);
+  });
+
   it("counts visits, no-shows, cancellations and released holds separately", () => {
     expect(r.appointments).toMatchObject({ completed: 2, upcoming: 1, noShows: 1, cancelledByClient: 1, holdsReleased: 1, online: 1, byStylist: 4 });
     expect(r.appointments.noShowRate).toBeCloseTo(1 / 3);

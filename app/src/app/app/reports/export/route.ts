@@ -8,8 +8,8 @@ import { parseRange } from "../range";
 export const dynamic = "force-dynamic";
 
 const STATUS: Record<string, string> = { completed: "Completed", booked: "Booked", confirmed: "Booked", pending: "Waiting on deposit", no_show: "No-show", cancelled: "Cancelled", checked_in: "Checked in", in_service: "In chair" };
-const KIND: Record<string, string> = { service: "Service", tip: "Tip", deposit: "Deposit", cancel_fee: "Late-cancel fee", no_show_fee: "No-show fee", balance: "Balance paid", retail: "Retail", refund: "Refund" };
-const METHOD: Record<string, string> = { cash: "Cash", venmo_direct: "Venmo", cash_app_direct: "Cash App", zelle: "Zelle", paypal_me: "PayPal", apple_cash: "Apple Cash", other: "Other" };
+const KIND: Record<string, string> = { service: "Service", tip: "Tip", deposit: "Deposit", cancel_fee: "Late-cancel fee", no_show_fee: "No-show fee", balance: "Balance paid", retail: "Retail", refund: "Refund", gift_card: "Gift card sold", package: "Package sold" };
+const METHOD: Record<string, string> = { cash: "Cash", venmo_direct: "Venmo", cash_app_direct: "Cash App", zelle: "Zelle", paypal_me: "PayPal", apple_cash: "Apple Cash", gift_card: "Gift card", other: "Other" };
 const dollars = (c: number) => (c / 100).toFixed(2);
 
 /** CSV downloads for a date range: appointments, payments, or services sold. */

@@ -4,7 +4,8 @@ import { useEffect, useState, useTransition } from "react";
 import { checkoutTotals, tipPresets } from "@/lib/checkout/settle";
 import type { CalAppointment, CalendarData } from "@/lib/data/calendar-types";
 import { money } from "@/lib/format";
-import { checkoutAppointment, sellableProducts } from "./actions";
+import { checkoutAppointment, lookupGiftCard, packagesForCheckout, sellableProducts } from "./actions";
+import type { ClientPackageInfo } from "@/lib/data/prepaid";
 import { Row, Sheet, toCents } from "./CloseSheet";
 
 const input = "w-full rounded-lg border border-line bg-background px-3 py-2.5 text-base";
@@ -19,16 +20,28 @@ export default function CheckoutSheet({ a, data, onClose, onDone }: { a: CalAppo
   const [saving, start] = useTransition();
   const [catalog, setCatalog] = useState<Awaited<ReturnType<typeof sellableProducts>>>([]);
   const [retail, setRetail] = useState<{ productId: string; qty: string; price: string }[]>([]);
+  const [packages, setPackages] = useState<ClientPackageInfo[]>([]);
+  /** line id → package id used for it */
+  const [uses, setUses] = useState<Record<string, string>>({});
+  const [giftCode, setGiftCode] = useState("");
+  const [gift, setGift] = useState<{ id: string; code: string; balanceCents: number } | null>(null);
+  const [giftMsg, setGiftMsg] = useState<string | null>(null);
+  const [looking, startLooking] = useTransition();
   useEffect(() => {
     sellableProducts().then(setCatalog).catch(() => setCatalog([]));
-  }, []);
+    packagesForCheckout(a.id).then(setPackages).catch(() => setPackages([]));
+  }, [a.id]);
+  const packageLeft = (id: string) => (packages.find((p) => p.id === id)?.left ?? 0) - Object.values(uses).filter((x) => x === id).length;
   const retailCents = retail.reduce((n, r) => n + Math.round(Number(r.qty || 0) * toCents(r.price || "0")), 0);
 
-  const priceCents = a.services.map((s) => toCents(prices[s.id] ?? ""));
+  const priceCents = a.services.map((s) => (uses[s.id] ? 0 : toCents(prices[s.id] ?? "")));
   const tipCents = toCents(tip || "0");
   const services = priceCents.reduce((x, y) => x + (Number.isFinite(y) ? y : 0), 0);
   const dueEstimate = Math.max(0, services + (Number.isFinite(retailCents) ? retailCents : 0) + (Number.isFinite(tipCents) ? tipCents : 0) - a.depositPaid);
-  const paidCents = paid === null ? dueEstimate : toCents(paid || "0");
+  const giftCents = gift ? Math.min(gift.balanceCents, dueEstimate) : 0;
+  const otherDefault = dueEstimate - giftCents;
+  const otherCents = paid === null ? otherDefault : toCents(paid || "0");
+  const paidCents = giftCents + otherCents;
 
   let totals: ReturnType<typeof checkoutTotals> | null = null;
   let problem: string | null = null;
@@ -52,6 +65,8 @@ export default function CheckoutSheet({ a, data, onClose, onDone }: { a: CalAppo
         paidCents,
         method,
         reference,
+        gift: gift && giftCents > 0 ? { cardId: gift.id, cents: giftCents } : null,
+        packageUses: Object.entries(uses).map(([lineId, packageId]) => ({ lineId, packageId })),
       });
       if (res.ok) onDone();
       else setError(res.error);
@@ -68,7 +83,7 @@ export default function CheckoutSheet({ a, data, onClose, onDone }: { a: CalAppo
           <div className="flex gap-2">
             <button onClick={onClose} className="rounded-lg px-4 py-2.5">Back</button>
             <button onClick={confirm} disabled={!totals || saving} className="rounded-lg bg-accent px-4 py-2.5 font-semibold text-on-accent disabled:opacity-40">
-              {saving ? "Saving…" : totals && totals.paid > 0 ? `Record ${money(totals.paid)}` : "Complete visit"}
+              {saving ? "Saving…" : totals && totals.paid > 0 ? `Record ${money(totals.paid)}${giftCents > 0 ? " (incl. gift card)" : ""}` : "Complete visit"}
             </button>
           </div>
         </div>
@@ -82,9 +97,35 @@ export default function CheckoutSheet({ a, data, onClose, onDone }: { a: CalAppo
               {s.name}
               {s.priceType === "starting_at" && <span className="block text-xs text-muted">Price varies: adjust if needed</span>}
               {s.discounts.map((d, j) => <span key={j} className="block text-xs text-muted">{d.label} applied</span>)}
+              {packages
+                .filter((p) => p.serviceId === s.serviceId && (uses[s.id] === p.id || packageLeft(p.id) > 0))
+                .slice(0, 1)
+                .map((p) => (
+                  <span key={p.id} className="mt-1 flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      className="size-4"
+                      checked={uses[s.id] === p.id}
+                      onChange={(e) => {
+                        const n = { ...uses };
+                        if (e.target.checked) n[s.id] = p.id;
+                        else delete n[s.id];
+                        setUses(n);
+                        setPaid(null);
+                      }}
+                    />
+                    Use package: {p.name} ({uses[s.id] === p.id ? packageLeft(p.id) + 1 : packageLeft(p.id)} left)
+                  </span>
+                ))}
             </span>
             <span className="flex items-center gap-1">
-              $<input type="number" inputMode="decimal" step="0.01" min={0} value={prices[s.id]} onChange={(e) => setPrices({ ...prices, [s.id]: e.target.value })} className="w-28 rounded-lg border border-line bg-background px-2 py-1.5 text-right tabular-nums" aria-label={`${s.name} price`} />
+              {uses[s.id] ? (
+                <span className="w-28 text-right text-sm font-semibold">Package</span>
+              ) : (
+                <>
+                  $<input type="number" inputMode="decimal" step="0.01" min={0} value={prices[s.id]} onChange={(e) => setPrices({ ...prices, [s.id]: e.target.value })} className="w-28 rounded-lg border border-line bg-background px-2 py-1.5 text-right tabular-nums" aria-label={`${s.name} price`} />
+                </>
+              )}
             </span>
           </label>
         ))}
@@ -152,13 +193,47 @@ export default function CheckoutSheet({ a, data, onClose, onDone }: { a: CalAppo
 
       {(totals?.due ?? 1) > 0 && (
         <section className="space-y-2">
-          <h3 className="text-sm font-semibold">Payment</h3>
+          <h3 className="text-sm font-semibold">Gift card</h3>
+          {gift ? (
+            <p className="flex flex-wrap items-center gap-2 text-sm">
+              Using <strong>{money(giftCents)}</strong> from {gift.code} (balance {money(gift.balanceCents)})
+              <button type="button" className="underline" onClick={() => { setGift(null); setPaid(null); }}>Remove</button>
+            </p>
+          ) : (
+            <div className="flex gap-2">
+              <input value={giftCode} onChange={(e) => setGiftCode(e.target.value)} className={input} placeholder="Gift card code" aria-label="Gift card code" autoCapitalize="characters" />
+              <button
+                type="button"
+                disabled={looking || giftCode.trim().length < 6}
+                className="rounded-lg border border-line px-3 py-2 text-sm disabled:opacity-50"
+                onClick={() =>
+                  startLooking(async () => {
+                    setGiftMsg(null);
+                    const r = await lookupGiftCard(giftCode);
+                    if (r.ok) {
+                      setGift(r.card);
+                      setPaid(null);
+                    } else setGiftMsg(r.error);
+                  })
+                }
+              >
+                Apply
+              </button>
+            </div>
+          )}
+          {giftMsg && <p className="text-sm text-red-700 dark:text-red-300" role="alert">{giftMsg}</p>}
+        </section>
+      )}
+
+      {(totals?.due ?? 1) > 0 && (gift === null || otherDefault > 0 || paid !== null) && (
+        <section className="space-y-2">
+          <h3 className="text-sm font-semibold">{gift ? "Rest of the payment" : "Payment"}</h3>
           <div className="grid gap-2 sm:grid-cols-2">
             <select value={method} onChange={(e) => setMethod(e.target.value)} className={input} aria-label="Payment method">
               {data.paymentMethods.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
             </select>
             <label className="flex items-center gap-1">
-              $<input type="number" inputMode="decimal" step="0.01" min={0} value={paid ?? (dueEstimate / 100).toFixed(2)} onChange={(e) => setPaid(e.target.value)} className={input} aria-label="Amount paid" />
+              $<input type="number" inputMode="decimal" step="0.01" min={0} value={paid ?? (otherDefault / 100).toFixed(2)} onChange={(e) => setPaid(e.target.value)} className={input} aria-label="Amount paid" />
             </label>
           </div>
           <input value={reference} onChange={(e) => setReference(e.target.value)} className={input} placeholder="Reference, e.g. Venmo note (optional)" aria-label="Reference" />

@@ -15,11 +15,11 @@ const RANGES: { key: RangeKey; label: string }[] = [
 ];
 
 const METHOD: Record<string, string> = {
-  cash: "Cash", venmo_direct: "Venmo", cash_app_direct: "Cash App", zelle: "Zelle", paypal_me: "PayPal", apple_cash: "Apple Cash", other: "Other",
+  cash: "Cash", venmo_direct: "Venmo", cash_app_direct: "Cash App", zelle: "Zelle", paypal_me: "PayPal", apple_cash: "Apple Cash", gift_card: "Gift card", other: "Other",
   card: "Card", google_pay: "Google Pay", apple_pay: "Apple Pay", cash_app_pay: "Cash App Pay", paypal: "PayPal", venmo: "Venmo",
 };
 const KIND: Record<string, string> = {
-  service: "Services", tip: "Tips", deposit: "Deposits", cancel_fee: "Late-cancel fees", no_show_fee: "No-show fees", balance: "Balances paid", retail: "Retail", refund: "Refunds",
+  service: "Services", tip: "Tips", deposit: "Deposits", cancel_fee: "Late-cancel fees", no_show_fee: "No-show fees", balance: "Balances paid", retail: "Retail", refund: "Refunds", gift_card: "Gift cards sold", package: "Packages sold",
 };
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -176,6 +176,7 @@ export default function ReportView({ r, prev, range, zone, basePath = "/app/repo
         <Card title="Money received by type">
           <Rows rows={Object.entries(r.money.byKind).sort((x, y) => y[1] - x[1]).map(([k, v]) => [KIND[k] ?? k, money(v)] as [string, string])} />
           {Object.keys(r.money.byKind).length === 0 && <p className="text-sm text-muted">Nothing received in this range.</p>}
+          {r.money.giftCardsRedeemed > 0 && <p className="mt-2 text-sm text-muted">Also paid with gift cards: {money(r.money.giftCardsRedeemed)} (counted when the cards were sold).</p>}
         </Card>
         <Card title="By payment method">
           <Rows rows={r.money.byMethod.map((m) => [METHOD[m.method] ?? m.method, money(m.cents), `${m.count} payment${m.count === 1 ? "" : "s"}`] as [string, string, string])} />

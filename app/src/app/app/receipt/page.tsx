@@ -7,7 +7,7 @@ import PrintButton from "./PrintButton";
 export const metadata = { title: "Receipt" };
 export const dynamic = "force-dynamic";
 
-const METHOD: Record<string, string> = { cash: "Cash", venmo_direct: "Venmo", cash_app_direct: "Cash App", zelle: "Zelle", paypal_me: "PayPal", apple_cash: "Apple Cash", other: "Other", card: "Card" };
+const METHOD: Record<string, string> = { cash: "Cash", venmo_direct: "Venmo", cash_app_direct: "Cash App", zelle: "Zelle", paypal_me: "PayPal", apple_cash: "Apple Cash", gift_card: "Gift card", other: "Other", card: "Card" };
 const UUID = /^[0-9a-f-]{36}$/;
 
 /** Printable receipt for a visit (?appointment=) or a quick sale (?sale=). Sized for 80 mm receipt paper. */

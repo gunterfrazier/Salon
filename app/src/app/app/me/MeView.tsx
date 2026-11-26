@@ -15,7 +15,7 @@ const btn = "rounded-lg border border-line px-3 py-2 text-sm disabled:opacity-50
 const primary = "rounded-lg bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-50";
 
 /** The customer's own page: every salon they use, upcoming visits, balances, history and preferences. */
-export default function MeView({ me, salons, waiting = [] }: { me: CustomerHome; salons: PortalData[]; waiting?: Waiting[] }) {
+export default function MeView({ me, salons, waiting = [], packages = [] }: { me: CustomerHome; salons: PortalData[]; waiting?: Waiting[]; packages?: { id: string; text: string; salon: string }[] }) {
   const upcoming = salons.flatMap((d) => d.upcoming.map((a) => ({ a, d }))).sort((x, y) => x.a.start.localeCompare(y.a.start));
   const past = salons.flatMap((d) => d.past.map((p) => ({ p, d }))).sort((x, y) => y.p.start.localeCompare(x.p.start)).slice(0, 20);
   const owed = salons.filter((d) => d.balance > 0);
@@ -66,6 +66,16 @@ export default function MeView({ me, salons, waiting = [] }: { me: CustomerHome;
             <Upcoming key={a.id} a={a} tz={d.salon.timezone} policy={d.policy} salonPhone={d.salon.phone} salon={many || !me.preferredSalon ? d.salon : null} />
           ))}
         </section>
+
+        {packages.length > 0 && (
+          <section className={card}>
+            <h2 className="font-semibold">Your packages</h2>
+            <ul className="mt-1 text-sm">
+              {packages.map((p) => <li key={p.id}>{p.text}{many && p.salon ? ` · ${p.salon}` : ""}</li>)}
+            </ul>
+            <p className="mt-1 text-xs text-muted">Visits are taken off when you check out.</p>
+          </section>
+        )}
 
         {waiting.length > 0 && (
           <section className="space-y-3">

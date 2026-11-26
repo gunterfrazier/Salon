@@ -27,5 +27,8 @@ export default async function MePage() {
     .flat()
     .filter(({ w }) => w.status === "active")
     .map(({ w, businessId }) => ({ id: w.id, salon: good.find((d) => d.salon.id === businessId)?.salon.name ?? "", what: `${w.serviceNames.join(" + ")}${w.staffName ? ` with ${w.staffName}` : ""}`, window: describeWindow(w) }));
-  return <MeView me={me as NonNullable<typeof me>} salons={good} waiting={waiting} />;
+  const pk = await Promise.all(who.links.map(async (l) => (await db.from("client_packages").select("id,name,visits_total,visits_used,expires_on,status").eq("business_id", l.businessId).eq("client_id", l.clientId).eq("status", "active")).data?.map((p) => ({ ...p, salon: good.find((d) => d.salon.id === l.businessId)?.salon.name ?? "" })) ?? []));
+  const today = new Date().toISOString().slice(0, 10);
+  const packages = pk.flat().filter((p) => p.visits_used < p.visits_total && (!p.expires_on || p.expires_on >= today)).map((p) => ({ id: p.id, text: `${p.name}: ${p.visits_total - p.visits_used} of ${p.visits_total} visits left${p.expires_on ? ` (use by ${p.expires_on})` : ""}`, salon: p.salon }));
+  return <MeView me={me as NonNullable<typeof me>} salons={good} waiting={waiting} packages={packages} />;
 }

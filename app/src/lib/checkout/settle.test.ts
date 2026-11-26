@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkoutTotals, settleCancel, tipPresets } from "./settle";
+import { checkoutTotals, settleCancel, tipPresets, splitGift } from "./settle";
 
 describe("settleCancel", () => {
   const opts = { refundDepositIfNoCharge: true, collectNow: false };
@@ -60,5 +60,19 @@ describe("checkoutTotals", () => {
 
   it("tip presets", () => {
     expect(tipPresets(10000)).toEqual([{ percent: 15, amount: 1500 }, { percent: 20, amount: 2000 }, { percent: 25, amount: 2500 }]);
+  });
+});
+
+describe("splitGift", () => {
+  it("puts the gift card on services first, then retail, then tip", () => {
+    const t = checkoutTotals({ prices: [5000], retail: 2000, tip: 1000, depositPaid: 0, paid: 8000 });
+    expect(splitGift(t, 3000)).toEqual({ gift: { service: 3000, retail: 0, tip: 0 }, other: { amount: 5000, tipPaid: 1000, retailPaid: 2000 } });
+    expect(splitGift(t, 6500)).toEqual({ gift: { service: 5000, retail: 1500, tip: 0 }, other: { amount: 1500, tipPaid: 1000, retailPaid: 500 } });
+    expect(splitGift(t, 8000)).toEqual({ gift: { service: 5000, retail: 2000, tip: 1000 }, other: { amount: 0, tipPaid: 0, retailPaid: 0 } });
+    expect(splitGift(t, 0).other.amount).toBe(8000);
+  });
+  it("refuses more than the payment", () => {
+    const t = checkoutTotals({ prices: [5000], tip: 0, depositPaid: 0, paid: 5000 });
+    expect(() => splitGift(t, 5001)).toThrow();
   });
 });

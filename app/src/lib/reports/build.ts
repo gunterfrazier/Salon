@@ -52,6 +52,8 @@ export interface Report {
     byMethod: { method: string; cents: number; count: number }[];
     serviceSales: number;
     tips: number;
+    /** Paid with gift cards in the range (not in collected: counted when the card was sold). */
+    giftCardsRedeemed: number;
     fees: number;
     deposits: number;
     refunds: number;
@@ -103,8 +105,16 @@ export function buildReport(i: ReportInput): Report {
   const byKind: Record<string, number> = {};
   const methods = new Map<string, { method: string; cents: number; count: number }>();
   let collected = 0;
+  // Paid from gift cards: the money came in when the card was sold, so it isn't counted again.
+  let giftRedeemed = 0;
+  let giftTips = 0;
   for (const p of i.payments) {
     if (p.status !== "succeeded") continue;
+    if (p.method === "gift_card") {
+      giftRedeemed += p.cents;
+      if (p.kind === "tip") giftTips += p.cents;
+      continue;
+    }
     byKind[p.kind] = (byKind[p.kind] ?? 0) + p.cents;
     collected += p.cents;
     const row = daily.get(dayOf(p.at));
@@ -180,7 +190,7 @@ export function buildReport(i: ReportInput): Report {
     if (h && !i.isClosed(d)) openMinutes += parseHHMM(h[1]) - parseHHMM(h[0]);
   }
 
-  const tips = byKind.tip ?? 0;
+  const tips = (byKind.tip ?? 0) + giftTips;
   return {
     from: i.from,
     to: i.to,
@@ -191,6 +201,7 @@ export function buildReport(i: ReportInput): Report {
       byMethod: [...methods.values()].sort((a, b) => b.cents - a.cents),
       serviceSales: sales,
       tips,
+      giftCardsRedeemed: giftRedeemed,
       fees: (byKind.cancel_fee ?? 0) + (byKind.no_show_fee ?? 0),
       deposits: byKind.deposit ?? 0,
       refunds: -(byKind.refund ?? 0),

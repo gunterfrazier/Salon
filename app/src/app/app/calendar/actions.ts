@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { buildBooking, toBookable, type ServiceRow } from "@/lib/booking/build";
-import { checkoutTotals, settleCancel } from "@/lib/checkout/settle";
+import { checkoutTotals, settleCancel, splitGift } from "@/lib/checkout/settle";
+import { findGiftCard, usablePackages, type ClientPackageInfo } from "@/lib/data/prepaid";
 import { cancelDefaults, type ChargeOption } from "@/lib/policy/engine";
 import { denied, getContext } from "@/lib/context";
 import { loadClientStates, reviveClientState, type ClientStateJSON } from "@/lib/data/clients";
@@ -20,6 +21,7 @@ import { hoursFor, offersAll, STAFF_COLS, toStylists, type StaffRow, type Stylis
 import { parseRange } from "@/lib/data/calendar";
 import { loadProducts, supplyWarnings } from "@/lib/data/inventory";
 import { lineTitle } from "@/lib/inventory/stock";
+import { money } from "@/lib/format";
 
 export async function fetchClientState(clientId: string): Promise<ClientStateJSON | null> {
   const ctx = await getContext();
@@ -305,6 +307,10 @@ export interface CheckoutRequest {
   paidCents: number;
   method: string;
   reference?: string;
+  /** Part of today's payment taken from a gift card. */
+  gift?: { cardId: string; cents: number } | null;
+  /** Lines paid with a package visit (priced 0). */
+  packageUses?: { lineId: string; packageId: string }[];
 }
 
 export async function checkoutAppointment(req: CheckoutRequest): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -320,7 +326,12 @@ export async function checkoutAppointment(req: CheckoutRequest): Promise<{ ok: t
 
   const byId = new Map(req.prices.map((p) => [p.id, p.cents]));
   if (a.lines.some((l) => !byId.has(l.id)) || req.prices.length !== a.lines.length) return { ok: false, error: "Services changed. Refresh and try again." };
-  const prices = a.lines.map((l) => byId.get(l.id)!);
+  // Package visits: those lines are free today.
+  const uses = (req.packageUses ?? []).filter((u) => a.lines.some((l) => l.id === u.lineId) && /^[0-9a-f-]{36}$/.test(u.packageId));
+  if (new Set(uses.map((u) => u.lineId)).size !== uses.length) return { ok: false, error: "Use one package visit per service." };
+  const free = new Set(uses.map((u) => u.lineId));
+  const prices = a.lines.map((l) => (free.has(l.id) ? 0 : byId.get(l.id)!));
+  if (req.paidCents > 0 && req.method === "gift_card") return { ok: false, error: "Enter the gift card code under Gift card." };
 
   const retail = await retailRows(ctx, req.retail);
   if ("error" in retail) return { ok: false, error: retail.error };
@@ -332,24 +343,41 @@ export async function checkoutAppointment(req: CheckoutRequest): Promise<{ ok: t
     return { ok: false, error: (e as Error).message };
   }
 
+  // Gift card: checked here for a clear message; the database checks again while locking the card.
+  const giftCents = req.gift?.cents ?? 0;
+  let split;
+  try {
+    split = splitGift(t, giftCents);
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+  if (giftCents > 0) {
+    const { data: card } = await ctx.supabase.from("gift_cards").select("balance_cents,status").eq("id", req.gift!.cardId).eq("business_id", ctx.business.id).maybeSingle();
+    if (!card || card.status !== "active") return { ok: false, error: "Gift card not found." };
+    if (card.balance_cents < giftCents) return { ok: false, error: `The gift card only has ${money(card.balance_cents)} left.` };
+  }
+  if (split.other.amount > 0 && !METHODS.has(req.method)) return { ok: false, error: "Pick how the rest was paid." };
+
   const { error } = await ctx.supabase.rpc("checkout_appointment", {
     p: {
       appointment_id: req.appointmentId,
       lines: a.lines.map((l, i) => ({ id: l.id, price_cents: prices[i] })),
       tip_cents: t.tip,
       retail: retail.rows,
-      payment: t.paid > 0 ? { method: req.method, amount_cents: t.paid, tip_cents: t.tipPaid, retail_cents: t.retailPaid, reference: clean(req.reference) } : null,
+      package_uses: uses.map((u) => ({ client_package_id: u.packageId, appointment_service_id: u.lineId })),
+      gift: giftCents > 0 ? { card_id: req.gift!.cardId, service_cents: split.gift.service, retail_cents: split.gift.retail, tip_cents: split.gift.tip } : null,
+      payment: split.other.amount > 0 ? { method: req.method, amount_cents: split.other.amount, tip_cents: split.other.tipPaid, retail_cents: split.other.retailPaid, reference: clean(req.reference) } : null,
       balance_cents: t.balance,
       refund_cents: t.refund,
     },
   });
-  if (error) return { ok: false, error: error.code === "P0002" ? "This appointment is already closed." : `Couldn't save: ${error.message}` };
+  if (error) return { ok: false, error: error.code === "P0002" ? (/Gift card/.test(error.message) ? "Gift card not found." : "This appointment is already closed.") : error.code === "22023" ? error.message : `Couldn't save: ${error.message}` };
   await notifyAppointment(ctx.business.id, req.appointmentId, "checked_out", {
-    lines: [...a.lines.map((l, i) => ({ name: l.name, cents: prices[i] })), ...retail.names],
+    lines: [...a.lines.map((l, i) => ({ name: free.has(l.id) ? `${l.name} (package visit)` : l.name, cents: prices[i] })), ...retail.names],
     tip: t.tip,
     depositApplied: t.depositApplied,
     paid: t.paid,
-    method: t.paid > 0 ? (METHOD_LABEL[req.method] ?? null) : null,
+    method: t.paid > 0 ? [giftCents > 0 ? "gift card" : null, split.other.amount > 0 ? (METHOD_LABEL[req.method] ?? null) : null].filter(Boolean).join(" + ") || null : null,
     balance: t.balance,
   });
   revalidatePath("/app/calendar");
@@ -510,4 +538,23 @@ export async function moveAppointment(req: MoveRequest): Promise<BookingResponse
   revalidatePath("/app/calendar");
   revalidatePath("/app/today");
   return { ok: true, appointmentId: req.appointmentId };
+}
+
+/** Look up a gift card by code at checkout or a sale. */
+export async function lookupGiftCard(code: string): Promise<{ ok: true; card: { id: string; code: string; balanceCents: number } } | { ok: false; error: string }> {
+  const ctx = await getContext();
+  if (!ctx.can("checkout") && !ctx.can("sell")) return { ok: false, error: "Your role doesn't allow this." };
+  const card = await findGiftCard(ctx.supabase, ctx.business.id, code, todayIn(ctx.business.timezone));
+  if (!card) return { ok: false, error: "No gift card with that code." };
+  if (!card.usable) return { ok: false, error: card.why! };
+  return { ok: true, card: { id: card.id, code: card.code, balanceCents: card.balanceCents } };
+}
+
+/** The client's packages that can pay for services today. */
+export async function packagesForCheckout(appointmentId: string): Promise<ClientPackageInfo[]> {
+  const ctx = await getContext();
+  if (!ctx.can("checkout") || !/^[0-9a-f-]{36}$/.test(appointmentId)) return [];
+  const { data: a } = await ctx.supabase.from("appointments").select("client_id").eq("id", appointmentId).eq("business_id", ctx.business.id).maybeSingle();
+  if (!a) return [];
+  return usablePackages(ctx.supabase, ctx.business.id, a.client_id, todayIn(ctx.business.timezone));
 }
