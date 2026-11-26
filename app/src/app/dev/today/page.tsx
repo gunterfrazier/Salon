@@ -12,7 +12,7 @@ const TZ = "America/Chicago";
 const at = (hhmm: string) => `2026-12-01T${String(Number(hhmm.slice(0, 2)) + 6).padStart(2, "0")}:${hhmm.slice(3)}:00.000Z`;
 const line = (name: string, cents: number) => ({ id: name, serviceId: name, name, priceType: "fixed", listPrice: cents, finalPrice: cents, discounts: [] });
 function appt(id: string, name: string, s: string, e: string, services: ReturnType<typeof line>[], extra: Partial<CalAppointment> = {}): CalAppointment {
-  return { id, clientId: id, clientName: name, clientPhone: "(256) 555-0101", start: at(s), end: at(e), status: "booked", notes: null, depositRequired: 0, depositPaid: 0, services, busy: [{ phase: "active", start: at(s), end: at(e) }], ...extra };
+  return { id, staffId: "s1", clientId: id, clientName: name, clientPhone: "(256) 555-0101", start: at(s), end: at(e), status: "booked", notes: null, depositRequired: 0, depositPaid: 0, services, busy: [{ phase: "active", start: at(s), end: at(e) }], ...extra };
 }
 
 export default async function DevToday() {

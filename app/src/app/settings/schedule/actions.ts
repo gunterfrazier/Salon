@@ -63,6 +63,8 @@ export interface TimeOffInput {
   startTime?: string; // hours
   endTime?: string;
   reason?: string;
+  /** A team member's id for personal time off; empty/"salon" for the whole salon. */
+  who?: string;
 }
 
 export async function addTimeOff(i: TimeOffInput): Promise<Result> {
@@ -88,9 +90,17 @@ export async function addTimeOff(i: TimeOffInput): Promise<Result> {
     }
     if (end <= start) return { ok: false, error: "End time must be after the start time." };
   }
+  let staffId = ctx.staff.id;
+  const salonWide = !i.who || i.who === "salon";
+  if (!salonWide) {
+    const { data: m } = await ctx.supabase.from("staff").select("id").eq("business_id", ctx.business.id).eq("id", i.who!).eq("active", true).maybeSingle();
+    if (!m) return { ok: false, error: "Pick who's off." };
+    staffId = m.id;
+  }
   const { error } = await ctx.supabase.from("time_off").insert({
     business_id: ctx.business.id,
-    staff_id: ctx.staff.id,
+    staff_id: staffId,
+    salon_wide: salonWide,
     start_at: start.toISOString(),
     end_at: end.toISOString(),
     all_day: i.kind === "days",

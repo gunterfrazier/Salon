@@ -13,6 +13,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { addDays, formatDay, formatTime, isDateStr, parseHHMM, todayIn, toHHMM, zonedToUtc } from "@/lib/time/zone";
 import { cleanFavorites, findOpenings, searchWindow, type Opening, type SearchCriteria } from "@/lib/booking/search";
 import { loadBusyRange } from "@/lib/data/schedule";
+import { hoursFor, whoOffers, type Stylist } from "@/lib/staff/stylists";
+import type { BookableService } from "@/lib/booking/build";
+import type { PublicBusiness } from "@/lib/data/public-booking";
 import { notifyAppointment } from "@/lib/notify/events";
 import { suggestOrder } from "@/lib/schedule/plan";
 
@@ -30,20 +33,36 @@ async function servicesFor(businessId: string, ids: string[]) {
   return ids.map((id) => toBookable(byId.get(id)!));
 }
 
-/** Open start times ("HH:MM", salon time) for the chosen services on a date. */
-export async function getTimes(date: string, serviceIds: string[]): Promise<{ ok: true; times: string[] } | { ok: false; error: string }> {
+/** Stylists who can do these services: one chosen stylist, or everyone who offers them ("any"). */
+function eligible(b: PublicBusiness, serviceIds: string[], staffId: string | null | undefined): Stylist[] {
+  const able = whoOffers(b.stylists, serviceIds);
+  return staffId && staffId !== "any" ? able.filter((s) => s.id === staffId) : able;
+}
+
+/** Open start minutes for one stylist on a date. */
+async function stylistStarts(b: PublicBusiness, s: Stylist, date: string, services: BookableService[]): Promise<number[]> {
+  const busy = await loadBusy(b, date, s.id);
+  return availableStarts({ date, tz: b.timezone, hours: hoursFor(s, b.hours), services, busy, now: new Date(), settings: b.settings });
+}
+
+/** Open start times ("HH:MM", salon time) for the chosen services on a date, with one stylist or anyone. */
+export async function getTimes(date: string, serviceIds: string[], staffId?: string | null): Promise<{ ok: true; times: string[] } | { ok: false; error: string }> {
   const b = await loadPublicBusiness();
   if (!b) return { ok: false, error: "Online booking isn't open yet." };
   if (!isDateStr(date) || !bookableDates(todayIn(b.timezone), b.hours, b.settings, await loadClosedChecker(b)).includes(date)) return { ok: false, error: "The salon is closed that day. Pick another day." };
   const services = await servicesFor(b.id, serviceIds);
   if (!services) return { ok: false, error: "Pick your services again." };
-  const busy = await loadBusy(b, date);
-  const times = availableStarts({ date, tz: b.timezone, hours: b.hours, services, busy, now: new Date(), settings: b.settings }).map(toHHMM);
-  return { ok: true, times };
+  const who = eligible(b, serviceIds, staffId);
+  if (!who.length) return { ok: false, error: "No one offers all of these services. Try fewer services or another stylist." };
+  const all = new Set<number>();
+  for (const s of who) for (const m of await stylistStarts(b, s, date, services)) all.add(m);
+  return { ok: true, times: [...all].sort((x, y) => x - y).map(toHHMM) };
 }
 
 export interface OnlineBookingRequest {
   serviceIds: string[];
+  /** A stylist's id, or "any" / empty for whoever is free. */
+  staffId?: string | null;
   date: string;
   time: string;
   firstName: string;
@@ -95,11 +114,15 @@ export async function submitOnlineBooking(req: OnlineBookingRequest): Promise<On
   const services = await servicesFor(b.id, req.serviceIds);
   if (!services) return { ok: false, error: "Pick your services again." };
 
-  // The time must still be open right now.
-  const busy = await loadBusy(b, req.date);
-  if (!availableStarts({ date: req.date, tz: b.timezone, hours: b.hours, services, busy, now: new Date(), settings: b.settings }).includes(minutes)) {
-    return { ok: false, error: "That time was just taken. Please pick another." };
+  // The time must still be open right now, with the chosen stylist or anyone who offers the services.
+  let stylist: Stylist | null = null;
+  for (const s of eligible(b, req.serviceIds, req.staffId)) {
+    if ((await stylistStarts(b, s, req.date, services)).includes(minutes)) {
+      stylist = s;
+      break;
+    }
   }
+  if (!stylist) return { ok: false, error: "That time was just taken. Please pick another." };
 
   const admin = createAdminClient();
 
@@ -158,7 +181,7 @@ export async function submitOnlineBooking(req: OnlineBookingRequest): Promise<On
       ...result.payload,
       business_id: b.id,
       client_id: clientId,
-      staff_id: b.staffId,
+      staff_id: stylist.id,
       booked_via: "online",
       status,
       notes: clean(req.notes, 1000),
@@ -195,7 +218,7 @@ export async function submitOnlineBooking(req: OnlineBookingRequest): Promise<On
 
 
 /** Public "Find a time": openings matching days / time of day / when. */
-export async function findPublicOpenings(serviceIds: string[], criteria: SearchCriteria): Promise<{ ok: true; openings: Opening[] } | { ok: false; error: string }> {
+export async function findPublicOpenings(serviceIds: string[], criteria: SearchCriteria, staffId?: string | null): Promise<{ ok: true; openings: Opening[] } | { ok: false; error: string }> {
   const b = await loadPublicBusiness();
   if (!b) return { ok: false, error: "Online booking isn't open yet." };
   const services = await servicesFor(b.id, serviceIds);
@@ -206,8 +229,17 @@ export async function findPublicOpenings(serviceIds: string[], criteria: SearchC
   const { first, last } = searchWindow(criteria.start, today, horizonDays);
   const from = zonedToUtc(first, 0, tz);
   const to = zonedToUtc(addDays(last, 1), 0, tz);
-  const [busy, isClosed] = await Promise.all([loadBusyRange(createAdminClient(), b.staffId, from, to), loadClosedChecker(b)]);
+  const who = eligible(b, serviceIds, staffId);
+  if (!who.length) return { ok: false, error: "No one offers all of these services. Try fewer services or another stylist." };
+  const isClosed = await loadClosedChecker(b);
   const ordered = suggestOrder(services, STAGES);
-  const openings = findOpenings({ services: ordered, criteria, today, tz, hours: b.hours, isClosed, busy, now: new Date(), settings: b.settings, horizonDays, limit: 24, perDay: 4 });
+  const seen = new Map<string, Opening>();
+  for (const st of who) {
+    const busy = await loadBusyRange(createAdminClient(), b.id, st.id, from, to);
+    for (const o of findOpenings({ services: ordered, criteria, today, tz, hours: hoursFor(st, b.hours), isClosed, busy, now: new Date(), settings: b.settings, horizonDays, limit: 24, perDay: 4 })) {
+      seen.set(`${o.date} ${o.minutes}`, o);
+    }
+  }
+  const openings = [...seen.values()].sort((x, y) => x.date.localeCompare(y.date) || x.minutes - y.minutes).slice(0, 24);
   return { ok: true, openings };
 }

@@ -3,6 +3,7 @@ import type { getContext } from "../context";
 import type { ClientSummary } from "../clients/summary";
 import { clientStanding } from "../policy/flags";
 import { loadClientStates, reviveClientState } from "./clients";
+import { visibleClientIds } from "./client-scope";
 
 type Ctx = Awaited<ReturnType<typeof getContext>>;
 const OPEN = ["pending", "booked", "confirmed", "checked_in", "in_service"];
@@ -16,7 +17,8 @@ export async function loadClientList(ctx: Ctx): Promise<ClientSummary[]> {
   if (clients.error) throw new Error(clients.error.message);
   if (upcoming.error) throw new Error(upcoming.error.message);
 
-  const rows = clients.data ?? [];
+  const visible = await visibleClientIds(ctx);
+  const rows = (clients.data ?? []).filter((c) => !visible || visible.has(c.id));
   const states = await loadClientStates(supabase, business.id, rows.map((c) => c.id));
   const next: Record<string, string> = {};
   for (const a of upcoming.data ?? []) next[a.client_id] ??= a.start_at;

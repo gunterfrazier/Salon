@@ -97,3 +97,53 @@ export async function saveRolePermissions(raw: unknown): Promise<Result> {
   revalidatePath("/", "layout");
   return { ok: true };
 }
+
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+
+export interface StylistSettings {
+  bookable: boolean;
+  title: string;
+  color: string | null;
+  /** null = the salon's hours. */
+  hours: Partial<Record<(typeof DAYS)[number], [string, string] | null>> | null;
+  /** null = all services. */
+  serviceIds: string[] | null;
+}
+
+/** Who takes appointments, and their hours, services, title and calendar color. */
+export async function saveStylistSettings(id: string, s: StylistSettings): Promise<Result> {
+  const ctx = await getContext();
+  const no = denied(ctx, "team.manage");
+  if (no) return no;
+  let hours: Record<string, [string, string] | null> | null = null;
+  if (s.hours) {
+    hours = {};
+    for (const d of DAYS) {
+      const h = s.hours[d];
+      if (!h) {
+        hours[d] = null;
+        continue;
+      }
+      if (!HHMM.test(h[0]) || !HHMM.test(h[1]) || h[0] >= h[1]) return { ok: false, error: `Check the hours for ${d[0].toUpperCase()}${d.slice(1)}: start must be before end.` };
+      hours[d] = [h[0], h[1]];
+    }
+  }
+  if (s.color !== null && !/^#[0-9a-f]{6}$/i.test(s.color)) return { ok: false, error: "Pick a color." };
+  let serviceIds: string[] | null = null;
+  if (s.serviceIds) {
+    const { data: svc } = await ctx.supabase.from("services").select("id").eq("business_id", ctx.business.id).in("id", s.serviceIds);
+    serviceIds = (svc ?? []).map((r) => r.id as string);
+    if (!serviceIds.length) return { ok: false, error: "Pick at least one service, or choose All services." };
+  }
+  const { error } = await ctx.supabase
+    .from("staff")
+    .update({ bookable: !!s.bookable, title: s.title.trim().slice(0, 60) || null, color: s.color, hours, service_ids: serviceIds })
+    .eq("business_id", ctx.business.id)
+    .eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  done();
+  revalidatePath("/calendar");
+  revalidatePath("/book");
+  return { ok: true };
+}

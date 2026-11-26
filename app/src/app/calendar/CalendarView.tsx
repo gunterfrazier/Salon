@@ -18,6 +18,7 @@ const STATUS_LABEL: Record<string, string> = { completed: "Completed", no_show: 
 import { markDepositReceived } from "./actions";
 import BookingSheet from "./BookingSheet";
 import { closureForDate } from "@/lib/schedule/holidays";
+import { firstName } from "@/lib/staff/stylists";
 import CheckoutSheet from "./CheckoutSheet";
 import CloseSheet from "./CloseSheet";
 import MoveSheet from "./MoveSheet";
@@ -37,7 +38,7 @@ export default function CalendarView({ data, focusDate }: { data: CalendarData; 
   const pxPerMin = data.view === "week" ? 1 : 1.5;
   const [now, setNow] = useState<Date | null>(null);
   const [selected, setSelected] = useState<CalAppointment | null>(null);
-  const [booking, setBooking] = useState<{ date: string; time: string; serviceIds?: string[]; clientId?: string | null } | null>(null);
+  const [booking, setBooking] = useState<{ date: string; time: string; serviceIds?: string[]; clientId?: string | null; staffId?: string | null } | null>(null);
   const [finding, setFinding] = useState<FindTimeStart | null>(null);
   const [closing, setClosing] = useState<{ a: CalAppointment; kind: CloseKind } | null>(null);
   const done = () => {
@@ -77,7 +78,9 @@ export default function CalendarView({ data, focusDate }: { data: CalendarData; 
   const monthFirst = `${focusDate.slice(0, 8)}01`;
   const prevDate = data.view === "month" ? addMonths(monthFirst, -1) : addDays(data.from, -data.days);
   const nextDate = data.view === "month" ? addMonths(monthFirst, 1) : addDays(data.from, data.days);
-  const href = (date: string, view = data.view) => `/calendar?view=${view}&date=${date}`;
+  const href = (date: string, view = data.view, staff = data.viewStaff) => `/calendar?view=${view}&date=${date}${staff ? `&staff=${staff}` : ""}`;
+  const manyStylists = data.stylists.length > 1;
+  const showStylist = manyStylists && !data.viewStaff;
   const title =
     data.view === "day"
       ? formatDay(data.from, { weekday: "long", month: "long", day: "numeric", year: "numeric" })
@@ -134,6 +137,17 @@ export default function CalendarView({ data, focusDate }: { data: CalendarData; 
               aria-label="Go to date"
             />
           </label>
+          {manyStylists && data.can.all && (
+            <select
+              value={data.viewStaff ?? ""}
+              onChange={(e) => router.push(href(focusDate, data.view, e.target.value || null))}
+              className="rounded-lg border border-line bg-surface px-2 py-2 text-sm"
+              aria-label="Whose calendar"
+            >
+              <option value="">Everyone</option>
+              {data.stylists.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          )}
           <button type="button" onClick={() => setFinding({})} className="rounded-lg border border-line bg-surface px-3 py-2 text-sm font-semibold">
             Find a time
           </button>
@@ -230,6 +244,7 @@ export default function CalendarView({ data, focusDate }: { data: CalendarData; 
                   )}
                   {dayAppts.map((a, i) => (
                     <AppointmentBlock
+                      stylist={showStylist ? data.stylists.find((s) => s.id === a.staffId) ?? { name: data.staffNames[a.staffId] ?? "", color: "#888888" } : null}
                       key={a.id}
                       lane={lanes[i]}
                       a={a}
@@ -283,7 +298,7 @@ export default function CalendarView({ data, focusDate }: { data: CalendarData; 
           onClose={() => setFinding(null)}
           onPick={(p) => {
             setFinding(null);
-            setBooking({ date: p.date, time: p.time, serviceIds: p.serviceIds, clientId: p.clientId });
+            setBooking({ date: p.date, time: p.time, serviceIds: p.serviceIds, clientId: p.clientId, staffId: p.staffId });
           }}
         />
       )}
@@ -296,6 +311,7 @@ export default function CalendarView({ data, focusDate }: { data: CalendarData; 
           initialTime={booking.time}
           initialServiceIds={booking.serviceIds}
           initialClientId={booking.clientId}
+          initialStaffId={booking.staffId}
           onClose={() => setBooking(null)}
           onSaved={() => {
             setBooking(null);
@@ -308,11 +324,12 @@ export default function CalendarView({ data, focusDate }: { data: CalendarData; 
 }
 
 function AppointmentBlock({
-  a, tz, top, pxPerMin, compact, chips, onOpen, lane,
+  stylist, a, tz, top, pxPerMin, compact, chips, onOpen, lane,
 }: {
   a: CalAppointment; tz: string; top: number; pxPerMin: number; compact: boolean; lane: number;
   chips: Chip[];
   onOpen: () => void;
+  stylist?: { name: string; color: string } | null;
 }) {
   const start = new Date(a.start).getTime();
   const end = new Date(a.end).getTime();
@@ -325,7 +342,7 @@ function AppointmentBlock({
         onOpen();
       }}
       className={`processing-stripes appt-block absolute right-1 flex flex-col items-stretch justify-start overflow-hidden rounded-lg border-l-4 text-left ${OPEN_STATUSES.has(a.status) ? "" : "appt-done"}`}
-      style={{ top, height: Math.max(h, 22), left: lane ? `${Math.min(25 + lane * 15, 60)}%` : 4, zIndex: 10 + lane }}
+      style={{ top, height: Math.max(h, 22), left: lane ? `${Math.min(25 + lane * 15, 60)}%` : 4, zIndex: 10 + lane, ...(stylist ? { borderLeftColor: stylist.color } : {}) }}
       aria-label={`${a.clientName}, ${formatTimeRange(new Date(a.start), new Date(a.end), tz)}`}
     >
       {a.busy.map((b, i) => (
@@ -338,6 +355,7 @@ function AppointmentBlock({
       ))}
       <span className="relative block p-1.5 text-xs leading-tight">
         <span className="font-semibold">{a.clientName}</span>
+        {stylist && <span className="ml-1 text-[11px] text-muted">· {firstName(stylist.name)}</span>}
         {(!OPEN_STATUSES.has(a.status) || a.status === "pending") && <span className="ml-1 text-[11px] font-semibold uppercase text-muted">· {STATUS_LABEL[a.status] ?? a.status}</span>}
         <span className="block text-muted">{formatTime(new Date(a.start), tz)} · {a.services.map((s) => s.name).join(" + ")}</span>
         {!compact && chips.length > 0 && (

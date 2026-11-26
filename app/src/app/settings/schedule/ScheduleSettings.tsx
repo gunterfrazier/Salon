@@ -36,9 +36,11 @@ function useRun() {
 }
 
 export default function ScheduleSettings({
-  businessName, timezone, today, holidays, daysOff,
+  businessName, timezone, today, holidays, daysOff, personal = [], people = [],
 }: {
   businessName: string; timezone: string; today: string; holidays: HolidayRule[]; daysOff: DayOff[];
+  personal?: (DayOff & { who: string })[];
+  people?: { id: string; name: string }[];
 }) {
   return (
     <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
@@ -50,7 +52,7 @@ export default function ScheduleSettings({
         <p className="mt-1 text-xs text-muted">Times in {zoneLabel(timezone)}</p>
       </div>
       <Holidays holidays={holidays} today={today} />
-      <DaysOff daysOff={daysOff} timezone={timezone} today={today} />
+      <DaysOff daysOff={[...daysOff.map((d) => ({ ...d, who: null as string | null })), ...personal].sort((a, b) => a.start.localeCompare(b.start))} timezone={timezone} today={today} people={people} />
     </main>
   );
 }
@@ -156,8 +158,9 @@ function Holidays({ holidays, today }: { holidays: HolidayRule[]; today: string 
   );
 }
 
-function DaysOff({ daysOff, timezone, today }: { daysOff: DayOff[]; timezone: string; today: string }) {
+function DaysOff({ daysOff, timezone, today, people }: { daysOff: (DayOff & { who: string | null })[]; timezone: string; today: string; people: { id: string; name: string }[] }) {
   const { run, pending, error } = useRun();
+  const [who, setWho] = useState("salon");
   const [kind, setKind] = useState<"days" | "hours">("days");
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
@@ -183,6 +186,15 @@ function DaysOff({ daysOff, timezone, today }: { daysOff: DayOff[]; timezone: st
       <p className="text-sm text-muted">Vacations, appointments, anything that isn&rsquo;t a yearly holiday.</p>
 
       <div className="mt-3 space-y-2 rounded-lg bg-background p-3">
+        {people.length > 0 && (
+          <label className="flex flex-wrap items-center gap-2 text-sm">
+            Who&apos;s off
+            <select className={input} value={who} onChange={(e) => setWho(e.target.value)}>
+              <option value="salon">Whole salon (closed)</option>
+              {people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </label>
+        )}
         <div className="flex flex-wrap gap-3 text-sm">
           <label className="flex items-center gap-2"><input type="radio" checked={kind === "days"} onChange={() => setKind("days")} className="size-4 accent-[var(--accent)]" />Whole day(s)</label>
           <label className="flex items-center gap-2"><input type="radio" checked={kind === "hours"} onChange={() => setKind("hours")} className="size-4 accent-[var(--accent)]" />Part of a day</label>
@@ -207,7 +219,7 @@ function DaysOff({ daysOff, timezone, today }: { daysOff: DayOff[]; timezone: st
           <button
             disabled={pending}
             className="rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-on-accent disabled:opacity-40"
-            onClick={() => run(() => addTimeOff({ kind, startDate, endDate, startTime, endTime, reason }), () => setReason(""))}
+            onClick={() => run(() => addTimeOff({ kind, startDate, endDate, startTime, endTime, reason, who }), () => setReason(""))}
           >
             {kind === "days" ? "Block day(s)" : "Block time"}
           </button>
@@ -219,7 +231,10 @@ function DaysOff({ daysOff, timezone, today }: { daysOff: DayOff[]; timezone: st
         {daysOff.map((o) => (
           <li key={o.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
             <span>
-              <span className="font-semibold">{o.reason || (o.allDay ? "Day off" : "Blocked time")}</span>
+              <span className="font-semibold">
+                {o.who ? `${o.who}: ` : people.length ? "Whole salon: " : ""}
+                {o.reason || (o.allDay ? "Day off" : "Blocked time")}
+              </span>
               <span className="block text-muted">{describeOff(o)}</span>
             </span>
             <button className="text-xs text-muted underline" disabled={pending} onClick={() => run(() => deleteTimeOff(o.id))}>Remove</button>

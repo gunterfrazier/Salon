@@ -7,6 +7,7 @@ import type { CalendarData } from "@/lib/data/calendar-types";
 import { fullName, money } from "@/lib/format";
 import { formatDay, formatSlot, toHHMM, tzAbbrev, WEEKDAY_KEYS, zoneLabel } from "@/lib/time/zone";
 import { findTimes } from "./actions";
+import { defaultStylist } from "@/lib/staff/stylists";
 import { Sheet } from "./CloseSheet";
 
 export interface FindTimeStart {
@@ -25,7 +26,7 @@ export default function FindTimeSheet({
   data: CalendarData;
   start: FindTimeStart;
   onClose: () => void;
-  onPick: (p: { date: string; time: string; serviceIds: string[]; clientId: string | null }) => void;
+  onPick: (p: { date: string; time: string; serviceIds: string[]; clientId: string | null; staffId: string | null }) => void;
 }) {
   const client = data.clients.find((c) => c.id === start.clientId) ?? null;
   const fav: Favorites | null = client?.favorites ?? null;
@@ -37,6 +38,7 @@ export default function FindTimeSheet({
     ...start.criteria,
   });
   const [results, setResults] = useState<Opening[] | null>(null);
+  const [staffId, setStaffId] = useState<string | null>(defaultStylist(data.stylists, data.viewStaff, data.me));
   const [error, setError] = useState<string | null>(null);
   const [loading, startLoading] = useTransition();
 
@@ -56,11 +58,11 @@ export default function FindTimeSheet({
     }
     setError(null);
     startLoading(async () => {
-      const r = await findTimes(serviceIds, criteria);
+      const r = await findTimes(serviceIds, criteria, staffId);
       if (r.ok) setResults(r.openings);
       else setError(r.error);
     });
-  }, [serviceIds, criteria]);
+  }, [serviceIds, criteria, staffId]);
 
   const byDate = useMemo(() => {
     const m = new Map<string, Opening[]>();
@@ -91,6 +93,15 @@ export default function FindTimeSheet({
             </button>
           )}
         </p>
+      )}
+
+      {data.stylists.length > 1 && data.can.all && (
+        <label className="block text-sm font-semibold">
+          With
+          <select className="mt-1 w-full rounded-lg border border-line bg-background px-3 py-2.5 text-base font-normal" value={staffId ?? ""} onChange={(e) => setStaffId(e.target.value)}>
+            {data.stylists.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </label>
       )}
 
       <section>
@@ -136,7 +147,7 @@ export default function FindTimeSheet({
                     <button
                       key={o.minutes}
                       type="button"
-                      onClick={() => onPick({ date: o.date, time: toHHMM(o.minutes), serviceIds, clientId: client?.id ?? null })}
+                      onClick={() => onPick({ date: o.date, time: toHHMM(o.minutes), serviceIds, clientId: client?.id ?? null, staffId })}
                       className="rounded-lg border border-line bg-surface px-3 py-2 text-sm font-semibold hover:border-accent"
                     >
                       {formatSlot(o.date, o.minutes, data.timezone)}

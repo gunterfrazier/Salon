@@ -13,7 +13,7 @@ export async function generateMetadata() {
   return { title: b ? `Book with ${b.name}` : "Book online" };
 }
 
-export default async function BookPage({ searchParams }: { searchParams: Promise<{ services?: string }> }) {
+export default async function BookPage({ searchParams }: { searchParams: Promise<{ services?: string; staff?: string }> }) {
   const sp = await searchParams;
   const b = await loadPublicBusiness();
   if (!b) {
@@ -39,6 +39,8 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
       policyLines={policyText(b.policy)}
       initialPicked={(sp.services ?? "").split(",").filter((x) => /^[0-9a-f-]{36}$/.test(x)).slice(0, 8)}
       prefill={prefill}
+      stylists={b.stylists.map((s) => ({ id: s.id, name: s.name, title: s.title, serviceIds: s.serviceIds }))}
+      initialStaff={b.stylists.some((s) => s.id === sp.staff) ? sp.staff! : null}
     />
   );
 }

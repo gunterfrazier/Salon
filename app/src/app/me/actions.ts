@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { bookableDates } from "@/lib/booking/availability";
 import { moveStarts } from "@/lib/booking/move";
+import { hoursFor } from "@/lib/staff/stylists";
 import { settleCancel } from "@/lib/checkout/settle";
 import { phoneKey } from "@/lib/clients/import";
 import { whoAmI } from "@/lib/auth/whoami";
@@ -77,11 +78,12 @@ async function movableTimes(own: NonNullable<Awaited<ReturnType<typeof ownAppoin
   const busyMine = ((own.a.appointment_services ?? []) as unknown as { staff_busy_blocks: { during: string }[] }[])
     .flatMap((l) => l.staff_busy_blocks.map((x) => parseRange(x.during)))
     .map((r) => ({ start: new Date(r.start), end: new Date(r.end) }));
-  const busy = await loadBusyRange(own.db, own.a.staff_id, zonedToUtc(date, 0, tz), zonedToUtc(addDays(date, 1), 0, tz));
+  const busy = await loadBusyRange(own.db, own.a.business_id, own.a.staff_id, zonedToUtc(date, 0, tz), zonedToUtc(addDays(date, 1), 0, tz));
+  const stylist = b.stylists.find((x) => x.id === own.a.staff_id);
   const earliest = new Date(Date.now() + b.settings.minNoticeHours * 3_600_000);
   return {
     b,
-    times: moveStarts({ date, tz, hours: b.hours, appt: { start: new Date(own.a.start_at), end: new Date(own.a.end_at), busy: busyMine }, busy, now: earliest, stepMinutes: b.settings.stepMinutes }),
+    times: moveStarts({ date, tz, hours: hoursFor(stylist, b.hours), appt: { start: new Date(own.a.start_at), end: new Date(own.a.end_at), busy: busyMine }, busy, now: earliest, stepMinutes: b.settings.stepMinutes }),
   };
 }
 

@@ -36,7 +36,7 @@ const input = "w-full rounded-xl border border-line bg-surface px-4 py-3 text-ba
 const STAGES = { consult: 0, chemical: 1, treatment: 2, cut: 3, style: 4, wax: 5, fee: 9 };
 
 export default function BookingWizard({
-  business, services, dates, policyLines, initialPicked = [], prefill,
+  business, services, dates, policyLines, initialPicked = [], prefill, stylists = [], initialStaff = null,
 }: {
   business: { name: string; timezone: string; hours: Hours; policy: PolicySettings; rules: BundleRule[] };
   services: PublicService[];
@@ -46,7 +46,11 @@ export default function BookingWizard({
   initialPicked?: string[];
   /** Signed-in client's details. */
   prefill?: { firstName: string; lastName: string; phone: string; email: string };
+  /** Stylists to choose from (shown when there's more than one). */
+  stylists?: { id: string; name: string; title: string | null; serviceIds: string[] | null }[];
+  initialStaff?: string | null;
 }) {
+  const [staffId, setStaffId] = useState<string>(initialStaff ?? "any");
   const [step, setStep] = useState<Step>("services");
   const [picked, setPicked] = useState<string[]>(() => initialPicked.filter((id) => services.some((s) => s.id === id)));
   const [date, setDate] = useState<string | null>(null);
@@ -98,7 +102,7 @@ export default function BookingWizard({
   }, []);
 
   // Search whenever services or criteria change.
-  const searchKey = JSON.stringify([ordered.map((s) => s.id), criteria]);
+  const searchKey = JSON.stringify([ordered.map((s) => s.id), criteria, staffId]);
   useEffect(() => {
     if (!ordered.length || addOnOnly) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -106,7 +110,7 @@ export default function BookingWizard({
       return;
     }
     startSearching(async () => {
-      const r = await findPublicOpenings(ordered.map((s) => s.id), criteria);
+      const r = await findPublicOpenings(ordered.map((s) => s.id), criteria, staffId);
       setOpenings(r.ok ? r.openings : []);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -153,7 +157,7 @@ export default function BookingWizard({
     setTimes(null);
     setError(null);
     startLoading(async () => {
-      const r = await getTimes(d, ordered.map((s) => s.id));
+      const r = await getTimes(d, ordered.map((s) => s.id), staffId);
       if (r.ok) setTimes(r.times);
       else setError(r.error);
     });
@@ -163,7 +167,7 @@ export default function BookingWizard({
     setError(null);
     startSaving(async () => {
       const fav: Favorites | null = remember ? cleanFavorites({ serviceIds: ordered.map((s) => s.id), weekdays: criteria.weekdays, block: criteria.block }) : null;
-      const r = await submitOnlineBooking({ serviceIds: ordered.map((s) => s.id), date: date!, time: time!, ...f, agreed, favorites: fav ?? undefined });
+      const r = await submitOnlineBooking({ serviceIds: ordered.map((s) => s.id), staffId, date: date!, time: time!, ...f, agreed, favorites: fav ?? undefined });
       if (r.ok) {
         writeFavorites(fav);
         setDone(r);
@@ -282,6 +286,34 @@ export default function BookingWizard({
               </ul>
             </div>
           ))}
+        </section>
+      )}
+
+      {step === "when" && stylists.length > 1 && (
+        <section className="mb-4 rounded-2xl border border-line bg-surface p-4">
+          <h2 className="font-semibold">With</h2>
+          <div className="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-label="Stylist">
+            {[{ id: "any", name: "Anyone available", title: null, serviceIds: null }, ...stylists]
+              .filter((s) => s.id === "any" || !s.serviceIds || ordered.every((o) => s.serviceIds!.includes(o.id)))
+              .map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={staffId === s.id}
+                  onClick={() => {
+                    setStaffId(s.id);
+                    setDate(null);
+                    setTime(null);
+                    setTimes(null);
+                  }}
+                  className={`rounded-xl border px-3 py-2 text-left text-sm ${staffId === s.id ? "border-foreground bg-foreground font-semibold text-background" : "border-line"}`}
+                >
+                  {s.name}
+                  {s.title && <span className="block text-xs opacity-80">{s.title}</span>}
+                </button>
+              ))}
+          </div>
         </section>
       )}
 

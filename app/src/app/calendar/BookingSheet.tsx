@@ -1,4 +1,5 @@
 "use client";
+import { defaultStylist, hoursFor, offersAll } from "@/lib/staff/stylists";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { StatusChip } from "@/components/StatusChip";
@@ -16,9 +17,9 @@ const input = "w-full rounded-lg border border-line bg-background px-3 py-2.5 te
 const label = "block text-sm font-semibold";
 
 export default function BookingSheet({
-  data, initialDate, initialTime, initialServiceIds, initialClientId, onClose, onSaved,
+  initialStaffId, data, initialDate, initialTime, initialServiceIds, initialClientId, onClose, onSaved,
 }: {
-  data: CalendarData; initialDate: string; initialTime: string; initialServiceIds?: string[]; initialClientId?: string | null;
+  data: CalendarData; initialDate: string; initialTime: string; initialServiceIds?: string[]; initialClientId?: string | null; initialStaffId?: string | null;
   onClose: () => void; onSaved: () => void;
 }) {
   const tz = data.timezone;
@@ -28,6 +29,8 @@ export default function BookingSheet({
   const [clientState, setClientState] = useState<ClientStateJSON | null>(initialClientId ? data.clientStates[initialClientId] ?? null : null);
   const [nc, setNc] = useState({ firstName: "", lastName: "", phone: "", email: "", smsOptIn: false });
   const [serviceIds, setServiceIds] = useState<string[]>(initialServiceIds ?? []);
+  const [staffId, setStaffId] = useState<string | null>(initialStaffId ?? defaultStylist(data.stylists, data.viewStaff, data.me));
+  const stylist = data.stylists.find((s) => s.id === staffId) ?? null;
   const [date, setDate] = useState(initialDate);
   const [time, setTime] = useState(initialTime);
   const [deposit, setDeposit] = useState("");
@@ -124,12 +127,13 @@ export default function BookingSheet({
   // Heads-ups (the server makes the final call on overlaps).
   const notices: string[] = [];
   if (preview && minutes !== null) {
-    const hours = data.hours[WEEKDAY_KEYS[weekday(date)]];
+    const hours = hoursFor(stylist, data.hours)[WEEKDAY_KEYS[weekday(date)]];
     const endMin = minutes + preview.plan.totalMinutes;
     if (!hours) notices.push(`You're closed on ${formatDay(date, { weekday: "long" })}s.`);
     else if (minutes < parseHHMM(hours[0]) || endMin > parseHHMM(hours[1])) notices.push(`Runs outside your hours (${formatSlot(date, parseHHMM(hours[0]), tz)} – ${formatSlot(date, parseHHMM(hours[1]), tz)}).`);
     const mine = preview.payload.services.flatMap((s) => s.busy);
-    const clash = data.appointments.some((a) =>
+    if (stylist && !offersAll(stylist, serviceIds)) notices.push(`${stylist.name} doesn't offer all of these services.`);
+    const clash = data.appointments.filter((a) => a.staffId === staffId).some((a) =>
       a.busy.some((b) => mine.some((m) => new Date(m.start) < new Date(b.end) && new Date(b.start) < new Date(m.end))),
     );
     if (clash) notices.push("Overlaps another appointment's hands-on time.");
@@ -155,6 +159,7 @@ export default function BookingSheet({
         clientId: mode === "existing" ? clientId ?? undefined : undefined,
         newClient: mode === "new" ? nc : undefined,
         serviceIds,
+        staffId,
         date,
         time,
         depositCents: preview?.deposit.required ? preview.depositCents : undefined,
@@ -186,6 +191,21 @@ export default function BookingSheet({
 
         <div className="space-y-6 overflow-y-auto px-5 py-4">
           {/* Client */}
+          {data.stylists.length > 1 && (
+            <section className="space-y-2">
+              <label className={label} htmlFor="booking-stylist">Stylist</label>
+              <select
+                id="booking-stylist"
+                className="w-full rounded-lg border border-line bg-background px-3 py-2.5 text-base"
+                value={staffId ?? ""}
+                disabled={!data.can.all}
+                onChange={(e) => setStaffId(e.target.value)}
+              >
+                {data.stylists.map((s) => <option key={s.id} value={s.id}>{s.name}{s.title ? ` · ${s.title}` : ""}</option>)}
+              </select>
+            </section>
+          )}
+
           <section className="space-y-2">
             <div className="flex items-center justify-between">
               <span className={label}>Client</span>

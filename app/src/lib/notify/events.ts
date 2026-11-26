@@ -5,7 +5,7 @@ import { formatDay, formatTime, wallParts } from "../time/zone";
 import { afterQuiet } from "./engine";
 import { clientRows, receiptDetails, stylistRow, type MessageRow, type ReceiptInfo } from "./outbox";
 import { configuredSender } from "./provider";
-import { deliverQueued, loadBusinesses } from "./run";
+import { contactFor, deliverQueued, loadBusinesses } from "./run";
 
 export type AppointmentEvent = "booked_online" | "booked_by_stylist" | "cancelled" | "moved" | "checked_out" | "checked_in";
 
@@ -25,7 +25,7 @@ export async function notifyAppointment(businessId: string, appointmentId: strin
     const { salon, settings: s } = b;
     const { data: a, error } = await db
       .from("appointments")
-      .select("id,client_id,start_at,status,deposit_required_cents,clients(first_name,last_name,phone,email,sms_opt_in),appointment_services(sort,services(name))")
+      .select("id,staff_id,client_id,start_at,status,deposit_required_cents,clients(first_name,last_name,phone,email,sms_opt_in),appointment_services(sort,services(name))")
       .eq("business_id", businessId)
       .eq("id", appointmentId)
       .single();
@@ -56,7 +56,7 @@ export async function notifyAppointment(businessId: string, appointmentId: strin
       } else if (s.client.confirmation.enabled) client("confirmation", s.client.confirmation.channels, `confirmation:${a.id}:${appt.start.toISOString()}`);
       if (event === "booked_online" && s.stylist.newOnlineBooking.enabled) {
         const dep = appt.depositDue > 0 ? ` Deposit ${money(appt.depositDue)} due; the time is held ${s.depositHold.releaseAfterHours} hours.` : "";
-        rows.push(stylistRow({ salon, staff: b.staff, template: "stylistNewBooking", body: `New online booking: ${name}, ${appt.services.join(", ")}, ${when}.${dep}`, apptId: a.id, key: `new-booking:${a.id}`, sendAfter: now }));
+        rows.push(stylistRow({ salon, staff: contactFor(b, a.staff_id), template: "stylistNewBooking", body: `New online booking: ${name}, ${appt.services.join(", ")}, ${when}.${dep}`, apptId: a.id, key: `new-booking:${a.id}`, sendAfter: now }));
       }
     }
 
@@ -72,11 +72,11 @@ export async function notifyAppointment(businessId: string, appointmentId: strin
     // The client changed it themselves (client portal): let the stylist know.
     if (opts.byClient && (event === "cancelled" || event === "moved") && s.stylist.changeOrCancel.enabled) {
       const what = event === "cancelled" ? "cancelled" : "moved to";
-      rows.push(stylistRow({ salon, staff: b.staff, template: "stylistClientChange", body: `${name} ${what} ${event === "cancelled" ? `their ${when}` : when} appointment (${appt.services.join(", ")}).${opts.note ? ` ${opts.note}` : ""}`, apptId: a.id, key: `client-${event}:${a.id}:${appt.start.toISOString()}`, sendAfter: now }));
+      rows.push(stylistRow({ salon, staff: contactFor(b, a.staff_id), template: "stylistClientChange", body: `${name} ${what} ${event === "cancelled" ? `their ${when}` : when} appointment (${appt.services.join(", ")}).${opts.note ? ` ${opts.note}` : ""}`, apptId: a.id, key: `client-${event}:${a.id}:${appt.start.toISOString()}`, sendAfter: now }));
     }
 
     if (event === "checked_in" && s.stylist.checkIn.enabled) {
-      rows.push(stylistRow({ salon, staff: b.staff, template: "stylistCheckIn", body: `${name} is here for ${formatTime(appt.start, salon.timezone)}: ${appt.services.join(", ")}.`, apptId: a.id, key: `checkin:${a.id}`, sendAfter: now }));
+      rows.push(stylistRow({ salon, staff: contactFor(b, a.staff_id), template: "stylistCheckIn", body: `${name} is here for ${formatTime(appt.start, salon.timezone)}: ${appt.services.join(", ")}.`, apptId: a.id, key: `checkin:${a.id}`, sendAfter: now }));
     }
 
     if (event === "checked_out") {

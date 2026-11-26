@@ -19,6 +19,7 @@ const STALE_HOURS = 6;
 
 interface ApptRow {
   id: string;
+  staff_id: string;
   client_id: string;
   start_at: string;
   status: string;
@@ -33,7 +34,7 @@ interface Loaded {
   paid: Record<string, number>;
 }
 
-const SELECT = "id,client_id,start_at,status,created_at,deposit_required_cents,clients(first_name,last_name,phone,email,sms_opt_in),appointment_services(sort,services(name))";
+const SELECT = "id,staff_id,client_id,start_at,status,created_at,deposit_required_cents,clients(first_name,last_name,phone,email,sms_opt_in),appointment_services(sort,services(name))";
 
 async function loadAppts(db: SupabaseClient, businessId: string, from: Date, to: Date, statuses = OPEN): Promise<Loaded> {
   const { data, error } = await db
@@ -90,7 +91,18 @@ export interface Business {
   salon: SalonInfo;
   settings: NotificationSettings;
   policy: PolicySettings;
-  staff: { id?: string; phone: string | null; email: string | null; push?: boolean };
+  /** The owner: gets salon-wide alerts and covers anyone without contact details. */
+  staff: Contact;
+  /** Everyone active on the team, by staff id. */
+  team: Map<string, Contact & { name: string; bookable: boolean }>;
+}
+
+type Contact = { id?: string; phone: string | null; email: string | null; push?: boolean };
+
+/** Where an alert about one stylist's appointment goes: that stylist, else the owner. */
+export function contactFor(b: Business, staffId: string | null | undefined): Contact {
+  const m = staffId ? b.team.get(staffId) : undefined;
+  return m && (m.phone || m.email || m.push) ? m : b.staff;
 }
 
 export async function loadBusinesses(db: SupabaseClient, siteUrl: string, onlyId?: string): Promise<Business[]> {
@@ -100,13 +112,16 @@ export async function loadBusinesses(db: SupabaseClient, siteUrl: string, onlyId
   if (error) throw new Error(error.message);
   const out: Business[] = [];
   for (const b of data ?? []) {
-    const { data: staff } = await db.from("staff").select("id,phone,email,role").eq("business_id", b.id).eq("active", true).order("created_at").limit(5);
+    const { data: staff } = await db.from("staff").select("id,display_name,phone,email,role,bookable").eq("business_id", b.id).eq("active", true).order("created_at");
     const owner = (staff ?? []).find((s) => s.role === "owner") ?? staff?.[0];
+    const team = new Map<string, Contact & { name: string; bookable: boolean }>();
+    for (const m of staff ?? []) team.set(m.id, { id: m.id, name: m.display_name, phone: m.phone, email: m.email, bookable: m.bookable, push: await hasPushDevice(db, m.id) });
     out.push({
       salon: { id: b.id, name: b.name, timezone: b.timezone, paymentMethods: b.payment_methods, siteUrl },
       settings: mergeNotificationSettings(b.notification_settings),
       policy: b.policy_settings,
-      staff: { id: owner?.id, phone: owner?.phone ?? null, email: owner?.email ?? null, push: owner ? await hasPushDevice(db, owner.id) : false },
+      staff: owner ? team.get(owner.id)! : { phone: null, email: null },
+      team,
     });
   }
   return out;
@@ -170,7 +185,7 @@ export async function scheduleBusiness(db: SupabaseClient, b: Business, now: Dat
     out.push(...clientRows({ salon, settings: s, to: toRecipient(r), appt: toInfo(r, paid), template: "holdReleased", channels: s.client.cancel.enabled ? (s.client.cancel.channels ?? ["sms"]) : [], key: h.key, sendAfter: now }));
     if (s.stylist.changeOrCancel.enabled) {
       const info = toInfo(r, paid);
-      out.push(stylistRow({ salon, staff: b.staff, template: "stylistHoldReleased", body: `Released: ${clientName(r)}'s ${info.services.join(", ")} on ${dayPreviewDateTime(info.start, tz)}. No deposit arrived.`, apptId: r.id, key: `${h.key}:stylist`, sendAfter: now }));
+      out.push(stylistRow({ salon, staff: contactFor(b, r.staff_id), template: "stylistHoldReleased", body: `Released: ${clientName(r)}'s ${info.services.join(", ")} on ${dayPreviewDateTime(info.start, tz)}. No deposit arrived.`, apptId: r.id, key: `${h.key}:stylist`, sendAfter: now }));
     }
   }
 
@@ -181,29 +196,37 @@ export async function scheduleBusiness(db: SupabaseClient, b: Business, now: Dat
       const key = `before-each:${a.id}:${a.start.toISOString()}`;
       if (at <= now.getTime() && !used.has(key)) {
         const r = byId.get(a.id)!;
-        out.push(stylistRow({ salon, staff: b.staff, template: "stylistBeforeEach", body: `Next: ${clientName(r)} at ${dayPreviewDateTime(a.start, tz)}: ${toInfo(r, paid).services.join(", ")}`, apptId: a.id, key, sendAfter: now }));
+        out.push(stylistRow({ salon, staff: contactFor(b, r.staff_id), template: "stylistBeforeEach", body: `Next: ${clientName(r)} at ${dayPreviewDateTime(a.start, tz)}: ${toInfo(r, paid).services.join(", ")}`, apptId: a.id, key, sendAfter: now }));
       }
     }
   }
 
   const previewDay = dayPreviewDue(s, tz, now, null);
   if (previewDay) {
-    const key = `day-preview:${previewDay}`;
-    if (!(await usedKeys(db, salon.id, [key])).has(key)) {
+    // Who gets one: each stylist (their own day), plus the owner for the whole salon if they don't take appointments.
+    const recipients = [...b.team.values()].filter((m) => m.bookable).map((m) => ({ contact: m as Contact, staffId: m.id as string | null }));
+    if (b.staff.id && !b.team.get(b.staff.id)?.bookable) recipients.push({ contact: b.staff, staffId: null });
+    const keys = recipients.map((r) => `day-preview:${r.staffId ?? "salon"}:${previewDay}`);
+    const used = await usedKeys(db, salon.id, keys);
+    const todo = recipients.filter((_, i) => !used.has(keys[i]));
+    if (todo.length) {
       const day = await loadAppts(db, salon.id, zonedToUtc(previewDay, 0, tz), zonedToUtc(addDays(previewDay, 1), 0, tz), ["pending", "booked", "confirmed", "checked_in", "in_service", "completed"]);
       const states = await loadClientStates(db, salon.id, [...new Set(day.rows.map((r) => r.client_id))]);
-      const items = day.rows.map((r) => {
-        const st = states[r.client_id];
-        const standing = st ? clientStanding(reviveClientState(st), b.policy, now).standing : "clear";
-        return { start: new Date(r.start_at), clientName: clientName(r), services: toInfo(r, day.paid).services, depositDue: r.status === "pending" || r.status === "booked" ? toInfo(r, day.paid).depositDue : 0, flagged: standing === "active" || standing === "permanent" };
-      });
       const low = (await loadProducts(db, salon.id)).filter((p) => ["low", "out"].includes(stockLevel(p)));
-      const preview = dayPreviewText(salon, previewDay, items);
       const lowLine = low.length ? `Low on ${low.length} product${low.length === 1 ? "" : "s"}: ${low.slice(0, 4).map((p) => p.name).join(", ")}${low.length > 4 ? ", …" : ""}.` : "";
-      // Keep the link as the last line (push opens it).
-      const lines = preview.split("\n");
-      const body = lowLine ? [...lines.slice(0, -1), lowLine, lines[lines.length - 1]].join("\n") : preview;
-      out.push(stylistRow({ salon, staff: b.staff, template: "stylistDayPreview", body, apptId: null, key, sendAfter: now }));
+      for (const r of todo) {
+        const mine = day.rows.filter((x) => !r.staffId || x.staff_id === r.staffId);
+        const items = mine.map((x) => {
+          const st = states[x.client_id];
+          const standing = st ? clientStanding(reviveClientState(st), b.policy, now).standing : "clear";
+          return { start: new Date(x.start_at), clientName: clientName(x), services: toInfo(x, day.paid).services, depositDue: x.status === "pending" || x.status === "booked" ? toInfo(x, day.paid).depositDue : 0, flagged: standing === "active" || standing === "permanent" };
+        });
+        const preview = dayPreviewText(salon, previewDay, items);
+        // Keep the link as the last line (push opens it).
+        const lines = preview.split("\n");
+        const body = lowLine ? [...lines.slice(0, -1), lowLine, lines[lines.length - 1]].join("\n") : preview;
+        out.push(stylistRow({ salon, staff: r.contact, template: "stylistDayPreview", body, apptId: null, key: `day-preview:${r.staffId ?? "salon"}:${previewDay}`, sendAfter: now }));
+      }
     }
   }
 

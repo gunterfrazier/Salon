@@ -13,12 +13,23 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 /** The day at a glance: who's coming, what they're having, what's owed, and open time. */
-export default function TodayView({ agenda, today, timezone, closureLabel, basePath = "/today", supply = {} }: { agenda: Agenda; today: string; timezone: string; closureLabel: string | null; basePath?: string; supply?: Record<string, string[]> }) {
+export default function TodayView({
+  agenda, today, timezone, closureLabel, basePath = "/today", supply = {}, stylists = [], viewStaff = null, staffNames = null,
+}: {
+  agenda: Agenda; today: string; timezone: string; closureLabel: string | null; basePath?: string; supply?: Record<string, string[]>;
+  /** Whose day to show (owners/managers with several stylists). */
+  stylists?: { id: string; name: string }[];
+  viewStaff?: string | null;
+  /** Show the stylist on each row (everyone's day). */
+  staffNames?: Record<string, string> | null;
+}) {
+  const who = viewStaff ?? "all";
+  const q = (d: string) => `${basePath}?date=${d}${stylists.length > 1 ? `&staff=${who}` : ""}`;
   const tz = timezone;
   const { date, items, gaps, summary } = agenda;
   const label = date === today ? "Today" : date === addDays(today, 1) ? "Tomorrow" : date === addDays(today, -1) ? "Yesterday" : formatDay(date, { weekday: "long" });
   const nav = (d: string, text: string) => (
-    <Link href={`${basePath}?date=${d}`} className="rounded-lg border border-line px-3 py-2 text-sm hover:bg-background">
+    <Link href={q(d)} className="rounded-lg border border-line px-3 py-2 text-sm hover:bg-background">
       {text}
     </Link>
   );
@@ -38,6 +49,15 @@ export default function TodayView({ agenda, today, timezone, closureLabel, baseP
             {formatDay(date, { weekday: "long", month: "long", day: "numeric", year: "numeric" })} · {zoneLabel(tz, new Date(`${date}T18:00:00Z`))}
           </p>
         </div>
+        {stylists.length > 1 && (
+          <nav aria-label="Whose day" className="flex w-full flex-wrap gap-2 text-sm">
+            {[{ id: "all", name: "Everyone" }, ...stylists].map((s) => (
+              <Link key={s.id} href={`${basePath}?date=${date}&staff=${s.id}`} aria-current={who === s.id ? "page" : undefined} className={`rounded-lg px-3 py-1.5 ${who === s.id ? "bg-foreground font-semibold text-background" : "border border-line"}`}>
+                {s.name.split(" ")[0]}
+              </Link>
+            ))}
+          </nav>
+        )}
         <nav aria-label="Day" className="flex flex-wrap gap-2">
           {nav(addDays(date, -1), "‹ Previous")}
           {date !== today && nav(today, "Today")}
@@ -81,7 +101,7 @@ export default function TodayView({ agenda, today, timezone, closureLabel, baseP
               </Link>
             </li>
           ) : (
-            <AgendaRow key={r.i.appt.id} item={r.i} tz={tz} date={date} supply={supply[r.i.appt.id] ?? []} />
+            <AgendaRow key={r.i.appt.id} item={r.i} tz={tz} date={date} supply={supply[r.i.appt.id] ?? []} stylist={staffNames?.[r.i.appt.staffId] ?? null} />
           ),
         )}
         {rows.length === 0 && !agenda.closed && <li className="rounded-xl border border-line bg-surface p-4 text-sm">Nothing booked yet.</li>}
@@ -99,7 +119,7 @@ function Stat({ label, value, warn }: { label: string; value: string; warn?: boo
   );
 }
 
-function AgendaRow({ item, tz, date, supply }: { item: Agenda["items"][number]; tz: string; date: string; supply: string[] }) {
+function AgendaRow({ item, tz, date, supply, stylist }: { item: Agenda["items"][number]; tz: string; date: string; supply: string[]; stylist: string | null }) {
   const a = item.appt;
   const start = new Date(a.start);
   const phone = a.clientPhone?.replace(/[^\d+]/g, "");
@@ -119,6 +139,7 @@ function AgendaRow({ item, tz, date, supply }: { item: Agenda["items"][number]; 
         <Link href={`/clients/${a.clientId}`} className="font-semibold underline">
           {a.clientName}
         </Link>
+        {stylist && <span className="text-sm text-muted"> with {stylist.split(" ")[0]}</span>}
         <span className="text-muted"> — {a.services.map((s) => s.name).join(", ")}</span>
       </p>
       {item.chips.length > 0 && (

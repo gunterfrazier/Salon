@@ -6,11 +6,14 @@ import type { getContext } from "../context";
 import { MANUAL_METHODS } from "./calendar";
 import { loadClientStates } from "./clients";
 import { cleanFavorites } from "../booking/search";
+import { visibleClientIds } from "./client-scope";
 
 type Ctx = Awaited<ReturnType<typeof getContext>>;
 
 export async function loadClientProfile(ctx: Ctx, clientId: string): Promise<ClientProfileData | null> {
   const { supabase, business } = ctx;
+  const visible = await visibleClientIds(ctx);
+  if (visible && !visible.has(clientId)) return null;
   const { data: c } = await supabase
     .from("clients")
     .select("id,first_name,last_name,phone,email,notes,prior_visit_count,sms_opt_in,source,created_at,deposit_override,deposit_override_cents,preferences")

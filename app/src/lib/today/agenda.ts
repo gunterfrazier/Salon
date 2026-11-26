@@ -53,7 +53,8 @@ export function hoursOn(date: string, hours: Hours, tz: string): { open: Date; c
   return { open: zonedToUtc(date, parseHHMM(w[0]), tz), close: zonedToUtc(date, parseHHMM(w[1]), tz) };
 }
 
-export function buildAgenda(data: Pick<CalendarData, "appointments" | "clientStates" | "policy" | "hours" | "timezone">, date: string, now: Date, closed = false): Agenda {
+/** `showGaps`: open time only makes sense for one person's day. */
+export function buildAgenda(data: Pick<CalendarData, "appointments" | "clientStates" | "policy" | "hours" | "timezone">, date: string, now: Date, closed = false, showGaps = true): Agenda {
   const tz = data.timezone;
   const window = closed ? null : hoursOn(date, data.hours, tz);
   const dayStart = zonedToUtc(date, 0, tz).getTime();
@@ -85,7 +86,7 @@ export function buildAgenda(data: Pick<CalendarData, "appointments" | "clientSta
 
   // Open time: business hours minus hands-on blocks (processing time counts as open).
   const gaps: AgendaGap[] = [];
-  if (window) {
+  if (window && showGaps) {
     const busy = appts
       .filter((a) => OPEN.has(a.status) || a.status === "completed")
       .flatMap((a) => (a.busy.length ? a.busy : [{ start: a.start, end: a.end }]))

@@ -1,4 +1,5 @@
 import type { ServiceRow } from "../booking/build";
+import type { Stylist } from "../staff/stylists";
 import type { Hours } from "../context";
 import type { PolicySettings } from "../policy/types";
 import type { BundleRule } from "../pricing/discounts";
@@ -10,6 +11,8 @@ import type { ClientStateJSON } from "./clients-shared";
 
 export interface CalAppointment {
   id: string;
+  /** The stylist doing it. */
+  staffId: string;
   clientId: string;
   clientName: string;
   clientPhone: string | null;
@@ -41,7 +44,15 @@ export interface CalClient {
 
 export interface CalendarData {
   /** What the signed-in team member may do on the calendar. */
-  can: { book: boolean; checkout: boolean };
+  can: { book: boolean; checkout: boolean; all: boolean };
+  /** Stylists who take appointments (calendar filter, booking). */
+  stylists: Stylist[];
+  /** Names for every team member, including former stylists on old appointments. */
+  staffNames: Record<string, string>;
+  /** Showing one stylist's book, or null for everyone. */
+  viewStaff: string | null;
+  /** The signed-in team member's own staff id. */
+  me: string;
   businessName: string;
   timezone: string;
   hours: Hours;

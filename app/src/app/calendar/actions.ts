@@ -16,6 +16,7 @@ import { menu } from "@/lib/menu";
 import { suggestOrder } from "@/lib/schedule/plan";
 import { notifyAppointment } from "@/lib/notify/events";
 import { moveStarts } from "@/lib/booking/move";
+import { hoursFor, offersAll, STAFF_COLS, toStylists, type StaffRow, type Stylist } from "@/lib/staff/stylists";
 import { parseRange } from "@/lib/data/calendar";
 import { loadProducts, supplyWarnings } from "@/lib/data/inventory";
 import { lineTitle } from "@/lib/inventory/stock";
@@ -37,7 +38,31 @@ export async function supplyFor(clientId: string): Promise<string[]> {
   }
 }
 
+/** Active, bookable stylists in this salon. */
+async function stylistsOf(ctx: Ctx): Promise<Stylist[]> {
+  const { data, error } = await ctx.supabase.from("staff").select(STAFF_COLS).eq("business_id", ctx.business.id);
+  if (error) throw new Error(error.message);
+  return toStylists((data ?? []) as StaffRow[]);
+}
+
+/** The stylist to book with (validated), or an error. Without "everyone's appointments", only yourself. */
+async function pickStylist(ctx: Ctx, staffId: string | null | undefined): Promise<Stylist | { error: string }> {
+  const list = await stylistsOf(ctx);
+  const id = staffId || (list.some((x) => x.id === ctx.staff.id) ? ctx.staff.id : list[0]?.id);
+  const s = list.find((x) => x.id === id);
+  if (!s) return { error: list.length ? "Pick a stylist." : "No one on the team takes appointments yet. Turn it on in Team." };
+  if (s.id !== ctx.staff.id && !ctx.can("calendar.all")) return { error: "You can only book your own appointments." };
+  return s;
+}
+
+/** Someone without "everyone's appointments" may only act on their own. */
+function notMine(ctx: Ctx, apptStaffId: string): { ok: false; error: string } | null {
+  return apptStaffId === ctx.staff.id || ctx.can("calendar.all") ? null : { ok: false, error: "That's another stylist's appointment." };
+}
+
 export interface BookingRequest {
+  /** Stylist; defaults to yourself (if you take appointments) or the first stylist. */
+  staffId?: string | null;
   clientId?: string;
   newClient?: { firstName: string; lastName?: string; phone?: string; email?: string; smsOptIn?: boolean };
   serviceIds: string[];
@@ -63,7 +88,7 @@ export async function createAppointment(req: BookingRequest): Promise<BookingRes
   const ctx = await getContext();
   const no = denied(ctx, "booking.manage");
   if (no) return no;
-  const { supabase, business, staff } = ctx;
+  const { supabase, business } = ctx;
 
   if (!isDateStr(req.date)) return { ok: false, error: "Pick a date." };
   let minutes: number;
@@ -74,6 +99,9 @@ export async function createAppointment(req: BookingRequest): Promise<BookingRes
   }
   if (!Array.isArray(req.serviceIds) || req.serviceIds.length === 0) return { ok: false, error: "Pick at least one service." };
   if (!req.clientId && !clean(req.newClient?.firstName)) return { ok: false, error: "Pick a client or enter a new client's first name." };
+  const stylist = await pickStylist(ctx, req.staffId);
+  if ("error" in stylist) return { ok: false, error: stylist.error };
+  if (!offersAll(stylist, req.serviceIds)) return { ok: false, error: `${stylist.name} doesn't offer all of these services. Pick another stylist, or add the services in Team.` };
 
   // Services, in the order chosen.
   const { data: rows, error: svcErr } = await supabase
@@ -128,7 +156,7 @@ export async function createAppointment(req: BookingRequest): Promise<BookingRes
   }
 
   const { data: id, error } = await supabase.rpc("book_appointment", {
-    p: { ...result.payload, business_id: business.id, client_id: clientId, staff_id: staff.id, booked_via: "stylist", notes: clean(req.notes) },
+    p: { ...result.payload, business_id: business.id, client_id: clientId, staff_id: stylist.id, booked_via: "stylist", notes: clean(req.notes) },
   });
   if (error) {
     if (error.code === "23P01") return { ok: false, error: "That time overlaps another appointment's hands-on time. Pick another time." };
@@ -150,7 +178,7 @@ async function loadForClose(ctx: Ctx, appointmentId: string) {
   const { supabase, business } = ctx;
   const { data: appt, error } = await supabase
     .from("appointments")
-    .select("id,status,start_at,client_id,appointment_services(id,sort,price_quoted_cents,services(name))")
+    .select("id,staff_id,status,start_at,client_id,appointment_services(id,sort,price_quoted_cents,services(name))")
     .eq("business_id", business.id)
     .eq("id", appointmentId)
     .single();
@@ -165,6 +193,7 @@ async function loadForClose(ctx: Ctx, appointmentId: string) {
     .sort((x, y) => x.sort - y.sort)
     .map((l) => ({ id: l.id, price_quoted_cents: l.price_quoted_cents, name: l.services?.name ?? "Service" }));
   return {
+    staffId: appt.staff_id as string,
     status: appt.status as string,
     start: new Date(appt.start_at),
     lines,
@@ -196,6 +225,8 @@ export async function closeAppointment(req: CloseRequest): Promise<{ ok: true } 
   const policy = ctx.business.policy_settings;
   const a = await loadForClose(ctx, req.appointmentId);
   if (!a) return { ok: false, error: "Appointment not found." };
+  const mine = notMine(ctx, a.staffId);
+  if (mine) return mine;
   if (!OPEN.has(a.status)) return { ok: false, error: "This appointment is already closed." };
   if (req.collect && !METHODS.has(req.collect.method)) return { ok: false, error: "Pick how the client paid." };
 
@@ -282,6 +313,8 @@ export async function checkoutAppointment(req: CheckoutRequest): Promise<{ ok: t
   if (no) return no;
   const a = await loadForClose(ctx, req.appointmentId);
   if (!a) return { ok: false, error: "Appointment not found." };
+  const mine = notMine(ctx, a.staffId);
+  if (mine) return mine;
   if (!OPEN.has(a.status)) return { ok: false, error: "This appointment is already closed." };
   if (req.paidCents > 0 && !METHODS.has(req.method)) return { ok: false, error: "Pick how the client paid." };
 
@@ -331,6 +364,8 @@ export async function markDepositReceived(appointmentId: string, amountCents: nu
   if (no) return no;
   const a = await loadForClose(ctx, appointmentId);
   if (!a) return { ok: false, error: "Appointment not found." };
+  const mine = notMine(ctx, a.staffId);
+  if (mine) return mine;
   if (!OPEN.has(a.status)) return { ok: false, error: "This appointment is closed." };
   if (a.depositPaid + amountCents > a.fullPrice) return { ok: false, error: "That's more than the appointment total." };
   const { error } = await ctx.supabase.rpc("mark_deposit_received", { p: { appointment_id: appointmentId, amount_cents: amountCents, method, reference: clean(reference) } });
@@ -340,12 +375,12 @@ export async function markDepositReceived(appointmentId: string, amountCents: nu
 }
 
 /** Stylist "Find a time": openings for services matching days / time block / start. */
-export async function findTimes(serviceIds: string[], criteria: SearchCriteria): Promise<{ ok: true; openings: Opening[] } | { ok: false; error: string }> {
+export async function findTimes(serviceIds: string[], criteria: SearchCriteria, staffId?: string | null): Promise<{ ok: true; openings: Opening[] } | { ok: false; error: string }> {
   if (!Array.isArray(serviceIds) || serviceIds.length === 0 || serviceIds.length > 8) return { ok: false, error: "Pick at least one service." };
   const ctx = await getContext();
   const no = denied(ctx, "booking.manage");
   if (no) return no;
-  const { supabase, business, staff } = ctx;
+  const { supabase, business } = ctx;
   const { data: rows, error } = await supabase
     .from("services")
     .select("id,key,name,price_type,price_cents,estimated_hours,active_min,processing_min,finish_min,deposit_category,stage,includes,is_add_on")
@@ -355,6 +390,8 @@ export async function findTimes(serviceIds: string[], criteria: SearchCriteria):
   const byId = new Map((rows as ServiceRow[]).map((r) => [r.id, r]));
   if (serviceIds.some((id) => !byId.has(id))) return { ok: false, error: "Pick your services again." };
   const services = suggestOrder(serviceIds.map((id) => toBookable(byId.get(id)!)), menu.stages);
+  const stylist = await pickStylist(ctx, staffId);
+  if ("error" in stylist) return { ok: false, error: stylist.error };
 
   const tz = business.timezone;
   const today = todayIn(tz);
@@ -362,7 +399,7 @@ export async function findTimes(serviceIds: string[], criteria: SearchCriteria):
   const { first, last } = searchWindow(criteria.start, today, horizonDays);
   const from = zonedToUtc(first, 0, tz);
   const to = zonedToUtc(addDays(last, 1), 0, tz);
-  const [busy, daysOff] = await Promise.all([loadBusyRange(supabase, staff.id, from, to), loadDaysOff(supabase, business.id, from, to)]);
+  const [busy, daysOff] = await Promise.all([loadBusyRange(supabase, business.id, stylist.id, from, to), loadDaysOff(supabase, business.id, from, to)]);
   const rules = mergeHolidays(business.holidays);
   const settings = { ...bookingSettings(business.booking_settings), minNoticeHours: 0 };
   const openings = findOpenings({
@@ -370,7 +407,7 @@ export async function findTimes(serviceIds: string[], criteria: SearchCriteria):
     criteria,
     today,
     tz,
-    hours: business.business_hours,
+    hours: hoursFor(stylist, business.business_hours),
     isClosed: (d) => isClosedDay(d, tz, rules, daysOff),
     busy,
     now: new Date(),
@@ -389,7 +426,7 @@ export async function findTimes(serviceIds: string[], criteria: SearchCriteria):
 async function loadForMove(ctx: Ctx, appointmentId: string) {
   const { data, error } = await ctx.supabase
     .from("appointments")
-    .select("id,status,start_at,end_at,appointment_services(staff_busy_blocks(during))")
+    .select("id,staff_id,status,start_at,end_at,appointment_services(staff_busy_blocks(during))")
     .eq("business_id", ctx.business.id)
     .eq("id", appointmentId)
     .single();
@@ -397,15 +434,16 @@ async function loadForMove(ctx: Ctx, appointmentId: string) {
   const busy = ((data.appointment_services ?? []) as unknown as { staff_busy_blocks: { during: string }[] }[])
     .flatMap((l) => l.staff_busy_blocks.map((b) => parseRange(b.during)))
     .map((r) => ({ start: new Date(r.start), end: new Date(r.end) }));
-  return { status: data.status as string, start: new Date(data.start_at), end: new Date(data.end_at), busy };
+  return { staffId: data.staff_id as string, status: data.status as string, start: new Date(data.start_at), end: new Date(data.end_at), busy };
 }
 
 const MOVABLE = new Set(["pending", "booked", "confirmed"]);
 
 async function movableTimes(ctx: Ctx, appt: NonNullable<Awaited<ReturnType<typeof loadForMove>>>, date: string) {
   const tz = ctx.business.timezone;
-  const busy = await loadBusyRange(ctx.supabase, ctx.staff.id, zonedToUtc(date, 0, tz), zonedToUtc(addDays(date, 1), 0, tz));
-  return moveStarts({ date, tz, hours: ctx.business.business_hours, appt, busy, now: new Date(), stepMinutes: bookingSettings(ctx.business.booking_settings).stepMinutes });
+  const busy = await loadBusyRange(ctx.supabase, ctx.business.id, appt.staffId, zonedToUtc(date, 0, tz), zonedToUtc(addDays(date, 1), 0, tz));
+  const stylist = (await stylistsOf(ctx)).find((x) => x.id === appt.staffId);
+  return moveStarts({ date, tz, hours: hoursFor(stylist, ctx.business.business_hours), appt, busy, now: new Date(), stepMinutes: bookingSettings(ctx.business.booking_settings).stepMinutes });
 }
 
 /** Open start times ("HH:MM") an appointment can move to on a date. */
@@ -416,6 +454,8 @@ export async function moveTimes(appointmentId: string, date: string): Promise<{ 
   if (no) return no;
   const appt = await loadForMove(ctx, appointmentId);
   if (!appt) return { ok: false, error: "Appointment not found." };
+  const mine = notMine(ctx, appt.staffId);
+  if (mine) return mine;
   if (!MOVABLE.has(appt.status)) return { ok: false, error: "Only upcoming appointments can be moved." };
   const tz = ctx.business.timezone;
   const daysOff = await loadDaysOff(ctx.supabase, ctx.business.id, zonedToUtc(date, 0, tz), zonedToUtc(addDays(date, 1), 0, tz));
@@ -445,6 +485,8 @@ export async function moveAppointment(req: MoveRequest): Promise<BookingResponse
   const tz = ctx.business.timezone;
   const appt = await loadForMove(ctx, req.appointmentId);
   if (!appt) return { ok: false, error: "Appointment not found." };
+  const mine = notMine(ctx, appt.staffId);
+  if (mine) return mine;
   if (!MOVABLE.has(appt.status)) return { ok: false, error: "Only upcoming appointments can be moved." };
   if (!(await movableTimes(ctx, appt, req.date)).includes(minutes)) return { ok: false, error: "That time isn't open anymore. Pick another." };
 

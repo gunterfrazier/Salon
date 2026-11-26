@@ -10,6 +10,13 @@ Calendar (day/week/month, go-to-date, Find a time), stylist booking with stacked
 - **B. Reporting: built.** Ranges with comparisons, money by type/method, visits, rates, clients, services, busiest times, CSV downloads.
 - **C. Inventory: built (first pass).** Products from the Kenra/Redken catalog or by hand, counts, received, min/max, reorder lists by supplier, barcode scanning, usage per formula (oz/g/ml/tubes → % of a tube), supply check when booking and on Today, low stock in the day preview. Next: SalonInteractive partner inquiry for SalonCentric auto-ordering.
 
+## Accounts, stylists and marketplace (decided Nov 26)
+1. **Done:** password sign-in, Account page, roles & permissions (Owner/Admin, Manager, Stylist, Front desk, Booth renter; per-role switches), Team page, client portal.
+2. **Multi-stylist scheduling (in progress):** appointments belong to a stylist; per-stylist hours, services and time off; calendar by stylist; stylists see their own book; online booking picks a stylist or "anyone".
+3. **Marketplace:** customer accounts independent of any salon (each salon keeps its own client record, notes, formulas and flags); preferred/primary salon and stylist; openings for the preferred stylist → all stylists at the salon → all salons within N miles of a ZIP/city; public salon and stylist pages.
+4. **Salon onboarding:** salons apply; the platform owner approves each one for now. After testing: open self-serve sign-up.
+5. **Launch:** Android app on the Play Store (packaged web app / Trusted Web Activity) and a subscription for salons. Check Google Play's billing rules for subscriptions sold in-app before launch.
+
 ## Plan (in order)
 
 | Phase | What | Depends on |

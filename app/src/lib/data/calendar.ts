@@ -7,6 +7,8 @@ import type { CalAppointment, CalendarData, CalClient } from "./calendar-types";
 import { loadClientStates } from "./clients";
 import { mergeHolidays } from "../schedule/holidays";
 import { loadDaysOff } from "./schedule";
+import { visibleClientIds } from "./client-scope";
+import { STAFF_COLS, toStylists, type StaffRow } from "../staff/stylists";
 
 type Ctx = Awaited<ReturnType<typeof getContext>>;
 
@@ -30,7 +32,7 @@ export function parseRange(r: string): { start: string; end: string } {
 }
 
 type ApptRow = {
-  id: string; client_id: string; start_at: string; end_at: string; status: string; notes: string | null; deposit_required_cents: number;
+  id: string; staff_id: string; client_id: string; start_at: string; end_at: string; status: string; notes: string | null; deposit_required_cents: number;
   clients: { first_name: string; last_name: string | null; phone: string | null } | null;
   appointment_services: {
     id: string; service_id: string; sort: number; list_price_cents: number; price_quoted_cents: number; discounts: { label: string; amount_cents: number }[];
@@ -38,23 +40,33 @@ type ApptRow = {
   }[];
 };
 
-export async function loadCalendar(ctx: Ctx, opts: { from: string; view: "day" | "week" | "month" }): Promise<CalendarData> {
+export async function loadCalendar(ctx: Ctx, opts: { from: string; view: "day" | "week" | "month"; staff?: string | null }): Promise<CalendarData> {
+  // Without "see everyone's appointments", a team member only sees their own book.
+  const all = ctx.can("calendar.all");
+  const viewStaff = all ? (opts.staff ?? null) : ctx.staff.id;
   const { supabase, business } = ctx;
   const tz = business.timezone;
   const days = opts.view === "month" ? 42 : opts.view === "week" ? 7 : 1;
   const rangeStart = zonedToUtc(opts.from, 0, tz).toISOString();
   const rangeEnd = zonedToUtc(addDays(opts.from, days), 0, tz).toISOString();
 
+  const { data: staffData, error: staffErr } = await supabase.from("staff").select(STAFF_COLS).eq("business_id", business.id);
+  if (staffErr) throw new Error(staffErr.message);
+  const staffRows = (staffData ?? []) as StaffRow[];
+  const stylists = toStylists(staffRows);
+  const allStaffIds = staffRows.map((r) => r.id);
+
   const [appts, services, clients] = await Promise.all([
     supabase
       .from("appointments")
       .select(
-        "id,client_id,start_at,end_at,status,notes,deposit_required_cents,clients(first_name,last_name,phone),appointment_services(id,service_id,sort,list_price_cents,price_quoted_cents,discounts,services(name,price_type),staff_busy_blocks(phase,during))",
+        "id,staff_id,client_id,start_at,end_at,status,notes,deposit_required_cents,clients(first_name,last_name,phone),appointment_services(id,service_id,sort,list_price_cents,price_quoted_cents,discounts,services(name,price_type),staff_busy_blocks(phase,during))",
       )
       .eq("business_id", business.id)
       .lt("start_at", rangeEnd)
       .gt("end_at", rangeStart)
       .not("status", "in", "(cancelled)")
+      .in("staff_id", viewStaff ? [viewStaff] : allStaffIds)
       .order("start_at"),
     supabase
       .from("services")
@@ -86,6 +98,7 @@ export async function loadCalendar(ctx: Ctx, opts: { from: string; view: "day" |
     const lines = [...a.appointment_services].sort((x, y) => x.sort - y.sort);
     return {
       id: a.id,
+      staffId: a.staff_id,
       clientId: a.client_id,
       clientName: [a.clients?.first_name, a.clients?.last_name].filter(Boolean).join(" ") || "Client",
       clientPhone: a.clients?.phone ?? null,
@@ -115,7 +128,8 @@ export async function loadCalendar(ctx: Ctx, opts: { from: string; view: "day" |
     .map(({ service_categories, ...s }) => ({ ...s, category: service_categories?.name ?? "Other", categorySort: service_categories?.sort ?? 99 }))
     .sort((x, y) => x.categorySort - y.categorySort || x.sort - y.sort);
 
-  const clientList: CalClient[] = (clients.data ?? []).map((c) => ({
+  const visible = await visibleClientIds(ctx);
+  const clientList: CalClient[] = (clients.data ?? []).filter((c) => !visible || visible.has(c.id)).map((c) => ({
     id: c.id,
     firstName: c.first_name,
     lastName: c.last_name,
@@ -125,7 +139,11 @@ export async function loadCalendar(ctx: Ctx, opts: { from: string; view: "day" |
   }));
 
   return {
-    can: { book: ctx.can("booking.manage"), checkout: ctx.can("checkout") },
+    can: { book: ctx.can("booking.manage"), checkout: ctx.can("checkout"), all },
+    stylists,
+    staffNames: Object.fromEntries(staffRows.map((r) => [r.id, r.display_name])),
+    viewStaff,
+    me: ctx.staff.id,
     businessName: business.name,
     timezone: tz,
     hours: business.business_hours,
@@ -142,11 +160,28 @@ export async function loadCalendar(ctx: Ctx, opts: { from: string; view: "day" |
     clients: clientList,
     paymentMethods: MANUAL_METHODS,
     holidays: mergeHolidays(business.holidays),
-    daysOff: await loadDaysOff(
-      supabase,
-      business.id,
-      new Date(Math.min(new Date(rangeStart).getTime(), Date.now())),
-      new Date(Math.max(new Date(rangeEnd).getTime(), Date.now() + 400 * 86_400_000)),
-    ),
+    daysOff: [
+      ...(await loadDaysOff(
+        supabase,
+        business.id,
+        new Date(Math.min(new Date(rangeStart).getTime(), Date.now())),
+        new Date(Math.max(new Date(rangeEnd).getTime(), Date.now() + 400 * 86_400_000)),
+      )),
+      ...(viewStaff ? await personalTimeOff(supabase, business.id, viewStaff, rangeStart, rangeEnd) : []),
+    ],
   };
+}
+
+/** One team member's own time off (shown on their calendar, not a salon closure). */
+async function personalTimeOff(supabase: Ctx["supabase"], businessId: string, staffId: string, from: string, to: string) {
+  const { data, error } = await supabase
+    .from("time_off")
+    .select("id,start_at,end_at,reason,all_day")
+    .eq("business_id", businessId)
+    .eq("staff_id", staffId)
+    .eq("salon_wide", false)
+    .lt("start_at", to)
+    .gt("end_at", from);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((t) => ({ id: t.id, start: new Date(t.start_at).toISOString(), end: new Date(t.end_at).toISOString(), reason: t.reason ?? "Time off", allDay: t.all_day }));
 }

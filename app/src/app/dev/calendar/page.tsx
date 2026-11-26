@@ -24,7 +24,7 @@ const svc = (k: string): BookableService => ({ ...servicesByKey[k], id: k });
 function appt(id: string, clientId: string, name: string, date: string, time: string, keys: string[], deposit = 0, paid = 0): CalAppointment {
   const r = buildBooking({ services: keys.map(svc), start: zonedToUtc(date, parseHHMM(time), TZ), rules, policy, client: NEW_CLIENT_STATE, now: new Date() });
   return {
-    id, clientId, clientName: name, clientPhone: "(555) 010-0100", start: r.payload.start_at, end: r.payload.end_at, status: "booked", notes: null,
+    id, staffId: "s1", clientId, clientName: name, clientPhone: "(555) 010-0100", start: r.payload.start_at, end: r.payload.end_at, status: "booked", notes: null,
     depositRequired: deposit, depositPaid: paid,
     services: r.priced.lines.map((l, i) => ({ id: `${id}-${i}`, serviceId: keys[i], name: l.name, priceType: servicesByKey[keys[i]].priceType, listPrice: l.listPrice, finalPrice: l.finalPrice, discounts: l.discounts.map((d) => ({ label: d.label, amount_cents: d.amount })) })),
     busy: r.payload.services.flatMap((s) => s.busy),
@@ -40,14 +40,21 @@ export default async function DevCalendar({ searchParams }: { searchParams: Prom
   const flagDate = "2026-10-20T20:30:00.000Z";
 
   const data: CalendarData = {
-    can: { book: true, checkout: true },
+    can: { book: true, checkout: true, all: true },
+    stylists: [
+      { id: "s1", name: "Karissa Frazier", role: "owner", color: "#257de0", hours: null, serviceIds: null, bookable: true, title: null },
+      { id: "s2", name: "Sam Lee", role: "stylist", color: "#f47230", hours: null, serviceIds: null, bookable: true, title: "Cuts" },
+    ],
+    staffNames: { s1: "Karissa Frazier", s2: "Sam Lee" },
+    viewStaff: null,
+    me: "s1",
     businessName: "Intensity Salon (sample data)",
     timezone: TZ,
     hours: menuJson.hours as unknown as CalendarData["hours"],
     policy, rules, stages: menu.stages, view, from, days: view === "month" ? 42 : view === "week" ? 7 : 1, today: "2026-12-01",
     appointments: [
       appt("a1", "c1", "Jamie R.", "2026-12-01", "15:30", ["all_over_color", "womens_cut", "style"]),
-      appt("a2", "c2", "Morgan T.", "2026-12-01", "16:05", ["mens_boys_cut"], 2000, 0),
+      { ...appt("a2", "c2", "Morgan T.", "2026-12-01", "16:05", ["mens_boys_cut"], 2000, 0), staffId: "s2" },
       appt("a3", "c3", "Taylor S.", "2026-12-03", "15:30", ["balayage", "olaplex"], 5000, 5000),
       appt("a4", "c4", "Riley P.", "2026-12-05", "07:15", ["updo"]),
     ],

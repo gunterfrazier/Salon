@@ -12,7 +12,7 @@ const at = (hhmm: string) => `2026-12-01T${String(Number(hhmm.slice(0, 2)) + 6).
 
 function appt(id: string, start: string, end: string, extra: Partial<CalAppointment> = {}): CalAppointment {
   return {
-    id, clientId: `c-${id}`, clientName: id, clientPhone: null, start: at(start), end: at(end), status: "booked", notes: null,
+    id, staffId: "s1", clientId: `c-${id}`, clientName: id, clientPhone: null, start: at(start), end: at(end), status: "booked", notes: null,
     depositRequired: 0, depositPaid: 0,
     services: [{ id: `${id}-1`, serviceId: "s", name: "Cut", priceType: "fixed", listPrice: 5000, finalPrice: 5000, discounts: [] }],
     busy: [{ phase: "active", start: at(start), end: at(end) }],
