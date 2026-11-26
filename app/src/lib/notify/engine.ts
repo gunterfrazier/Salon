@@ -138,6 +138,7 @@ export const PLACEHOLDERS: Record<string, string> = {
   pay_link: "Where to pay the deposit",
   hold_hours: "Hours before an unpaid hold is released",
   total: "Receipt total",
+  details: "Receipt lines: services, tip, paid",
   manage_link: "Link to change or cancel",
   book_link: "Online booking link",
   review_link: "Review page link",

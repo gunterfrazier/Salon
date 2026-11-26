@@ -4,7 +4,7 @@ import type { PolicySettings } from "../policy/types";
 import { reviveClientState } from "../data/clients-shared";
 import { loadClientStates } from "../data/clients";
 import { addDays, zonedToUtc } from "../time/zone";
-import { dayPreviewDue, dueReminders, holdActions, type NotifyAppt } from "./engine";
+import { afterQuiet, dayPreviewDue, dueReminders, holdActions, type NotifyAppt } from "./engine";
 import { clientRows, dayPreviewText, stylistRow, type ApptInfo, type MessageRow, type Recipient, type SalonInfo } from "./outbox";
 import type { Sender } from "./provider";
 import { mergeNotificationSettings, type NotificationSettings } from "./settings";
@@ -198,8 +198,42 @@ export async function scheduleBusiness(db: SupabaseClient, b: Business, now: Dat
     }
   }
 
+  if (s.client.rebookNudge.enabled && afterQuiet(now, tz, s.quietHours).getTime() === now.getTime()) {
+    out.push(...(await rebookNudges(db, b, now)));
+  }
+
   await queueRows(db, out);
   return { queued: out.filter((r) => r.status === "queued").length, released };
+}
+
+/**
+ * "Time to rebook": clients whose last visit was N weeks ago (within a two-week
+ * window, so old clients aren't all messaged at once) and who have nothing booked since.
+ */
+async function rebookNudges(db: SupabaseClient, b: Business, now: Date): Promise<MessageRow[]> {
+  const { salon, settings: s } = b;
+  const weeks = s.client.rebookNudge.afterWeeks;
+  const to = new Date(now.getTime() - weeks * 7 * 86_400_000);
+  const from = new Date(to.getTime() - 14 * 86_400_000);
+  const { rows: visits } = await loadAppts(db, salon.id, from, to, ["completed"]);
+  if (!visits.length) return [];
+  const latest = new Map<string, ApptRow>();
+  for (const v of visits) latest.set(v.client_id, v); // ordered by start, so the last one wins
+  const clientIds = [...latest.keys()];
+  const { data: later, error } = await db
+    .from("appointments")
+    .select("client_id")
+    .eq("business_id", salon.id)
+    .in("client_id", clientIds)
+    .gt("start_at", to.toISOString())
+    .not("status", "in", "(cancelled,no_show)");
+  if (error) throw new Error(error.message);
+  const busy = new Set((later ?? []).map((r) => r.client_id as string));
+  const due = [...latest.values()].filter((v) => !busy.has(v.client_id));
+  const used = await usedKeys(db, salon.id, due.map((v) => `rebook:${v.id}`));
+  return due
+    .filter((v) => !used.has(`rebook:${v.id}`))
+    .flatMap((v) => clientRows({ salon, settings: s, to: toRecipient(v), appt: null, template: "rebookNudge", channels: s.client.rebookNudge.channels ?? ["sms"], key: `rebook:${v.id}`, sendAfter: now, extra: { weeks } }));
 }
 
 function dayPreviewDateTime(d: Date, tz: string) {

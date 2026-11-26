@@ -12,7 +12,7 @@ import { clientChips, NEW_CLIENT_STATE } from "@/lib/ui/standing";
 import type { StatusKey } from "@/lib/ui/status-colors";
 
 type Chip = { status: StatusKey; text?: string };
-type CloseKind = "checkout" | "cancel" | "no_show";
+type CloseKind = "checkout" | "cancel" | "no_show" | "move";
 const OPEN_STATUSES = new Set(["pending", "booked", "confirmed", "checked_in", "in_service"]);
 const STATUS_LABEL: Record<string, string> = { completed: "Completed", no_show: "No-show", cancelled: "Cancelled", pending: "Pending deposit" };
 import { markDepositReceived } from "./actions";
@@ -20,6 +20,7 @@ import BookingSheet from "./BookingSheet";
 import { closureForDate } from "@/lib/schedule/holidays";
 import CheckoutSheet from "./CheckoutSheet";
 import CloseSheet from "./CloseSheet";
+import MoveSheet from "./MoveSheet";
 import FindTimeSheet, { type FindTimeStart } from "./FindTimeSheet";
 
 const SNAP = 15;
@@ -284,7 +285,8 @@ export default function CalendarView({ data, focusDate }: { data: CalendarData; 
           }}
         />
       )}
-      {closing && closing.kind !== "checkout" && <CloseSheet a={closing.a} data={data} mode={closing.kind} onClose={() => setClosing(null)} onDone={done} />}
+      {closing?.kind === "move" && <MoveSheet a={closing.a} data={data} onClose={() => setClosing(null)} onDone={done} />}
+      {closing && (closing.kind === "cancel" || closing.kind === "no_show") && <CloseSheet a={closing.a} data={data} mode={closing.kind} onClose={() => setClosing(null)} onDone={done} />}
       {booking && (
         <BookingSheet
           data={data}
@@ -471,6 +473,7 @@ function AppointmentDetails({
         {OPEN_STATUSES.has(a.status) ? (
           <div className="mt-5 flex flex-wrap gap-2">
             <button onClick={() => onAction("checkout")} className="flex-1 rounded-lg bg-accent px-4 py-2.5 font-semibold text-on-accent">Check out</button>
+            {["pending", "booked", "confirmed"].includes(a.status) && <button onClick={() => onAction("move")} className="rounded-lg border border-line px-4 py-2.5">Move</button>}
             <button onClick={() => onAction("cancel")} className="rounded-lg border border-line px-4 py-2.5">Cancel</button>
             <button
               onClick={() => onAction("no_show")}

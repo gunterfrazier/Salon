@@ -139,3 +139,24 @@ export function dayPreviewText(salon: SalonInfo, date: string, appts: { start: D
   const lines = appts.map((a) => `${formatTime(a.start, salon.timezone)} ${a.clientName}: ${a.services.join(", ")}${a.depositDue ? ` (deposit ${money(a.depositDue)} due)` : ""}${a.flagged ? " (flagged)" : ""}`);
   return `${day}, ${appts.length} appointment${appts.length === 1 ? "" : "s"}:\n${lines.join("\n")}\n${salon.siteUrl}/today?date=${date}`;
 }
+
+/** What was charged at checkout, for the receipt. */
+export interface ReceiptInfo {
+  lines: { name: string; cents: number }[];
+  tip: number;
+  depositApplied: number;
+  paid: number;
+  method: string | null;
+  balance: number;
+}
+
+export function receiptDetails(r: ReceiptInfo): { details: string; total: string } {
+  const out = r.lines.map((l) => `${l.name} ${money(l.cents)}`);
+  if (r.tip) out.push(`Tip ${money(r.tip)}`);
+  const total = r.lines.reduce((n, l) => n + l.cents, 0) + r.tip;
+  out.push(`Total ${money(total)}`);
+  if (r.depositApplied) out.push(`Deposit applied ${money(r.depositApplied)}`);
+  if (r.paid) out.push(`Paid today ${money(r.paid)}${r.method ? ` (${r.method})` : ""}`);
+  if (r.balance) out.push(`Balance due ${money(r.balance)}`);
+  return { details: out.join("\n"), total: money(total) };
+}

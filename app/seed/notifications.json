@@ -29,7 +29,7 @@
     "depositRequest": "Hi {first_name}, to hold {date} at {time} please send your {deposit} deposit: {pay_link}. Unpaid holds are released after {hold_hours} hours.",
     "depositReminder": "Hi {first_name}, we're still holding {date} at {time} for you. Please send your {deposit} deposit: {pay_link}",
     "holdReleased": "Hi {first_name}, we didn't receive your deposit, so {date} at {time} has been released. Book again anytime: {book_link}",
-    "receipt": "Thank you, {first_name}! {salon} receipt for {date}: {services}. Total {total}.",
+    "receipt": "Thank you, {first_name}! Your {salon} receipt for {date}:\n{details}",
     "reviewRequest": "Thanks for coming in, {first_name}! If you loved your visit, a quick review means a lot: {review_link}",
     "rebookNudge": "Hi {first_name}, it's been {weeks} weeks since your last visit at {salon}. Ready for your next one? {book_link}"
   },

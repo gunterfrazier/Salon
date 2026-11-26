@@ -75,3 +75,14 @@ describe("sender", () => {
     }
   });
 });
+
+describe("receipt", () => {
+  it("lists services, tip, deposit and payment", async () => {
+    const { receiptDetails } = await import("./outbox");
+    const r = receiptDetails({ lines: [{ name: "All Over Color", cents: 9025 }, { name: "Style", cents: 3325 }], tip: 2500, depositApplied: 5000, paid: 9850, method: "Venmo", balance: 0 });
+    expect(r.total).toBe("$148.50");
+    expect(r.details).toBe("All Over Color $90.25\nStyle $33.25\nTip $25\nTotal $148.50\nDeposit applied $50\nPaid today $98.50 (Venmo)");
+    const [row] = clientRows({ salon, settings: s, to, appt, template: "receipt", channels: ["email"], key: null, sendAfter: new Date(), extra: r });
+    expect(row.body).toBe(`Thank you, Jamie! Your Intensity Salon receipt for Tue, Dec 1:\n${r.details}`);
+  });
+});

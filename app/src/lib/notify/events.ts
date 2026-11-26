@@ -3,11 +3,12 @@ import { createAdminClient } from "../supabase/admin";
 import { money } from "../format";
 import { formatDay, formatTime, wallParts } from "../time/zone";
 import { afterQuiet } from "./engine";
-import { clientRows, stylistRow, type MessageRow } from "./outbox";
+import { clientRows, receiptDetails, stylistRow, type MessageRow, type ReceiptInfo } from "./outbox";
 import { configuredSender } from "./provider";
 import { deliverQueued, loadBusinesses } from "./run";
 
-export type AppointmentEvent = "booked_online" | "booked_by_stylist" | "cancelled";
+export type AppointmentEvent = "booked_online" | "booked_by_stylist" | "cancelled" | "moved" | "checked_out";
+
 
 const siteUrl = () => process.env.SITE_URL ?? "https://chairvana.app";
 
@@ -16,7 +17,7 @@ const siteUrl = () => process.env.SITE_URL ?? "https://chairvana.app";
  * happened to an appointment. Never throws: a messaging problem must not undo
  * or block a booking.
  */
-export async function notifyAppointment(businessId: string, appointmentId: string, event: AppointmentEvent): Promise<void> {
+export async function notifyAppointment(businessId: string, appointmentId: string, event: AppointmentEvent, receipt?: ReceiptInfo): Promise<void> {
   try {
     const db = createAdminClient();
     const [b] = await loadBusinesses(db, siteUrl(), businessId);
@@ -46,8 +47,8 @@ export async function notifyAppointment(businessId: string, appointmentId: strin
     const when = `${formatDay(wallParts(appt.start, salon.timezone).date, { weekday: "short", month: "short", day: "numeric" })} ${formatTime(appt.start, salon.timezone)}`;
     const now = new Date();
     const rows: MessageRow[] = [];
-    const client = (template: "confirmation" | "depositRequest" | "cancel", channels: ("sms" | "email")[] | undefined, key: string, sendAfter = now) =>
-      rows.push(...clientRows({ salon, settings: s, to, appt, template, channels: channels ?? ["sms"], key, sendAfter }));
+    const client = (template: "confirmation" | "depositRequest" | "cancel" | "change" | "receipt" | "reviewRequest", channels: ("sms" | "email")[] | undefined, key: string, sendAfter = now, extra?: Record<string, string>) =>
+      rows.push(...clientRows({ salon, settings: s, to, appt, template, channels: channels ?? ["sms"], key, sendAfter, extra }));
 
     if (event === "booked_online" || event === "booked_by_stylist") {
       if (a.status === "pending" && appt.depositDue > 0) {
@@ -62,6 +63,18 @@ export async function notifyAppointment(businessId: string, appointmentId: strin
     if (event === "cancelled" && s.client.cancel.enabled) {
       // Cancelled late at night? The notice waits for quiet hours to end.
       client("cancel", s.client.cancel.channels, `cancel:${a.id}`, afterQuiet(now, salon.timezone, s.quietHours));
+    }
+
+    if (event === "moved" && s.client.change.enabled) {
+      client("change", s.client.change.channels, `change:${a.id}:${appt.start.toISOString()}`, afterQuiet(now, salon.timezone, s.quietHours));
+    }
+
+    if (event === "checked_out") {
+      if (receipt && s.client.receipt.enabled) client("receipt", s.client.receipt.channels, `receipt:${a.id}`, now, receiptDetails(receipt));
+      if (s.client.reviewRequest.enabled && s.client.reviewRequest.url) {
+        const at = new Date(now.getTime() + s.client.reviewRequest.afterHours * 3_600_000);
+        client("reviewRequest", s.client.reviewRequest.channels, `review:${a.id}`, afterQuiet(at, salon.timezone, s.quietHours));
+      }
     }
 
     if (!rows.length) return;

@@ -6,7 +6,7 @@ import { checkoutTotals, settleCancel } from "@/lib/checkout/settle";
 import { cancelDefaults, type ChargeOption } from "@/lib/policy/engine";
 import { getContext } from "@/lib/context";
 import { loadClientStates, reviveClientState, type ClientStateJSON } from "@/lib/data/clients";
-import { addDays, isDateStr, parseHHMM, todayIn, zonedToUtc } from "@/lib/time/zone";
+import { addDays, isDateStr, parseHHMM, todayIn, toHHMM, zonedToUtc } from "@/lib/time/zone";
 import { NEW_CLIENT_STATE } from "@/lib/ui/standing";
 import { loadBusyRange, loadDaysOff } from "@/lib/data/schedule";
 import { blockedDuring, closureForDate, isClosedDay, mergeHolidays } from "@/lib/schedule/holidays";
@@ -15,6 +15,8 @@ import { findOpenings, searchWindow, type Opening, type SearchCriteria } from "@
 import { menu } from "@/lib/menu";
 import { suggestOrder } from "@/lib/schedule/plan";
 import { notifyAppointment } from "@/lib/notify/events";
+import { moveStarts } from "@/lib/booking/move";
+import { parseRange } from "@/lib/data/calendar";
 
 export async function fetchClientState(clientId: string): Promise<ClientStateJSON | null> {
   const ctx = await getContext();
@@ -133,7 +135,7 @@ async function loadForClose(ctx: Ctx, appointmentId: string) {
   const { supabase, business } = ctx;
   const { data: appt, error } = await supabase
     .from("appointments")
-    .select("id,status,start_at,client_id,appointment_services(id,price_quoted_cents)")
+    .select("id,status,start_at,client_id,appointment_services(id,sort,price_quoted_cents,services(name))")
     .eq("business_id", business.id)
     .eq("id", appointmentId)
     .single();
@@ -144,7 +146,9 @@ async function loadForClose(ctx: Ctx, appointmentId: string) {
     .eq("appointment_id", appointmentId)
     .eq("kind", "deposit")
     .eq("status", "succeeded");
-  const lines = (appt.appointment_services ?? []) as { id: string; price_quoted_cents: number }[];
+  const lines = ((appt.appointment_services ?? []) as unknown as { id: string; sort: number; price_quoted_cents: number; services: { name: string } | null }[])
+    .sort((x, y) => x.sort - y.sort)
+    .map((l) => ({ id: l.id, price_quoted_cents: l.price_quoted_cents, name: l.services?.name ?? "Service" }));
   return {
     status: appt.status as string,
     start: new Date(appt.start_at),
@@ -156,6 +160,7 @@ async function loadForClose(ctx: Ctx, appointmentId: string) {
 
 const OPEN = new Set(["pending", "booked", "confirmed", "checked_in", "in_service"]);
 const METHODS = new Set(["cash", "venmo_direct", "cash_app_direct", "zelle", "paypal_me", "apple_cash", "other"]);
+const METHOD_LABEL: Record<string, string> = { cash: "cash", venmo_direct: "Venmo", cash_app_direct: "Cash App", zelle: "Zelle", paypal_me: "PayPal", apple_cash: "Apple Cash", other: "other" };
 
 export interface CloseRequest {
   appointmentId: string;
@@ -247,6 +252,14 @@ export async function checkoutAppointment(req: CheckoutRequest): Promise<{ ok: t
     },
   });
   if (error) return { ok: false, error: error.code === "P0002" ? "This appointment is already closed." : `Couldn't save: ${error.message}` };
+  await notifyAppointment(ctx.business.id, req.appointmentId, "checked_out", {
+    lines: a.lines.map((l, i) => ({ name: l.name, cents: prices[i] })),
+    tip: t.tip,
+    depositApplied: t.depositApplied,
+    paid: t.paid,
+    method: t.paid > 0 ? (METHOD_LABEL[req.method] ?? null) : null,
+    balance: t.balance,
+  });
   revalidatePath("/calendar");
   return { ok: true };
 }
@@ -304,4 +317,88 @@ export async function findTimes(serviceIds: string[], criteria: SearchCriteria):
     perDay: 6,
   });
   return { ok: true, openings };
+}
+
+// ---------------------------------------------------------------------------
+// Move (reschedule)
+// ---------------------------------------------------------------------------
+
+async function loadForMove(ctx: Ctx, appointmentId: string) {
+  const { data, error } = await ctx.supabase
+    .from("appointments")
+    .select("id,status,start_at,end_at,appointment_services(staff_busy_blocks(during))")
+    .eq("business_id", ctx.business.id)
+    .eq("id", appointmentId)
+    .single();
+  if (error || !data) return null;
+  const busy = ((data.appointment_services ?? []) as unknown as { staff_busy_blocks: { during: string }[] }[])
+    .flatMap((l) => l.staff_busy_blocks.map((b) => parseRange(b.during)))
+    .map((r) => ({ start: new Date(r.start), end: new Date(r.end) }));
+  return { status: data.status as string, start: new Date(data.start_at), end: new Date(data.end_at), busy };
+}
+
+const MOVABLE = new Set(["pending", "booked", "confirmed"]);
+
+async function movableTimes(ctx: Ctx, appt: NonNullable<Awaited<ReturnType<typeof loadForMove>>>, date: string) {
+  const tz = ctx.business.timezone;
+  const busy = await loadBusyRange(ctx.supabase, ctx.staff.id, zonedToUtc(date, 0, tz), zonedToUtc(addDays(date, 1), 0, tz));
+  return moveStarts({ date, tz, hours: ctx.business.business_hours, appt, busy, now: new Date(), stepMinutes: bookingSettings(ctx.business.booking_settings).stepMinutes });
+}
+
+/** Open start times ("HH:MM") an appointment can move to on a date. */
+export async function moveTimes(appointmentId: string, date: string): Promise<{ ok: true; times: string[]; closed: string | null } | { ok: false; error: string }> {
+  if (!isDateStr(date)) return { ok: false, error: "Pick a date." };
+  const ctx = await getContext();
+  const appt = await loadForMove(ctx, appointmentId);
+  if (!appt) return { ok: false, error: "Appointment not found." };
+  if (!MOVABLE.has(appt.status)) return { ok: false, error: "Only upcoming appointments can be moved." };
+  const tz = ctx.business.timezone;
+  const daysOff = await loadDaysOff(ctx.supabase, ctx.business.id, zonedToUtc(date, 0, tz), zonedToUtc(addDays(date, 1), 0, tz));
+  const day = closureForDate(date, tz, mergeHolidays(ctx.business.holidays), daysOff);
+  return { ok: true, times: (await movableTimes(ctx, appt, date)).map(toHHMM), closed: day && day.kind !== "blocked_hours" ? day.label : null };
+}
+
+export interface MoveRequest {
+  appointmentId: string;
+  date: string;
+  time: string;
+  notifyClient?: boolean;
+  confirmClosed?: boolean;
+}
+
+export async function moveAppointment(req: MoveRequest): Promise<BookingResponse> {
+  if (!isDateStr(req.date)) return { ok: false, error: "Pick a date." };
+  let minutes: number;
+  try {
+    minutes = parseHHMM(req.time);
+  } catch {
+    return { ok: false, error: "Pick a start time." };
+  }
+  const ctx = await getContext();
+  const tz = ctx.business.timezone;
+  const appt = await loadForMove(ctx, req.appointmentId);
+  if (!appt) return { ok: false, error: "Appointment not found." };
+  if (!MOVABLE.has(appt.status)) return { ok: false, error: "Only upcoming appointments can be moved." };
+  if (!(await movableTimes(ctx, appt, req.date)).includes(minutes)) return { ok: false, error: "That time isn't open anymore. Pick another." };
+
+  const newStart = zonedToUtc(req.date, minutes, tz);
+  if (!req.confirmClosed) {
+    const newEnd = new Date(newStart.getTime() + (appt.end.getTime() - appt.start.getTime()));
+    const daysOff = await loadDaysOff(ctx.supabase, ctx.business.id, newStart, newEnd);
+    const day = closureForDate(req.date, tz, mergeHolidays(ctx.business.holidays), daysOff);
+    const blocked = blockedDuring(newStart, newEnd, daysOff);
+    if (day && day.kind !== "blocked_hours") return { ok: false, error: `The salon is scheduled to be closed: ${day.label}.`, closed: day };
+    if (blocked) return { ok: false, error: `That time is blocked: ${blocked.reason || "Blocked time"}.`, closed: { kind: "blocked_hours", label: blocked.reason || "Blocked time" } };
+  }
+
+  const { error } = await ctx.supabase.rpc("move_appointment", { p: { appointment_id: req.appointmentId, new_start: newStart.toISOString() } });
+  if (error) {
+    if (error.code === "23P01") return { ok: false, error: "That time overlaps another appointment. Pick another." };
+    if (error.code === "P0002") return { ok: false, error: "Only upcoming appointments can be moved." };
+    return { ok: false, error: `Couldn't move: ${error.message}` };
+  }
+  if (req.notifyClient !== false) await notifyAppointment(ctx.business.id, req.appointmentId, "moved");
+  revalidatePath("/calendar");
+  revalidatePath("/today");
+  return { ok: true, appointmentId: req.appointmentId };
 }
