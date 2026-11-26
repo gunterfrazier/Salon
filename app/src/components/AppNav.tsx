@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { navFor, roleLabel } from "@/lib/auth/permissions";
 import { getContext } from "@/lib/context";
+import { isPlatformAdmin } from "@/lib/platform/salons";
 
 /** Main menu: shows only what the signed-in team member's role allows. */
 export async function AppNav({ current, businessName }: { current: string; businessName: string }) {
   const ctx = await getContext();
-  const links = navFor(ctx.perms);
+  const links = [...navFor(ctx.perms), ...(isPlatformAdmin(ctx.user.email) ? [{ href: "/admin", label: "Platform" }] : [])];
   return (
     <header className="border-b border-line bg-surface">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-2">

@@ -26,3 +26,17 @@ describe("first-run seed", () => {
     expect(stripNotes({ a: 1, _x: 2, b: [{ _y: 1, c: 3 }] })).toEqual({ a: 1, b: [{ c: 3 }] });
   });
 });
+
+describe("starter menu for new salons", () => {
+  it("gives every generic service a known stacking stage", async () => {
+    const { GENERIC_MENU, guessStage } = await import("./seed");
+    const cats = categoryRows("b2", GENERIC_MENU);
+    const ids = Object.fromEntries(cats.map((c) => [c.key, `cat-${c.key}`]));
+    const rows = serviceRows("b2", ids, GENERIC_MENU);
+    expect(rows.length).toBeGreaterThan(20);
+    for (const r of rows) expect(["consult", "chemical", "treatment", "cut", "style", "wax", "fee"]).toContain(r.stage);
+    expect(guessStage("color", "All Over Color")).toBe("chemical");
+    expect(guessStage("cuts_styling", "Blowout")).toBe("style");
+    expect(guessStage("consultations", "New Client Consultation")).toBe("consult");
+  });
+});

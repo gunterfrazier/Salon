@@ -4,7 +4,7 @@
  */
 import pg from "pg";
 import { describe, expect, it } from "vitest";
-import { businessRow, categoryRows, serviceRows } from "./seed";
+import { businessRow, categoryRows, GENERIC_MENU, serviceRows, STARTER_HOURS } from "./seed";
 
 const url = process.env.TEST_DATABASE_URL;
 
@@ -41,6 +41,16 @@ describe.skipIf(!url)("seed against real schema", () => {
       expect(svcs).toHaveLength(18);
       expect(b.policy_settings.flags.clearAfterOnTimeVisits).toBe(4);
       expect(b.payment_methods.methods.length).toBeGreaterThan(10);
+
+      // A newly approved salon: starter menu, its own hours and time zone, a unique web address.
+      const b2 = (await db.query(insertSql("businesses", [json({ ...businessRow("Glow Studio", { timezone: "America/New_York", hours: STARTER_HOURS }), slug: "glow-studio" })]))).rows[0];
+      const cats2 = (await db.query(insertSql("service_categories", categoryRows(b2.id, GENERIC_MENU)))).rows;
+      const ids2 = Object.fromEntries(cats2.map((c) => [c.key, c.id]));
+      const svcs2 = (await db.query(insertSql("services", serviceRows(b2.id, ids2, GENERIC_MENU)))).rows;
+      expect(svcs2.length).toBeGreaterThan(20);
+      expect(b2.timezone).toBe("America/New_York");
+      expect(b2.status).toBe("approved");
+      await expect(db.query(insertSql("businesses", [json({ ...businessRow("Glow Studio 2"), slug: "glow-studio" })]))).rejects.toMatchObject({ code: "23505" });
       await db.query("rollback");
     } finally {
       await db.end();
