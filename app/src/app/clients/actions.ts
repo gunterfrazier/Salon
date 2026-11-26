@@ -190,3 +190,61 @@ export async function deleteFormula(clientId: string, formulaId: string): Promis
   done(clientId);
   return { ok: true };
 }
+
+export interface ImportClientInput {
+  firstName: string;
+  lastName: string | null;
+  phone: string | null;
+  email: string | null;
+  notes: string | null;
+  priorVisits: number;
+}
+
+/** Bulk-add clients from an import; duplicates (phone/email) are skipped again here. */
+export async function importClients(rows: ImportClientInput[], source: "styleseat_import" | "manual" = "styleseat_import"): Promise<Result<{ imported: number; skipped: number }>> {
+  if (!Array.isArray(rows) || rows.length === 0) return { ok: false, error: "Nothing to import." };
+  if (rows.length > 5000) return { ok: false, error: "Import up to 5,000 clients at a time." };
+  const ctx = await getContext();
+  const { data: existing, error: exErr } = await ctx.supabase.from("clients").select("phone,email").eq("business_id", ctx.business.id).limit(10000);
+  if (exErr) return { ok: false, error: exErr.message };
+
+  const digits = (p: string | null) => {
+    const d = (p ?? "").replace(/\D/g, "");
+    return d.length >= 10 ? d.slice(-10) : d.length >= 7 ? d : "";
+  };
+  const phones = new Set((existing ?? []).map((c) => digits(c.phone)).filter(Boolean));
+  const emails = new Set((existing ?? []).map((c) => (c.email ?? "").toLowerCase()).filter(Boolean));
+
+  const toInsert = [];
+  let skipped = 0;
+  for (const r of rows) {
+    const first = clean(r.firstName);
+    const email = clean(r.email)?.toLowerCase() ?? null;
+    const phone = clean(r.phone);
+    const visits = Number.isInteger(r.priorVisits) && r.priorVisits >= 0 ? Math.min(r.priorVisits, 9999) : 0;
+    const pk = digits(phone);
+    if (!first || (email && !EMAIL.test(email)) || (pk && phones.has(pk)) || (email && emails.has(email))) {
+      skipped++;
+      continue;
+    }
+    if (pk) phones.add(pk);
+    if (email) emails.add(email);
+    toInsert.push({
+      business_id: ctx.business.id,
+      first_name: first.slice(0, 100),
+      last_name: clean(r.lastName)?.slice(0, 100) ?? null,
+      phone: phone?.slice(0, 40) ?? null,
+      email,
+      notes: clean(r.notes)?.slice(0, 5000) ?? null,
+      prior_visit_count: visits,
+      source,
+    });
+  }
+
+  for (let i = 0; i < toInsert.length; i += 200) {
+    const { error } = await ctx.supabase.from("clients").insert(toInsert.slice(i, i + 200));
+    if (error) return { ok: false, error: `Stopped after ${i} clients: ${error.message}` };
+  }
+  done();
+  return { ok: true, imported: toInsert.length, skipped };
+}

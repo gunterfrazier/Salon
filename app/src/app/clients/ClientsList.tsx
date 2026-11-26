@@ -41,7 +41,10 @@ export default function ClientsList({ clients, timezone }: { clients: ClientSumm
     <main className="mx-auto max-w-4xl px-4 py-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Clients <span className="text-base font-normal text-muted">({clients.length})</span></h1>
-        <button onClick={() => setAdding(true)} className="rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-on-accent">+ Add client</button>
+        <div className="flex gap-2">
+          <Link href="/clients/import" className="rounded-lg border border-line px-3 py-2 text-sm">Import</Link>
+          <button onClick={() => setAdding(true)} className="rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-on-accent">+ Add client</button>
+        </div>
       </div>
 
       <input className={`${input} mt-4`} placeholder="Search name, phone or email" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search clients" />
@@ -76,7 +79,7 @@ export default function ClientsList({ clients, timezone }: { clients: ClientSumm
             </Link>
           </li>
         ))}
-        {shown.length === 0 && <li className="px-4 py-6 text-center text-muted">{clients.length ? "No clients match." : "No clients yet. Add one, or import your StyleSeat list (coming next)."}</li>}
+        {shown.length === 0 && <li className="px-4 py-6 text-center text-muted">{clients.length ? "No clients match." : "No clients yet. Add one, or import your StyleSeat list."}</li>}
       </ul>
 
       {adding && <AddClient onClose={() => setAdding(false)} onSaved={(id) => router.push(`/clients/${id}`)} />}
