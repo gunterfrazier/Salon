@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { StatusChip } from "@/components/StatusChip";
 import type { CalAppointment, CalendarData } from "@/lib/data/calendar-types";
 import { reviveClientState } from "@/lib/data/clients-shared";
@@ -14,7 +14,8 @@ import type { StatusKey } from "@/lib/ui/status-colors";
 type Chip = { status: StatusKey; text?: string };
 type CloseKind = "checkout" | "cancel" | "no_show";
 const OPEN_STATUSES = new Set(["pending", "booked", "confirmed", "checked_in", "in_service"]);
-const STATUS_LABEL: Record<string, string> = { completed: "Completed", no_show: "No-show", cancelled: "Cancelled" };
+const STATUS_LABEL: Record<string, string> = { completed: "Completed", no_show: "No-show", cancelled: "Cancelled", pending: "Pending deposit" };
+import { markDepositReceived } from "./actions";
 import BookingSheet from "./BookingSheet";
 import CheckoutSheet from "./CheckoutSheet";
 import CloseSheet from "./CloseSheet";
@@ -201,7 +202,7 @@ export default function CalendarView({ data, focusDate }: { data: CalendarData; 
       </p>
 
       {selected && !closing && (
-        <AppointmentDetails a={selected} tz={tz} chips={chipsFor(selected)} data={data} now={now} onClose={() => setSelected(null)} onAction={(kind) => setClosing({ a: selected, kind })} />
+        <AppointmentDetails a={selected} tz={tz} chips={chipsFor(selected)} data={data} now={now} onClose={() => setSelected(null)} onAction={(kind) => setClosing({ a: selected, kind })} onDepositDone={done} />
       )}
       {closing?.kind === "checkout" && <CheckoutSheet a={closing.a} data={data} onClose={() => setClosing(null)} onDone={done} />}
       {closing && closing.kind !== "checkout" && <CloseSheet a={closing.a} data={data} mode={closing.kind} onClose={() => setClosing(null)} onDone={done} />}
@@ -252,7 +253,7 @@ function AppointmentBlock({
       ))}
       <span className="relative block p-1.5 text-xs leading-tight">
         <span className="font-semibold">{a.clientName}</span>
-        {!OPEN_STATUSES.has(a.status) && <span className="ml-1 text-[11px] font-semibold uppercase text-muted">· {STATUS_LABEL[a.status] ?? a.status}</span>}
+        {(!OPEN_STATUSES.has(a.status) || a.status === "pending") && <span className="ml-1 text-[11px] font-semibold uppercase text-muted">· {STATUS_LABEL[a.status] ?? a.status}</span>}
         <span className="block text-muted">{formatTime(new Date(a.start), tz)} · {a.services.map((s) => s.name).join(" + ")}</span>
         {!compact && chips.length > 0 && (
           <span className="mt-1 flex flex-wrap gap-1">
@@ -265,11 +266,45 @@ function AppointmentBlock({
   );
 }
 
+function DepositReceived({ a, data, onDone }: { a: CalAppointment; data: CalendarData; onDone: () => void }) {
+  const [amount, setAmount] = useState(((a.depositRequired - a.depositPaid) / 100).toFixed(2));
+  const [method, setMethod] = useState("venmo_direct");
+  const [reference, setReference] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, start] = useTransition();
+  return (
+    <div className="mt-3 rounded-lg border border-line p-3 text-sm">
+      <p className="font-semibold">Deposit received?</p>
+      <div className="mt-2 grid gap-2 sm:grid-cols-3">
+        <label className="flex items-center gap-1">$<input type="number" step="0.01" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full rounded-lg border border-line bg-background px-2 py-2" aria-label="Deposit amount received" /></label>
+        <select value={method} onChange={(e) => setMethod(e.target.value)} className="rounded-lg border border-line bg-background px-2 py-2" aria-label="Deposit method">
+          {data.paymentMethods.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
+        </select>
+        <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Reference" className="rounded-lg border border-line bg-background px-2 py-2" aria-label="Deposit reference" />
+      </div>
+      {error && <p className="mt-2 text-red-700 dark:text-red-300" role="alert">{error}</p>}
+      <button
+        disabled={saving}
+        onClick={() =>
+          start(async () => {
+            const r = await markDepositReceived(a.id, Math.round(Number(amount) * 100), method, reference);
+            if (r.ok) onDone();
+            else setError(r.error);
+          })
+        }
+        className="mt-2 rounded-lg bg-accent px-4 py-2 font-semibold text-on-accent disabled:opacity-40"
+      >
+        {saving ? "Saving…" : "Mark deposit received"}
+      </button>
+    </div>
+  );
+}
+
 function AppointmentDetails({
-  a, tz, chips, data, now, onClose, onAction,
+  a, tz, chips, data, now, onClose, onAction, onDepositDone,
 }: {
   a: CalAppointment; tz: string; chips: Chip[];
-  data: CalendarData; now: Date | null; onClose: () => void; onAction: (k: CloseKind) => void;
+  data: CalendarData; now: Date | null; onClose: () => void; onAction: (k: CloseKind) => void; onDepositDone: () => void;
 }) {
   useEffect(() => {
     const k = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -346,9 +381,11 @@ function AppointmentDetails({
 
         {a.depositRequired > 0 && (
           <p className="mt-3 text-sm">
-            Deposit: {money(a.depositRequired)} — {a.depositPaid >= a.depositRequired ? "paid" : "not received yet"}
+            Deposit: {money(a.depositRequired)} — {a.depositPaid >= a.depositRequired ? "paid" : a.depositPaid > 0 ? `${money(a.depositPaid)} received` : "not received yet"}
+            {a.status === "pending" && " · booking is pending until it arrives"}
           </p>
         )}
+        {OPEN_STATUSES.has(a.status) && a.depositRequired > a.depositPaid && <DepositReceived a={a} data={data} onDone={onDepositDone} />}
         {a.notes && <p className="mt-3 whitespace-pre-wrap rounded-lg bg-background p-3 text-sm">{a.notes}</p>}
         {OPEN_STATUSES.has(a.status) ? (
           <div className="mt-5 flex flex-wrap gap-2">

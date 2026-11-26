@@ -1,33 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useTransition } from "react";
+import { savePaymentMethod } from "./actions";
 import { paymentRequest, validateHandle, type PaymentMethod } from "@/lib/payments/methods";
 
 /**
  * Settings > Payments. Every supported method is listed; the stylist links
- * and switches each on or off whenever they like.
- *
- * Preview build: settings are kept in this browser only. Once the database
- * is connected they're saved to the business's settings instead.
+ * and switches each on or off whenever they like. Saved to the salon's
+ * settings in the database.
  */
-const STORE_KEY = "salon.paymentSettings.v1";
-
-type Saved = Record<string, { enabled: boolean; handle?: string; connected?: boolean }>;
-
-function load(): Saved {
-  try {
-    return JSON.parse(localStorage.getItem(STORE_KEY) ?? "{}") as Saved;
-  } catch {
-    return {};
-  }
-}
-function save(s: Saved) {
-  try {
-    localStorage.setItem(STORE_KEY, JSON.stringify(s));
-  } catch {
-    /* storage unavailable: settings last for this visit only */
-  }
-}
+type Saved = Record<string, { enabled: boolean; handle?: string }>;
 
 const HANDLE_HINT: Record<string, string> = {
   venmo_direct: "Venmo username, e.g. @StyledByK",
@@ -67,31 +49,33 @@ function Card({ children }: { children: React.ReactNode }) {
 }
 
 export default function PaymentSettings({ methods }: { methods: PaymentMethod[] }) {
-  const [saved, setSaved] = useState<Saved>({});
+  const [saved, setSaved] = useState<Saved>(() => Object.fromEntries(methods.map((m) => [m.key, { enabled: m.enabled, handle: m.handle }])));
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [, startSaving] = useTransition();
 
-  useEffect(() => {
-    // Read browser-only settings after mount so the server render matches.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSaved(load());
-  }, []);
+  const state = (m: PaymentMethod) => ({ enabled: saved[m.key]?.enabled ?? m.enabled, handle: saved[m.key]?.handle ?? "" });
 
-  const state = (m: PaymentMethod) => ({
-    enabled: saved[m.key]?.enabled ?? m.enabled,
-    handle: saved[m.key]?.handle ?? m.handle ?? "",
-    connected: saved[m.key]?.connected ?? false,
-  });
-  const update = (key: string, patch: Saved[string]) => {
-    const next = { ...saved, [key]: { ...saved[key], ...patch } };
-    setSaved(next);
-    save(next);
+  /** Optimistic update, then save; roll back and show the error if refused. */
+  const update = (key: string, patch: { enabled?: boolean; handle?: string }) => {
+    const before = saved[key];
+    setSaved((s) => ({ ...s, [key]: { ...s[key], ...patch } as Saved[string] }));
+    setErrors((e) => ({ ...e, [key]: "" }));
+    startSaving(async () => {
+      const r = await savePaymentMethod(key, patch);
+      if (!r.ok) {
+        setSaved((s) => ({ ...s, [key]: before }));
+        setErrors((e) => ({ ...e, [key]: r.error }));
+      } else if (r.handle !== undefined) {
+        setSaved((s) => ({ ...s, [key]: { ...s[key], handle: r.handle } }));
+        setDrafts((d) => ({ ...d, [key]: r.handle! }));
+      }
+    });
   };
 
   const stripe = methods.filter((m) => m.provider === "stripe");
   const paypal = methods.filter((m) => m.provider === "paypal");
   const manual = methods.filter((m) => m.provider === "manual");
-  const stripeLinked = saved.__stripe?.connected ?? false;
 
   return (
     <div className="space-y-8">
@@ -99,31 +83,18 @@ export default function PaymentSettings({ methods }: { methods: PaymentMethod[] 
         <h2 className="text-lg font-semibold">Cards &amp; wallets</h2>
         <p className="text-sm text-muted">One Stripe account links all four. These can be saved for later, so late-cancel and no-show fees can be charged automatically.</p>
         <Card>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="font-semibold">Stripe</p>
-              <p className="text-sm text-muted">{stripeLinked ? "Linked (preview)" : "Not linked"}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => update("__stripe", { enabled: false, connected: !stripeLinked })}
-              className="rounded-lg border-2 border-foreground px-3 py-1.5 text-sm font-semibold"
-            >
-              {stripeLinked ? "Unlink" : "Link Stripe account"}
-            </button>
+          <div>
+            <p className="font-semibold">Stripe</p>
+            <p className="text-sm text-muted">Not connected yet. Card, Google Pay, Apple Pay and Cash App Pay arrive when Stripe is set up.</p>
           </div>
           <ul className="mt-4 divide-y divide-line">
             {stripe.map((m) => (
               <li key={m.key} className="flex items-center justify-between gap-3 py-3">
-                <span className="flex items-center gap-2">
-                  {m.label}
-                  {state(m).enabled && stripeLinked ? <Badge text="On" tone="on" /> : <Badge text="Off" tone="off" />}
-                </span>
-                <Toggle label={m.label} on={state(m).enabled} disabled={!stripeLinked} onChange={() => update(m.key, { enabled: !state(m).enabled })} />
+                <span className="flex items-center gap-2">{m.label} <Badge text="Not connected" tone="off" /></span>
+                <Toggle label={m.label} on={false} disabled onChange={() => {}} />
               </li>
             ))}
           </ul>
-          {!stripeLinked && <p className="mt-2 text-xs text-muted">Linking opens Stripe&rsquo;s sign-up as a sole proprietor. Available once the Stripe account is created.</p>}
         </Card>
       </section>
 
@@ -152,7 +123,7 @@ export default function PaymentSettings({ methods }: { methods: PaymentMethod[] 
                   {m.label}
                   {s.enabled && linked ? <Badge text="On" tone="on" /> : linked ? <Badge text="Linked · off" tone="off" /> : <Badge text="Not linked" tone="warn" />}
                 </span>
-                <Toggle label={m.label} on={s.enabled} disabled={!linked} onChange={() => update(m.key, { enabled: !s.enabled, handle: s.handle || undefined })} />
+                <Toggle label={m.label} on={s.enabled} disabled={!linked} onChange={() => update(m.key, { enabled: !s.enabled })} />
               </div>
               {needsHandle && (
                 <form
@@ -160,10 +131,8 @@ export default function PaymentSettings({ methods }: { methods: PaymentMethod[] 
                   onSubmit={(e) => {
                     e.preventDefault();
                     const r = validateHandle(m.key, draft);
-                    if (!r.ok) return setErrors({ ...errors, [m.key]: r.error });
-                    setErrors({ ...errors, [m.key]: "" });
-                    setDrafts({ ...drafts, [m.key]: r.value });
-                    update(m.key, { handle: r.value, enabled: s.enabled });
+                    if (!r.ok) return setErrors((x) => ({ ...x, [m.key]: r.error }));
+                    update(m.key, { handle: r.value });
                   }}
                 >
                   <label className="sr-only" htmlFor={`h-${m.key}`}>{HANDLE_HINT[m.key]}</label>
@@ -193,12 +162,12 @@ export default function PaymentSettings({ methods }: { methods: PaymentMethod[] 
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">PayPal &amp; Venmo checkout</h2>
-        <p className="text-sm text-muted">Coming in Phase 2: clients pay inside the booking page, and these may be chargeable later too.</p>
+        <p className="text-sm text-muted">Coming later: clients pay inside the booking page. Until then, use Venmo / PayPal.Me above.</p>
         <Card>
           <ul className="divide-y divide-line">
             {paypal.map((m) => (
               <li key={m.key} className="flex items-center justify-between gap-3 py-3">
-                <span className="flex items-center gap-2">{m.label} <Badge text="Phase 2" tone="off" /></span>
+                <span className="flex items-center gap-2">{m.label} <Badge text="Coming later" tone="off" /></span>
                 <Toggle label={m.label} on={false} disabled onChange={() => {}} />
               </li>
             ))}
@@ -206,7 +175,7 @@ export default function PaymentSettings({ methods }: { methods: PaymentMethod[] 
         </Card>
       </section>
 
-      <p className="text-xs text-muted">Preview: settings are saved in this browser only until the app&rsquo;s database is connected. Reports will show payments by method so you can compare which ones clients use most.</p>
+      <p className="text-xs text-muted">Methods switched on here appear on your online booking page when a deposit is due. Reports will show payments by method so you can compare which ones clients use most.</p>
     </div>
   );
 }

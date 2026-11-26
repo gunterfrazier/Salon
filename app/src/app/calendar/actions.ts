@@ -225,3 +225,17 @@ export async function checkoutAppointment(req: CheckoutRequest): Promise<{ ok: t
   revalidatePath("/calendar");
   return { ok: true };
 }
+
+export async function markDepositReceived(appointmentId: string, amountCents: number, method: string, reference?: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!Number.isInteger(amountCents) || amountCents <= 0) return { ok: false, error: "Enter the deposit amount." };
+  if (!METHODS.has(method)) return { ok: false, error: "Pick how the client paid." };
+  const ctx = await getContext();
+  const a = await loadForClose(ctx, appointmentId);
+  if (!a) return { ok: false, error: "Appointment not found." };
+  if (!OPEN.has(a.status)) return { ok: false, error: "This appointment is closed." };
+  if (a.depositPaid + amountCents > a.fullPrice) return { ok: false, error: "That's more than the appointment total." };
+  const { error } = await ctx.supabase.rpc("mark_deposit_received", { p: { appointment_id: appointmentId, amount_cents: amountCents, method, reference: clean(reference) } });
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/calendar");
+  return { ok: true };
+}
