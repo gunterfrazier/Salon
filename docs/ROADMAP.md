@@ -42,7 +42,7 @@ Reviewed Meevo, Zenoti, Vagaro (salon page + pricing), Booksy's buyer's guide, a
 1. **Done (Nov 26):** Waitlist: auto-notify when a slot opens (Meevo, Vagaro, Zenoti). Team Waitlist page, "Join the waitlist" in online booking, offers by text/email at most once a day with a link to book.
 2. Card on file, no-show/late fees charged automatically (Booksy's top point). With Stripe.
 3. **Done (Nov 26):** Digital forms: intake, color consultation, patch-test/consent, signed on a phone or the kiosk (Vagaro, Zenoti, Meevo). Settings → Forms; sent with bookings; shown on the client profile.
-4. Gift cards, packages/memberships (all four).
+4. **Done (Nov 26):** Gift cards and packages (prepaid visits). Memberships (monthly billing) wait for Stripe.
 5. Commissions, tips by stylist, booth rent collection (Vagaro, Zenoti). Decide how booth renters take payments before Stripe.
 6. Reputation: review requests + private feedback (already in Phase E).
 7. Book from Instagram/Google/Facebook (Zenoti); Reserve with Google later.

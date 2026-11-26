@@ -95,6 +95,15 @@ Use a second email address (a Gmail you control) as a pretend client, and a thir
 - [ ] Kiosk: check in a client with a waiting form; **Fill it in now** appears, and "Back to check-in" returns.
 - [ ] Book the same color service again within 6 months: the consent form isn't asked again.
 
+### Gift cards and packages
+- [ ] **Sell → Gift card**: sell a $50 card; print it.
+- [ ] Check out a visit using the card for part of it and cash for the rest. Its balance goes down on **Gift cards & packages**.
+- [ ] Try to spend more than the balance: it's refused.
+- [ ] Use the card on a product sale under **Sell → Products**.
+- [ ] **Gift cards & packages → New package**: e.g. "3 blowouts", then **Sell → Package** to the pretend client.
+- [ ] Check out that client's blowout: tick **Use package**; the line shows "Package" and visits left go down (client profile and their home page).
+- [ ] **Reports**: gift card and package sales show under money received; gift card spending shows as "Also paid with gift cards".
+
 ### Check-in kiosk (tablet)
 - [ ] On the tablet, sign in, Today → **Check-in kiosk**. Enter the pretend client's phone and tap **I'm here** on a same-day appointment.
 - [ ] You get a check-in alert; the calendar shows "Checked in".
