@@ -59,6 +59,8 @@ export interface ScreenSettings {
   touch: boolean;
   /** Show the clock and salon name across the top. */
   header: boolean;
+  /** 4–6 digits needed to unpair a TV from the screen itself. Never sent to the screen. */
+  exitPin?: string | null;
 }
 
 export const DEFAULT_SETTINGS: ScreenSettings = { touch: false, header: true };
@@ -128,7 +130,13 @@ export function cleanPlaylist(raw: unknown, audience: Audience): Slide[] {
 
 export function cleanSettings(raw: unknown): ScreenSettings {
   const r = (raw ?? {}) as Record<string, unknown>;
-  return { touch: r.touch === true, header: r.header !== false };
+  const pin = typeof r.exitPin === "string" && /^\d{4,6}$/.test(r.exitPin) ? r.exitPin : null;
+  return { touch: r.touch === true, header: r.header !== false, ...(pin ? { exitPin: pin } : {}) };
+}
+
+/** Settings safe to hand to the screen itself (no PIN). */
+export function playerSettings(s: ScreenSettings): ScreenSettings {
+  return { touch: s.touch, header: s.header };
 }
 
 /** Slides still running today (an "until" date in the past drops out). */

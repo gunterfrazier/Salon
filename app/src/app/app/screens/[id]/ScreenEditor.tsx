@@ -5,14 +5,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { newSlide, SLIDE_TYPES, SLIDES, type ScreenSettings, type Slide, type SlideType } from "@/lib/screens/slides";
-import { deleteScreen, newScreenLink, saveScreen } from "../actions";
+import { deleteScreen, moveTv, newScreenLink, pairTv, removeTv, saveScreen } from "../actions";
 
 type Media = { id: string; url: string; title: string | null };
+type Device = { id: string; name: string; pairedAt: string; lastSeen: string | null; slide: string | null };
 const input = "w-full rounded-xl border border-line bg-background px-3 py-2 text-base";
 const btn = "rounded-full border border-line px-3 py-1.5 text-sm hover:bg-background disabled:opacity-50";
 
 /** Name, who can see it, touch, and the playlist of a screen. */
-export default function ScreenEditor({ screen, media, stylists }: { screen: { id: string; name: string; audience: "public" | "staff"; playlist: Slide[]; settings: ScreenSettings; link: string | null }; media: Media[]; stylists: { id: string; name: string }[] }) {
+export default function ScreenEditor({ screen, media, stylists, devices = [], otherScreens = [] }: { screen: { id: string; name: string; audience: "public" | "staff"; playlist: Slide[]; settings: ScreenSettings; link: string | null }; media: Media[]; stylists: { id: string; name: string }[]; devices?: Device[]; otherScreens?: { id: string; name: string }[] }) {
   const router = useRouter();
   const [name, setName] = useState(screen.name);
   const [audience, setAudience] = useState(screen.audience);
@@ -75,6 +76,10 @@ export default function ScreenEditor({ screen, media, stylists }: { screen: { id
           <span><span className="font-medium">Show salon name and clock</span><span className="block text-muted">Across the top of the screen.</span></span>
           <input type="checkbox" className="mt-0.5 h-5 w-5" checked={settings.header} onChange={(e) => setSettings({ ...settings, header: e.target.checked })} />
         </label>
+        <label className="flex flex-wrap items-start justify-between gap-3 text-sm">
+          <span><span className="font-medium">Exit PIN</span><span className="block text-muted">4–6 digits needed to unpair a TV from the TV itself. Leave blank for none.</span></span>
+          <input inputMode="numeric" maxLength={6} className="w-28 rounded-lg border border-line bg-background px-2 py-1.5 text-center font-mono tracking-widest" value={settings.exitPin ?? ""} onChange={(e) => setSettings({ ...settings, exitPin: e.target.value.replace(/\D/g, "") || null })} aria-label="Exit PIN" placeholder="none" />
+        </label>
       </section>
 
       <section className="space-y-2 rounded-2xl border border-line bg-surface p-4">
@@ -129,11 +134,13 @@ export default function ScreenEditor({ screen, media, stylists }: { screen: { id
         )}
       </section>
 
+      <TvSection screenId={screen.id} devices={devices} otherScreens={otherScreens} onMsg={setMsg} />
+
       <section className="space-y-2 rounded-2xl border border-line bg-surface p-4">
-        <h2 className="font-semibold">Put it on a screen</h2>
+        <h2 className="font-semibold">Other ways to open it</h2>
         {audience === "public" && screen.link ? (
           <>
-            <p className="text-sm text-muted">Open this link in the TV&rsquo;s web browser (or a streaming stick or tablet) and make it full screen. Anyone with the link can see it, so keep it to your own devices.</p>
+            <p className="text-sm text-muted">Pairing (above) is easiest. You can also open this private link in any web browser. Anyone with the link can see it, so keep it to your own devices.</p>
             <p className="break-all rounded-lg bg-background p-2 font-mono text-xs">{screen.link}</p>
             <div className="flex flex-wrap gap-2">
               <button className={btn} onClick={() => navigator.clipboard?.writeText(screen.link!).then(() => setMsg({ ok: true, text: "Link copied." }), () => {})}>Copy link</button>
@@ -143,7 +150,7 @@ export default function ScreenEditor({ screen, media, stylists }: { screen: { id
           </>
         ) : (
           <>
-            <p className="text-sm text-muted">On the device, sign in to Chairvana, then open Front desk → {name || "this screen"}. Staff screens only show what that person&rsquo;s access allows.</p>
+            <p className="text-sm text-muted">Pairing (above) is easiest. Or sign in to Chairvana on the device and open Front desk → {name || "this screen"}; it then shows what that person&rsquo;s access allows.</p>
             <Link className={btn} href={`/app/screens/${screen.id}/play`} target="_blank">Open here</Link>
           </>
         )}
@@ -209,4 +216,73 @@ function SlideOptions({ slide, media, stylists, onChange }: { slide: Slide; medi
   }
   if (t === "specials" || t === "products") return <div className="mt-2">{until}</div>;
   return null;
+}
+
+function ago(iso: string | null): string {
+  if (!iso) return "never";
+  const m = Math.round((Date.now() - Date.parse(iso)) / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m} min ago`;
+  const h = Math.round(m / 60);
+  return h < 48 ? `${h} h ago` : `${Math.round(h / 24)} days ago`;
+}
+
+/** Pair a TV by the code it shows; see which TVs show this screen and whether they're on. */
+function TvSection({ screenId, devices, otherScreens, onMsg }: { screenId: string; devices: Device[]; otherScreens: { id: string; name: string }[]; onMsg: (m: { ok: boolean; text: string }) => void }) {
+  const router = useRouter();
+  const [code, setCode] = useState("");
+  const [name, setName] = useState("");
+  const [pending, start] = useTransition();
+  const [now] = useState(() => Date.now());
+  const online = (d: Device) => !!d.lastSeen && now - Date.parse(d.lastSeen) < 5 * 60_000;
+  return (
+    <section className="space-y-3 rounded-2xl border border-line bg-surface p-4">
+      <h2 className="font-semibold">TVs showing this screen</h2>
+      <ol className="list-decimal space-y-1 pl-5 text-sm text-muted">
+        <li>On the TV (or streaming stick, tablet), open <strong className="text-foreground">chairvana.app/tv</strong> in its web browser.</li>
+        <li>It shows a 6-character code. Type it here.</li>
+      </ol>
+      <div className="flex flex-wrap gap-2">
+        <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} maxLength={7} placeholder="K7M 4QX" aria-label="Code on the TV" className="w-32 rounded-xl border border-line bg-background px-3 py-2 text-center font-mono text-lg tracking-widest" />
+        <input value={name} onChange={(e) => setName(e.target.value)} maxLength={40} placeholder="Name, e.g. Lobby TV" aria-label="TV name" className="min-w-0 flex-1 rounded-xl border border-line bg-background px-3 py-2" />
+        <button
+          className="rounded-full bg-accent px-4 py-2 font-semibold text-on-accent disabled:opacity-40"
+          disabled={pending || code.replace(/[^A-Z0-9]/g, "").length !== 6}
+          onClick={() => start(async () => {
+            const r = await pairTv(screenId, code, name);
+            onMsg(r.ok ? { ok: true, text: "Paired. The TV switches over within a few seconds." } : { ok: false, text: r.error });
+            if (r.ok) {
+              setCode("");
+              setName("");
+              router.refresh();
+            }
+          })}
+        >
+          Pair a TV
+        </button>
+      </div>
+      {devices.length > 0 && (
+        <ul className="divide-y divide-line rounded-xl border border-line">
+          {devices.map((d) => (
+            <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
+              <span>
+                <span className="font-medium">{d.name}</span>
+                <span className={`ml-2 rounded-full px-2 py-0.5 text-[11px] font-semibold ${online(d) ? "bg-emerald-500/20" : "bg-line"}`}>{online(d) ? "On" : "Off"}</span>
+                <span className="block text-xs text-muted">Last seen {ago(d.lastSeen)}{d.slide ? ` · showing ${d.slide}` : ""}</span>
+              </span>
+              <span className="flex flex-wrap gap-2">
+                {otherScreens.length > 0 && (
+                  <select aria-label={`Move ${d.name} to another screen`} className="rounded-lg border border-line bg-background px-2 py-1 text-sm" value="" onChange={(e) => e.target.value && start(async () => { const r = await moveTv(d.id, e.target.value); onMsg(r.ok ? { ok: true, text: `${d.name} moved.` } : { ok: false, text: r.error }); router.refresh(); })}>
+                    <option value="">Move to…</option>
+                    {otherScreens.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                )}
+                <button className={btn} disabled={pending} onClick={() => confirm(`Remove ${d.name}? It goes back to its setup code.`) && start(async () => { await removeTv(d.id); router.refresh(); })}>Remove</button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
 }

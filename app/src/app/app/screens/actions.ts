@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { getContext } from "@/lib/context";
 import { cleanPlaylist, cleanSettings, fromTemplate, TEMPLATES } from "@/lib/screens/slides";
+import { newKey, normalizeCode, sha256 } from "@/lib/screens/pairing";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { CardData } from "@/components/screens/ClientCard";
 import { formatDay, wallParts } from "@/lib/time/zone";
 
@@ -76,7 +78,7 @@ export async function createScreen(templateKey: string, name: string): Promise<R
 export interface ScreenEdit {
   name: string;
   audience: "public" | "staff";
-  settings: { touch: boolean; header: boolean };
+  settings: { touch: boolean; header: boolean; exitPin?: string | null };
   playlist: unknown;
 }
 
@@ -152,5 +154,55 @@ export async function deleteScreenImage(id: string): Promise<Result> {
   const { data } = await ctx.supabase.from("signage_media").delete().eq("id", id).eq("business_id", ctx.business.id).select("path").maybeSingle();
   if (data?.path) await ctx.supabase.storage.from("salon-media").remove([data.path as string]);
   refresh();
+  return { ok: true };
+}
+
+/** Pair the TV showing this code to a screen. */
+export async function pairTv(screenId: string, rawCode: string, name: string): Promise<Result> {
+  const ctx = await getContext();
+  const no = canManage(ctx);
+  if (no) return no;
+  const code = normalizeCode(rawCode);
+  if (!code) return { ok: false, error: "Enter the 6-character code shown on the TV." };
+  const { data: screen } = await ctx.supabase.from("screens").select("id").eq("id", screenId).eq("business_id", ctx.business.id).maybeSingle();
+  if (!screen) return { ok: false, error: "Screen not found." };
+  const admin = createAdminClient();
+  const { data: row } = await admin.from("screen_pair_codes").select("code,expires_at,device_id").eq("code", code).maybeSingle();
+  if (!row || row.device_id || Date.parse(row.expires_at) < Date.now()) {
+    await new Promise((r) => setTimeout(r, 800));
+    return { ok: false, error: "That code isn't valid. Check the TV for the current code." };
+  }
+  const key = newKey();
+  const { data: dev, error } = await admin
+    .from("screen_devices")
+    .insert({ business_id: ctx.business.id, screen_id: screenId, name: name.trim().slice(0, 40) || "TV", key_hash: await sha256(key) })
+    .select("id")
+    .single();
+  if (error) return { ok: false, error: "Couldn't pair it. Try again." };
+  await admin.from("screen_pair_codes").update({ device_id: dev.id, device_key: key }).eq("code", code);
+  revalidatePath(`/app/screens/${screenId}`);
+  return { ok: true };
+}
+
+/** Unpair a TV: it goes back to its setup code. */
+export async function removeTv(deviceId: string): Promise<Result> {
+  const ctx = await getContext();
+  const no = canManage(ctx);
+  if (no) return no;
+  const { data } = await ctx.supabase.from("screen_devices").delete().eq("id", deviceId).eq("business_id", ctx.business.id).select("screen_id").maybeSingle();
+  if (data) revalidatePath(`/app/screens/${data.screen_id}`);
+  return { ok: true };
+}
+
+/** Move a paired TV to another screen without pairing again. */
+export async function moveTv(deviceId: string, screenId: string): Promise<Result> {
+  const ctx = await getContext();
+  const no = canManage(ctx);
+  if (no) return no;
+  const { data: s } = await ctx.supabase.from("screens").select("id").eq("id", screenId).eq("business_id", ctx.business.id).maybeSingle();
+  if (!s) return { ok: false, error: "Screen not found." };
+  const { error } = await ctx.supabase.from("screen_devices").update({ screen_id: screenId }).eq("id", deviceId).eq("business_id", ctx.business.id);
+  if (error) return { ok: false, error: "Couldn't move it." };
+  revalidatePath("/app/screens", "layout");
   return { ok: true };
 }

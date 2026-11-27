@@ -16,7 +16,13 @@ const time = (iso: string, tz: string) => formatTime(new Date(iso), tz).replace(
 const hm = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ""}` : `${m}m`);
 
 /** Full-screen player: rotates through the playlist, refreshes its data every minute. */
-export default function ScreenPlayer({ name, slides, settings, data, clientCard }: { name: string; slides: Slide[]; settings: ScreenSettings; data: ScreenData; clientCard?: ClientCardApi }) {
+/** A paired TV: checks in every 2 minutes, and can be unpaired from the corner lock (with the exit PIN). */
+export interface DeviceApi {
+  hasPin: boolean;
+  unpair: (pin: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+}
+
+export default function ScreenPlayer({ name, slides, settings, data, clientCard, device }: { name: string; slides: Slide[]; settings: ScreenSettings; data: ScreenData; clientCard?: ClientCardApi; device?: DeviceApi }) {
   const router = useRouter();
   const [now, setNow] = useState<Date | null>(null);
   const [index, setIndex] = useState(0);
@@ -44,6 +50,19 @@ export default function ScreenPlayer({ name, slides, settings, data, clientCard 
     }, current.seconds * 1000);
     return () => clearTimeout(t);
   }, [current, paused, slides.length, index]);
+
+  // Paired TV: check in every 2 minutes; if it was removed in the app, go back to pairing.
+  const playing = current?.type ?? null;
+  useEffect(() => {
+    if (!device) return;
+    const ping = () =>
+      fetch("/api/screens/ping", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ slide: playing }) })
+        .then((r) => r.status === 401 && window.location.reload())
+        .catch(() => {});
+    ping();
+    const t = setInterval(ping, 120_000);
+    return () => clearInterval(t);
+  }, [device, playing]);
 
   const go = (i: number) => {
     setIndex(i);
@@ -91,6 +110,7 @@ export default function ScreenPlayer({ name, slides, settings, data, clientCard 
           {slides.map((s, i) => <span key={s.id} className={`h-1.5 rounded-full transition-all ${i === index % slides.length ? "w-6 bg-accent" : "w-1.5 bg-line"}`} />)}
         </div>
       ) : null}
+      {device && <DeviceLock api={device} />}
       <style>{`@keyframes screenIn { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }`}</style>
     </div>
   );
@@ -414,3 +434,37 @@ function Empty({ text }: { text: string }) {
   return <p className="m-auto text-center text-2xl text-muted">{text}</p>;
 }
 
+
+function DeviceLock({ api }: { api: DeviceApi }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const unpair = async () => {
+    setBusy(true);
+    const r = await api.unpair(pin);
+    setBusy(false);
+    if (r.ok) router.refresh();
+    else setError(r.error);
+  };
+  return (
+    <>
+      <button onClick={() => setOpen(true)} className="fixed bottom-2 right-2 size-8 rounded-full text-sm opacity-20 hover:opacity-80 focus:opacity-80" aria-label="Screen settings">🔒</button>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div role="dialog" aria-modal="true" aria-labelledby="lock-title" className="w-full max-w-sm space-y-3 rounded-2xl border border-line bg-surface p-5">
+            <h2 id="lock-title" className="text-xl font-semibold">Unpair this TV?</h2>
+            <p className="text-sm text-muted">It goes back to the setup code. You can pair it again any time.</p>
+            {api.hasPin && <input autoFocus inputMode="numeric" maxLength={6} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} placeholder="Exit PIN" aria-label="Exit PIN" className="w-full rounded-xl border border-line bg-background px-4 py-3 text-center font-mono text-2xl tracking-widest" />}
+            {error && <p role="alert" className="text-sm font-semibold text-red-300">{error}</p>}
+            <div className="flex gap-2">
+              <button className="flex-1 rounded-full border border-line px-4 py-2.5" onClick={() => { setOpen(false); setPin(""); setError(null); }}>Cancel</button>
+              <button className="flex-1 rounded-full bg-accent px-4 py-2.5 font-semibold text-on-accent disabled:opacity-50" disabled={busy || (api.hasPin && pin.length < 4)} onClick={unpair}>Unpair</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

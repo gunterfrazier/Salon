@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import ScreenPlayer from "@/components/screens/ScreenPlayer";
 import { loadScreenData } from "@/lib/screens/data";
-import { cleanPlaylist, cleanSettings, liveSlides } from "@/lib/screens/slides";
+import { cleanPlaylist, cleanSettings, liveSlides, playerSettings } from "@/lib/screens/slides";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { todayIn } from "@/lib/time/zone";
 
@@ -22,5 +22,5 @@ export default async function PublicScreen({ params }: { params: Promise<{ token
   if (!b || b.status !== "approved") notFound();
   const slides = liveSlides(cleanPlaylist(s.playlist, "public"), todayIn(b.timezone));
   const data = await loadScreenData(db, s.business_id, slides, "public");
-  return <ScreenPlayer name={s.name} slides={slides} settings={{ ...cleanSettings(s.settings), touch: false }} data={data} />;
+  return <ScreenPlayer name={s.name} slides={slides} settings={{ ...playerSettings(cleanSettings(s.settings)), touch: false }} data={data} />;
 }
