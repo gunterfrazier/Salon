@@ -6,6 +6,8 @@ import { whoAmI } from "@/lib/auth/whoami";
 import { createAdminClient } from "@/lib/supabase/admin";
 import PreferButton from "./PreferButton";
 import ShareButton from "./ShareButton";
+import Stars, { RatingSummary } from "@/components/Stars";
+import { loadPublicReviews } from "@/lib/reviews/server";
 import { duration, money } from "@/lib/format";
 import { formatMinutes, parseHHMM, tzAbbrev, WEEKDAY_KEYS } from "@/lib/time/zone";
 
@@ -40,6 +42,8 @@ export default async function SalonPage({ params, searchParams }: Props) {
   const cats = [...new Set(services.map((x) => x.category))];
   const book = (q = "") => `/s/${s.slug}/book${q}`;
 
+  const reviews = await loadPublicReviews(createAdminClient(), s.id).catch(() => null);
+  const rated = reviews && reviews.summary.count > 0 ? reviews : null;
   const initials = s.name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
   const place = [s.city, s.state].filter(Boolean).join(", ");
 
@@ -62,6 +66,13 @@ export default async function SalonPage({ params, searchParams }: Props) {
             <div className="min-w-0">
               <h1 className="font-display text-4xl leading-tight">{s.name}</h1>
               {place && <p className="text-sm text-muted">{place}</p>}
+              {rated && (
+                <a href="#reviews" className="mt-1 flex items-center gap-1.5 text-sm">
+                  <Stars value={rated.summary.average ?? 0} />
+                  <span className="font-semibold">{rated.summary.average}</span>
+                  <span className="text-muted">({rated.summary.count} review{rated.summary.count === 1 ? "" : "s"})</span>
+                </a>
+              )}
             </div>
           </div>
           <div className="mt-5 flex flex-wrap items-center gap-2">
@@ -77,6 +88,7 @@ export default async function SalonPage({ params, searchParams }: Props) {
       <nav aria-label="On this page" className="sticky top-0 z-30 border-b border-line bg-background/95 backdrop-blur">
         <div className="mx-auto flex max-w-2xl gap-6 px-4 text-sm">
           <a href="#services" className="border-b-2 border-foreground py-3 font-semibold">Services</a>
+          {rated && <a href="#reviews" className="py-3 text-muted hover:text-foreground">Reviews</a>}
           {s.stylists.length > 1 && <a href="#team" className="py-3 text-muted hover:text-foreground">Team</a>}
           <a href="#details" className="py-3 text-muted hover:text-foreground">Details</a>
         </div>
@@ -134,9 +146,52 @@ export default async function SalonPage({ params, searchParams }: Props) {
         </section>
       )}
 
+      {rated && (
+        <section id="reviews" className="scroll-mt-14 space-y-4">
+          <h2 className="font-display text-2xl">Reviews</h2>
+          <RatingSummary {...rated.summary} />
+          <ul className="space-y-3">
+            {rated.list.map((r) => (
+              <li key={r.id} className="rounded-2xl border border-line bg-surface p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="flex items-center gap-2">
+                    <span className="font-semibold">{r.name}</span>
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">Confirmed client</span>
+                  </span>
+                  <Stars value={r.rating} />
+                </div>
+                <p className="mt-1 text-xs text-muted">
+                  {new Date(r.at).toLocaleDateString("en-US", { timeZone: s.timezone, month: "short", day: "numeric", year: "numeric" })}
+                  {r.services ? ` · ${r.services}` : ""}
+                  {r.staff ? ` · with ${r.staff}` : ""}
+                </p>
+                {r.body && <p className="mt-2 whitespace-pre-wrap">{r.body}</p>}
+                {r.reply && (
+                  <div className="mt-3 rounded-xl bg-background p-3 text-sm">
+                    <p className="text-xs font-semibold text-muted">Reply from {s.name}</p>
+                    <p className="whitespace-pre-wrap">{r.reply}</p>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section id="details" className="scroll-mt-14 space-y-4">
         <h2 className="font-display text-2xl">Details</h2>
         {s.about && <p className="whitespace-pre-wrap">{s.about}</p>}
+        {Object.keys(s.social).length > 0 && (
+          <p className="flex flex-wrap gap-2 text-sm">
+            {(["instagram", "facebook", "tiktok", "website"] as const)
+              .filter((k) => s.social[k] && /^https?:\/\//.test(s.social[k]))
+              .map((k) => (
+                <a key={k} href={s.social[k]} target="_blank" rel="noreferrer" className="rounded-full border border-line px-3 py-1.5">
+                  {{ instagram: "Instagram", facebook: "Facebook", tiktok: "TikTok", website: "Website" }[k]}
+                </a>
+              ))}
+          </p>
+        )}
         {(address || s.phone) && (
           <div className="space-y-1 text-sm">
             {address && <p>{map ? <a href={map} target="_blank" rel="noreferrer" className="underline">{address}</a> : address}</p>}

@@ -117,7 +117,7 @@ export default function NotificationSettingsForm({ initial, salon, timezone, con
     total: "$123.50",
     manage_link: "chairvana.app/book",
     book_link: "chairvana.app/book",
-    review_link: s.client.reviewRequest.url || "(your review link)",
+    review_link: "chairvana.app/r/…",
     weeks: s.client.rebookNudge.afterWeeks,
     openings: "Fri, Dec 4 at 10 AM, Fri, Dec 11 at 9:30 AM",
     waitlist_link: "chairvana.app/s/your-salon/book",
@@ -209,13 +209,17 @@ export default function NotificationSettingsForm({ initial, salon, timezone, con
             <Switch label={label} on={s.client[k].enabled} onChange={(v) => update((d) => void (d.client[k].enabled = v))} />
           </Row>
         ))}
-        <Row label="Review request" hint="Asks happy clients for a review after their visit">
+        <Row label="Review request" hint="Asks clients to rate their visit">
           <input type="number" min={1} max={72} aria-label="Hours after checkout" className={`${input} w-16`} value={s.client.reviewRequest.afterHours} onChange={(e) => update((d) => void (d.client.reviewRequest.afterHours = Number(e.target.value) || 1))} />
           <span className="text-sm">hours after</span>
           <Switch label="Review request" on={s.client.reviewRequest.enabled} onChange={(v) => update((d) => void (d.client.reviewRequest.enabled = v))} />
         </Row>
         {s.client.reviewRequest.enabled && (
-          <input type="url" placeholder="Review link, e.g. your Google review page" aria-label="Review link" className={`${input} w-full`} value={s.client.reviewRequest.url} onChange={(e) => update((d) => void (d.client.reviewRequest.url = e.target.value))} />
+          <label className="block text-sm">
+            Google review link (optional)
+            <input type="url" placeholder="https://g.page/r/…/review" aria-label="Google review link" className={`${input} mt-1 w-full`} value={s.client.reviewRequest.url} onChange={(e) => update((d) => void (d.client.reviewRequest.url = e.target.value))} />
+            <span className="mt-1 block text-xs text-muted">Clients rate the visit on Chairvana. Happy ones are then invited to post on Google too; unhappy ones reach only you.</span>
+          </label>
         )}
         <Row label="Time to rebook" hint="If a client hasn't booked again">
           <input type="number" min={1} max={52} aria-label="Weeks since last visit" className={`${input} w-16`} value={s.client.rebookNudge.afterWeeks} onChange={(e) => update((d) => void (d.client.rebookNudge.afterWeeks = Number(e.target.value) || 1))} />

@@ -16,6 +16,7 @@ export interface SalonProfile {
   zip: string | null;
   phone: string | null;
   about: string | null;
+  social: Record<string, string>;
   lat: number | null;
   lng: number | null;
   stylists: { id: string; name: string; title: string | null; bio: string | null; serviceIds: string[] | null }[];
@@ -27,7 +28,7 @@ export async function loadSalonProfile(slug: string): Promise<SalonProfile | nul
   const db = createAdminClient();
   const { data: b } = await db
     .from("businesses")
-    .select("id,slug,name,timezone,business_hours,street,city,state,zip,phone,about,lat,lng")
+    .select("id,slug,name,timezone,business_hours,street,city,state,zip,phone,about,lat,lng,social")
     .eq("slug", slug.toLowerCase())
     .eq("status", "approved")
     .maybeSingle();
@@ -37,7 +38,7 @@ export async function loadSalonProfile(slug: string): Promise<SalonProfile | nul
   const stylists = toStylists(rows).map((s) => ({ id: s.id, name: s.name, title: s.title, bio: rows.find((r) => r.id === s.id)?.bio ?? null, serviceIds: s.serviceIds }));
   return {
     id: b.id, slug: b.slug, name: b.name, timezone: b.timezone, hours: b.business_hours as Hours,
-    street: b.street, city: b.city, state: b.state, zip: b.zip, phone: b.phone, about: b.about, lat: b.lat, lng: b.lng,
+    street: b.street, city: b.city, state: b.state, zip: b.zip, phone: b.phone, about: b.about, social: (b.social ?? {}) as Record<string, string>, lat: b.lat, lng: b.lng,
     stylists, services,
   };
 }

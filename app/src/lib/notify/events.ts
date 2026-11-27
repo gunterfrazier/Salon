@@ -7,6 +7,7 @@ import { clientRows, receiptDetails, stylistRow, type MessageRow, type ReceiptIn
 import { configuredSender } from "./provider";
 import { contactFor, deliverQueued, loadBusinesses } from "./run";
 import { formsForBooking } from "../forms/server";
+import { reviewTokenFor } from "../reviews/server";
 
 export type AppointmentEvent = "booked_online" | "booked_by_stylist" | "cancelled" | "moved" | "checked_out" | "checked_in";
 
@@ -87,9 +88,11 @@ export async function notifyAppointment(businessId: string, appointmentId: strin
 
     if (event === "checked_out") {
       if (receipt && s.client.receipt.enabled) client("receipt", s.client.receipt.channels, `receipt:${a.id}`, now, receiptDetails(receipt));
-      if (s.client.reviewRequest.enabled && s.client.reviewRequest.url) {
+      if (s.client.reviewRequest.enabled) {
+        // Our own review link: happy clients are then invited to post on Google too.
+        const token = await reviewTokenFor(db, { id: a.id, business_id: businessId, client_id: a.client_id, staff_id: a.staff_id }, appt.services).catch(() => null);
         const at = new Date(now.getTime() + s.client.reviewRequest.afterHours * 3_600_000);
-        client("reviewRequest", s.client.reviewRequest.channels, `review:${a.id}`, afterQuiet(at, salon.timezone, s.quietHours));
+        if (token) client("reviewRequest", s.client.reviewRequest.channels, `review:${a.id}`, afterQuiet(at, salon.timezone, s.quietHours), { review_link: `${salon.siteUrl}/r/${token}` });
       }
     }
 

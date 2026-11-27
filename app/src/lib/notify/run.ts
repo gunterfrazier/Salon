@@ -309,6 +309,7 @@ const PUSH_TITLE: Record<string, string> = {
   stylistClientChange: "Appointment changed by client",
   stylistTest: "Chairvana alerts are on",
   stylistWaitlist: "New on the waitlist",
+  stylistReview: "New review",
 };
 
 const SUBJECT: Record<string, string> = {

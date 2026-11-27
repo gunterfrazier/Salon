@@ -10,7 +10,7 @@
     "cancel": { "enabled": true, "channels": ["sms", "email"] },
     "depositRequest": { "enabled": true, "channels": ["sms", "email"] },
     "receipt": { "enabled": true, "channels": ["email"] },
-    "reviewRequest": { "enabled": false, "afterHours": 3, "channels": ["sms"], "url": "" },
+    "reviewRequest": { "enabled": true, "afterHours": 3, "channels": ["sms", "email"], "url": "" },
     "rebookNudge": { "enabled": false, "afterWeeks": 6, "channels": ["sms"] },
     "waitlist": { "enabled": true, "channels": ["sms", "email"] },
     "forms": { "enabled": true, "channels": ["sms", "email"] }
@@ -34,7 +34,7 @@
     "depositReminder": "Hi {first_name}, we're still holding {date} at {time} for you. Please send your {deposit} deposit: {pay_link}",
     "holdReleased": "Hi {first_name}, we didn't receive your deposit, so {date} at {time} has been released. Book again anytime: {book_link}",
     "receipt": "Thank you, {first_name}! Your {salon} receipt for {date}:\n{details}",
-    "reviewRequest": "Thanks for coming in, {first_name}! If you loved your visit, a quick review means a lot: {review_link}",
+    "reviewRequest": "Thanks for coming in, {first_name}! How was your visit at {salon}? Tap to rate it: {review_link}",
     "rebookNudge": "Hi {first_name}, it's been {weeks} weeks since your last visit at {salon}. Ready for your next one? {book_link}",
     "waitlistOffer": "Hi {first_name}! A time opened up at {salon} for {services}: {openings}. First to book gets it: {waitlist_link}",
     "formRequest": "Hi {first_name}, before your {date} visit at {salon}, please fill out: {forms}. It takes a few minutes: {form_link}"
