@@ -125,6 +125,14 @@ Use a second email address (a Gmail you control) as a pretend client, and a thir
 - [ ] **Messages**: paste your Google review link so happy clients are offered Google too.
 - [ ] **Marketing**: copy the booking link into Instagram/TikTok bios; download a QR code; print the mirror cling and business cards; add social links.
 
+### Promo codes, loyalty and referrals
+- [ ] **Marketing → Promo codes**: make NEWCLIENT15 (15% off, new clients only). Book online as a new pretend client with the code: the saving shows before booking.
+- [ ] Apply a code at checkout: service prices drop; uses go up on Marketing.
+- [ ] **Marketing → Loyalty & referrals**: turn on a punch card (e.g. every 3 visits for testing) and referrals; save.
+- [ ] The pretend client's home page shows their card and "Share my link".
+- [ ] Open their link in a private window and book as another new client: "Jamie sent you" shows; the welcome reward appears at that client's checkout.
+- [ ] After that first visit, the referrer's reward appears at their next checkout.
+
 ### Check-in kiosk (tablet)
 - [ ] On the tablet, sign in, Today → **Check-in kiosk**. Enter the pretend client's phone and tap **I'm here** on a same-day appointment.
 - [ ] You get a check-in alert; the calendar shows "Checked in".
