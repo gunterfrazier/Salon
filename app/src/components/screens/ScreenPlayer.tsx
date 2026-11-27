@@ -152,7 +152,7 @@ export default function ScreenPlayer({ name, slides, settings, data, clientCard,
     : undefined;
   const brandBg: React.CSSProperties | undefined = theme === "brand" ? { background: "radial-gradient(120% 120% at 0% 0%, color-mix(in srgb, var(--accent) 55%, #0f0f11) 0%, #0f0f11 70%)" } : undefined;
   return (
-    <div className={`${theme === "light" ? "bg-background text-foreground" : "brand-dark"} flex min-h-dvh flex-col gap-4 p-4 sm:p-6 lg:p-10 ${rotate ? "min-h-0" : ""}`} style={{ ...accent, ...brandBg, ...rotated }}>
+    <div className={`tv-focus ${theme === "light" ? "bg-background text-foreground" : "brand-dark"} flex min-h-dvh flex-col gap-4 p-4 sm:p-6 lg:p-10 ${rotate ? "min-h-0" : ""}`} style={{ ...accent, ...brandBg, ...rotated }}>
       {settings.header && (
         <header className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3 sm:gap-4">

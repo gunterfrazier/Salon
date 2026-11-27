@@ -46,7 +46,7 @@ export default function PairTv() {
   }, [code, router]);
 
   return (
-    <main className="brand-dark flex min-h-dvh flex-col items-center justify-center gap-6 p-8 text-center">
+    <main className="tv-focus brand-dark flex min-h-dvh flex-col items-center justify-center gap-6 p-8 text-center">
       <img src="/brand/mark-ivory.png" alt="" className="h-16 w-auto" />
       <h1 className="font-display text-4xl sm:text-5xl">Set up this screen</h1>
       {state === "paired" ? (
