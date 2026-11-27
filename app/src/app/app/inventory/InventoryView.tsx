@@ -1,5 +1,6 @@
 "use client";
 
+import { lineInfo, linesFor, soldAt, SUPPLY_BRANDS } from "@/lib/inventory/supply";
 import { useMemo, useState, useTransition } from "react";
 import { money } from "@/lib/format";
 import {
@@ -323,6 +324,23 @@ function ProductForm({ product, barcode, onClose }: { product: Product | null; b
   const [error, setError] = useState<string | null>(null);
   const [saving, start] = useTransition();
   const set = (k: keyof ProductFields) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
+  // Picking a known brand + line fills in its type and usual size (new products only; nothing typed is overwritten).
+  const setLine = (k: "brand" | "line") => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const next = { ...f, [k]: e.target.value };
+    const info = !product ? lineInfo(next.brand, next.line) : null;
+    if (info) {
+      next.kind = info.kind;
+      if (!f.size && info.size) next.size = String(info.size);
+      if (info.unit) next.unit = info.unit;
+    }
+    if (!product && !f.vendor && k === "brand") {
+      const where = soldAt(next.brand)[0];
+      if (where === "SalonCentric" || where === "CosmoProf") next.vendor = where.toLowerCase();
+    }
+    setF(next);
+  };
+  const lineOptions = linesFor(f.brand);
+  const sold = soldAt(f.brand);
   const save = () =>
     start(async () => {
       const r = await saveProduct(product?.id ?? null, f);
@@ -339,11 +357,14 @@ function ProductForm({ product, barcode, onClose }: { product: Product | null; b
         </select>
       </label>
       <div className="grid grid-cols-2 gap-2">
-        <label className={label}>Brand<input className={`${input} mt-1`} value={f.brand} onChange={set("brand")} placeholder="Redken" /></label>
-        <label className={label}>Line<input className={`${input} mt-1`} value={f.line} onChange={set("line")} placeholder="Shades EQ Gloss" /></label>
+        <label className={label}>Brand<input className={`${input} mt-1`} value={f.brand} onChange={setLine("brand")} placeholder="Redken" list="supply-brands" autoComplete="off" /></label>
+        <label className={label}>Line<input className={`${input} mt-1`} value={f.line} onChange={setLine("line")} placeholder="Shades EQ Gloss" list="supply-lines" autoComplete="off" /></label>
+        <datalist id="supply-brands">{SUPPLY_BRANDS.map((b) => <option key={b} value={b} />)}</datalist>
+        <datalist id="supply-lines">{lineOptions.map((l) => <option key={l} value={l} />)}</datalist>
         <label className={label}>Shade<input className={`${input} mt-1`} value={f.shade} onChange={set("shade")} placeholder="09V" /></label>
         <label className={label}>Name<input className={`${input} mt-1`} value={f.name} onChange={set("name")} placeholder="09V Platinum Ice" /></label>
       </div>
+      {sold.length > 0 && <p className="-mt-1 text-xs text-muted">Usually sold at {sold.join(", ")}.</p>}
       <label className={label}>
         Size of one tube / bottle
         <div className="mt-1 flex gap-2">
