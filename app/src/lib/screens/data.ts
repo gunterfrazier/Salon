@@ -47,7 +47,7 @@ export interface ScreenData {
   reviews?: { text: string; name: string }[];
   photos?: { url: string; caption: string | null; staffId: string | null }[];
   products?: { name: string; brand: string; priceCents: number }[];
-  media?: Record<string, { url: string; title: string | null }>;
+  media?: Record<string, { url: string; title: string | null; kind: "image" | "video" }>;
   openings?: { stylist: string; start: string; minutes: number }[];
   board?: { columns: BoardColumn[]; next: string | null };
   today?: { appts: ScreenAppt[]; next: string | null };
@@ -137,11 +137,11 @@ export async function loadScreenData(db: SupabaseClient, businessId: string, sli
       }
     })());
   }
-  const mediaIds = [...new Set(slides.filter((s) => s.type === "image" && s.mediaId).map((s) => s.mediaId!))];
+  const mediaIds = [...new Set(slides.flatMap((s) => [s.mediaId, s.bgMediaId]).filter((x): x is string => !!x))];
   if (mediaIds.length) {
     tasks.push((async () => {
-      const { data } = await db.from("signage_media").select("id,path,title").eq("business_id", businessId).in("id", mediaIds);
-      out.media = Object.fromEntries((data ?? []).map((m) => [m.id as string, { url: mediaUrl(m.path as string)!, title: m.title as string | null }]));
+      const { data } = await db.from("signage_media").select("id,path,title,kind").eq("business_id", businessId).in("id", mediaIds);
+      out.media = Object.fromEntries((data ?? []).map((m) => [m.id as string, { url: mediaUrl(m.path as string)!, title: m.title as string | null, kind: (m.kind === "video" ? "video" : "image") as "image" | "video" }]));
     })());
   }
 

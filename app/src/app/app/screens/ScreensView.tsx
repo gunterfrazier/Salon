@@ -6,10 +6,10 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { TEMPLATES } from "@/lib/screens/slides";
 import { shrinkImage } from "@/lib/ui/resize";
-import { createScreen, deleteScreenImage, uploadScreenImage } from "./actions";
+import { createScreen, deleteScreenImage, finishVideoUpload, startVideoUpload, uploadScreenImage } from "./actions";
 
 type ScreenRow = { id: string; name: string; audience: "public" | "staff"; link: string | null; slides: number; touch: boolean; tvs?: { total: number; on: number } };
-type Media = { id: string; url: string; title: string | null; source: "upload" | "studio" | "brand" };
+type Media = { id: string; url: string; title: string | null; source: "upload" | "studio" | "brand"; kind?: "image" | "video" };
 
 const card = "rounded-2xl border border-line bg-surface p-4";
 const btn = "rounded-full border border-line px-3 py-1.5 text-sm hover:bg-background disabled:opacity-50";
@@ -38,6 +38,17 @@ export default function ScreensView({ screens, media }: { screens: ScreenRow[]; 
       f.set("title", file.name.replace(/\.[^.]+$/, "").slice(0, 80));
       const r = await uploadScreenImage(f);
       setMsg(r.ok ? "Picture added. Use it in a screen with a Picture slide." : r.error);
+    });
+
+  const uploadVideo = (file: File) =>
+    start(async () => {
+      const s = await startVideoUpload(file.type, file.size);
+      if (!s.ok) return setMsg(s.error);
+      setMsg("Uploading video…");
+      const put = await fetch(s.url, { method: "PUT", body: file, headers: { "content-type": file.type } }).catch(() => null);
+      if (!put?.ok) return setMsg("The upload didn't finish. Check the connection and try again.");
+      const r = await finishVideoUpload(s.path, file.name.replace(/\.[^.]+$/, ""));
+      setMsg(r.ok ? "Video added. Use it in a screen with a Video slide." : r.error);
     });
 
   const copy = async (text: string) => {
@@ -108,13 +119,17 @@ export default function ScreensView({ screens, media }: { screens: ScreenRow[]; 
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
             <h2 className="font-semibold">Pictures for screens</h2>
-            <p className="text-sm text-muted">Designs from the Graphics studio land here automatically. You can also upload your own, or brand material from your suppliers.</p>
+            <p className="text-sm text-muted">Designs from the Graphics studio land here automatically. You can also upload your own pictures, short silent videos (MP4 or WebM, up to 50 MB), or brand material from your suppliers.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Link href="/app/marketing/studio" className={btn}>Graphics studio</Link>
             <label className={`${btn} cursor-pointer`}>
-              Upload
+              Upload picture
               <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={pending} onChange={(e) => e.target.files?.[0] && upload(e.target.files[0], "upload")} />
+            </label>
+            <label className={`${btn} cursor-pointer`}>
+              Upload video
+              <input type="file" accept="video/mp4,video/webm" className="sr-only" disabled={pending} onChange={(e) => e.target.files?.[0] && uploadVideo(e.target.files[0])} />
             </label>
           </div>
         </div>
@@ -122,9 +137,13 @@ export default function ScreensView({ screens, media }: { screens: ScreenRow[]; 
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {media.map((m) => (
               <li key={m.id} className="overflow-hidden rounded-xl border border-line">
-                <img src={m.url} alt={m.title ?? ""} className="aspect-square w-full bg-background object-contain" />
+                {m.kind === "video" ? (
+                  <video src={m.url} muted playsInline preload="metadata" className="aspect-square w-full bg-background object-contain" aria-label={m.title ?? "Video"} />
+                ) : (
+                  <img src={m.url} alt={m.title ?? ""} className="aspect-square w-full bg-background object-contain" />
+                )}
                 <div className="flex items-center justify-between gap-1 p-2 text-xs">
-                  <span className="min-w-0 truncate" title={m.title ?? ""}>{m.title ?? SOURCE[m.source]}<span className="block text-muted">{SOURCE[m.source]}</span></span>
+                  <span className="min-w-0 truncate" title={m.title ?? ""}>{m.title ?? SOURCE[m.source]}<span className="block text-muted">{m.kind === "video" ? "Video" : SOURCE[m.source]}</span></span>
                   <button className="text-muted underline" disabled={pending} onClick={() => confirm("Remove this picture? Slides using it will skip it.") && start(async () => void (await deleteScreenImage(m.id)))}>Remove</button>
                 </div>
               </li>

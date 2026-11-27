@@ -144,8 +144,15 @@ export default function ScreenPlayer({ name, slides, settings, data, clientCard,
   const go = (i: number) => setControl((c) => jumpControl(seconds, Date.now() + offset, c, i));
   const setPaused = (p: boolean) => setControl((c) => (p ? pauseControl(Date.now() + offset, c) : playControl(Date.now() + offset, c)));
 
+  const theme = settings.theme ?? "dark";
+  const rotate = settings.rotate ?? 0;
+  const accent = accentStyle({ accent: data.salon.accent }) as React.CSSProperties | undefined;
+  const rotated: React.CSSProperties | undefined = rotate
+    ? { position: "fixed", top: 0, left: 0, width: "100vh", height: "100vw", transformOrigin: "top left", transform: rotate === 90 ? "rotate(90deg) translateY(-100%)" : "rotate(-90deg) translateX(-100%)", overflow: "hidden" }
+    : undefined;
+  const brandBg: React.CSSProperties | undefined = theme === "brand" ? { background: "radial-gradient(120% 120% at 0% 0%, color-mix(in srgb, var(--accent) 55%, #0f0f11) 0%, #0f0f11 70%)" } : undefined;
   return (
-    <div className="brand-dark flex min-h-dvh flex-col gap-4 p-4 sm:p-6 lg:p-10" style={accentStyle({ accent: data.salon.accent }) as React.CSSProperties | undefined}>
+    <div className={`${theme === "light" ? "bg-background text-foreground" : "brand-dark"} flex min-h-dvh flex-col gap-4 p-4 sm:p-6 lg:p-10 ${rotate ? "min-h-0" : ""}`} style={{ ...accent, ...brandBg, ...rotated }}>
       {settings.header && (
         <header className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3 sm:gap-4">
@@ -159,9 +166,15 @@ export default function ScreenPlayer({ name, slides, settings, data, clientCard,
         </header>
       )}
 
-      <main className="flex flex-1 flex-col rounded-3xl border border-line bg-surface p-5 sm:p-8">
+      <main className="relative flex flex-1 flex-col overflow-hidden rounded-3xl border border-line bg-surface p-5 sm:p-8">
+        {current?.bgMediaId && data.media?.[current.bgMediaId]?.kind === "image" && (
+          <>
+            <img src={data.media[current.bgMediaId].url} alt="" className="absolute inset-0 size-full object-cover" />
+            <div className="absolute inset-0 bg-[#0f0f11]/70" aria-hidden="true" />
+          </>
+        )}
         {current ? (
-          <div key={`${current.id}-${cycle}`} className="flex flex-1 flex-col justify-center motion-safe:animate-[screenIn_.7s_ease]">
+          <div key={`${current.id}-${cycle}`} className={`relative flex flex-1 flex-col justify-center motion-safe:animate-[screenIn_.7s_ease] ${current.bgMediaId ? "text-[#f5efe6]" : ""}`}>
             <SlideView slide={current} data={data} cycle={cycle} now={now} clientCard={clientCard} onBusy={setBusy} />
           </div>
         ) : (
@@ -308,10 +321,20 @@ function SlideView({ slide, data, cycle, now, clientCard, onBusy }: { slide: Sli
     }
     case "image": {
       const m = slide.mediaId ? data.media?.[slide.mediaId] : undefined;
-      if (!m) return <Empty text="This picture was removed." />;
+      if (!m || m.kind === "video") return <Empty text="This picture was removed." />;
       return (
         <figure className="flex flex-1 flex-col items-center justify-center">
           <img src={m.url} alt={slide.title ?? m.title ?? ""} className="max-h-[70dvh] w-auto max-w-full rounded-2xl object-contain" />
+          {slide.title && <figcaption className="mt-3 text-2xl">{slide.title}</figcaption>}
+        </figure>
+      );
+    }
+    case "video": {
+      const m = slide.mediaId ? data.media?.[slide.mediaId] : undefined;
+      if (!m || m.kind !== "video") return <Empty text="This video was removed." />;
+      return (
+        <figure className="flex flex-1 flex-col items-center justify-center">
+          <video src={m.url} autoPlay muted loop playsInline className="max-h-[72dvh] w-full rounded-2xl object-contain" aria-label={slide.title ?? m.title ?? "Video"} />
           {slide.title && <figcaption className="mt-3 text-2xl">{slide.title}</figcaption>}
         </figure>
       );
@@ -551,6 +574,7 @@ function mediaUrls(d: ScreenData): string[] {
     ...(d.salon.logoUrl ? [d.salon.logoUrl] : []),
     "/brand/mark-ivory.png",
     ...(d.photos ?? []).map((p) => p.url),
-    ...Object.values(d.media ?? {}).map((m) => m.url),
+    // Videos stream in pieces, so they aren't saved for offline.
+    ...Object.values(d.media ?? {}).filter((m) => m.kind !== "video").map((m) => m.url),
   ];
 }

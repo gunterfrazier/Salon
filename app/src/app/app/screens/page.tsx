@@ -11,7 +11,7 @@ export default async function ScreensPage() {
   const ctx = await requirePermission("settings.salon");
   const [{ data: screens }, { data: media }, { data: devices }] = await Promise.all([
     ctx.supabase.from("screens").select("id,name,audience,token,playlist,settings").eq("business_id", ctx.business.id).order("sort").order("created_at"),
-    ctx.supabase.from("signage_media").select("id,path,title,source,created_at").eq("business_id", ctx.business.id).order("created_at", { ascending: false }).limit(200),
+    ctx.supabase.from("signage_media").select("id,path,title,source,kind,created_at").eq("business_id", ctx.business.id).order("created_at", { ascending: false }).limit(200),
     ctx.supabase.from("screen_devices").select("screen_id,last_seen").eq("business_id", ctx.business.id),
   ]);
   const checkedAt = new Date().getTime();
@@ -28,7 +28,7 @@ export default async function ScreensPage() {
           const audience = s.audience === "staff" ? ("staff" as const) : ("public" as const);
           return { id: s.id, name: s.name, audience, link: audience === "public" ? `${site}/tv/${s.token}` : null, slides: cleanPlaylist(s.playlist, audience).length, touch: cleanSettings(s.settings).touch, tvs: tvs(s.id) };
         })}
-        media={(media ?? []).map((m) => ({ id: m.id, url: mediaUrl(m.path)!, title: m.title, source: m.source as "upload" | "studio" | "brand" }))}
+        media={(media ?? []).map((m) => ({ id: m.id, url: mediaUrl(m.path)!, title: m.title, source: m.source as "upload" | "studio" | "brand", kind: (m.kind === "video" ? "video" : "image") as "image" | "video" }))}
       />
     </>
   );

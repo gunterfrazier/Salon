@@ -257,3 +257,40 @@ export async function remoteOverride(id: string, screenId: string | null, howLon
   const until = howLong === "hour" ? Date.now() + 3_600_000 : howLong === "today" ? zonedToUtc(addDays(todayIn(tz), 1), 0, tz).getTime() : Date.now() + 30 * 86_400_000;
   return writeControl(ctx, id, { ...c, override: { screenId, until }, pausedAt: null });
 }
+
+// ---------------------------------------------------------------------------
+// Videos for screens: uploaded straight from the browser to storage
+// (too big to pass through the app), then recorded here.
+// ---------------------------------------------------------------------------
+
+const VIDEO: Record<string, string> = { "video/mp4": "mp4", "video/webm": "webm" };
+const VIDEO_MAX = 50 * 1024 * 1024;
+
+/** A one-time upload link for a video. */
+export async function startVideoUpload(type: string, size: number): Promise<Result<{ path: string; url: string }>> {
+  const ctx = await getContext();
+  const no = canManage(ctx);
+  if (no) return no;
+  if (!VIDEO[type]) return { ok: false, error: "Use an MP4 or WebM video." };
+  if (!Number.isFinite(size) || size <= 0 || size > VIDEO_MAX) return { ok: false, error: "Videos can be up to 50 MB. Try a shorter clip." };
+  const path = `${ctx.business.id}/screens/${crypto.randomUUID()}.${VIDEO[type]}`;
+  const { data, error } = await ctx.supabase.storage.from("salon-media").createSignedUploadUrl(path);
+  if (error || !data) return { ok: false, error: "Couldn't start the upload." };
+  return { ok: true, path, url: data.signedUrl };
+}
+
+/** Record a video once it has finished uploading. */
+export async function finishVideoUpload(path: string, title: string): Promise<Result<{ id: string }>> {
+  const ctx = await getContext();
+  const no = canManage(ctx);
+  if (no) return no;
+  const prefix = `${ctx.business.id}/screens/`;
+  const file = path.slice(prefix.length);
+  if (!path.startsWith(prefix) || !/^[0-9a-f-]{36}\.(mp4|webm)$/.test(file)) return { ok: false, error: "Upload not found." };
+  const { data: found } = await ctx.supabase.storage.from("salon-media").list(`${ctx.business.id}/screens`, { search: file, limit: 1 });
+  if (!found?.some((f) => f.name === file)) return { ok: false, error: "The upload didn't finish. Try again." };
+  const { data, error } = await ctx.supabase.from("signage_media").insert({ business_id: ctx.business.id, path, title: title.trim().slice(0, 80) || "Video", source: "upload", kind: "video" }).select("id").single();
+  if (error) return { ok: false, error: "Couldn't save the video." };
+  refresh();
+  return { ok: true, id: data.id as string };
+}

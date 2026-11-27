@@ -5,7 +5,7 @@ import { cleanSchedule, type ScheduleRule } from "./playback";
 export type Audience = "public" | "staff";
 
 export const SLIDE_TYPES = [
-  "hours", "book", "specials", "reviews", "portfolio", "products", "image", "message", "openings", "team", "board",
+  "hours", "book", "specials", "reviews", "portfolio", "products", "image", "video", "message", "openings", "team", "board",
   "today", "week", "month", "inventory", "colorwheel", "clientcard",
 ] as const;
 export type SlideType = (typeof SLIDE_TYPES)[number];
@@ -28,6 +28,7 @@ export const SLIDES: Record<SlideType, SlideInfo> = {
   portfolio: { label: "Our work", hint: "Photos from your portfolio. Pick a stylist to show only their work.", audience: "public", seconds: 8 },
   products: { label: "Products", hint: "Retail products in stock, with prices.", audience: "public", seconds: 10 },
   image: { label: "Picture", hint: "A design from the Graphics studio, an upload or brand material.", audience: "public", seconds: 12 },
+  video: { label: "Video", hint: "A short silent video loop (MP4 or WebM), like a brand clip.", audience: "public", seconds: 20 },
   message: { label: "Message", hint: "Your own headline and text: holiday hours, news, a welcome.", audience: "public", seconds: 12 },
   openings: { label: "Open times today", hint: "Times still open today (no client names).", audience: "public", seconds: 12 },
   team: { label: "Meet the team", hint: "Your stylists and their specialties.", audience: "public", seconds: 12 },
@@ -48,8 +49,10 @@ export interface Slide {
   title?: string;
   /** message: text. */
   body?: string;
-  /** image: signage_media id. */
+  /** image / video: signage_media id. */
   mediaId?: string;
+  /** A picture behind the slide (dimmed so the words stay readable). */
+  bgMediaId?: string;
   /** portfolio / board / today: only this stylist. */
   staffId?: string;
   /** Stop showing after this date (YYYY-MM-DD), e.g. holiday hours. */
@@ -61,6 +64,10 @@ export interface ScreenSettings {
   touch: boolean;
   /** Show the clock and salon name across the top. */
   header: boolean;
+  /** dark = black, light = cream, brand = your accent color. */
+  theme?: "dark" | "light" | "brand";
+  /** Turn the picture for a TV mounted on its side (when the TV can't rotate it itself). */
+  rotate?: 0 | 90 | 270;
   /** 4–6 digits needed to unpair a TV from the screen itself. Never sent to the screen. */
   exitPin?: string | null;
   /** Times of day another screen's playlist plays here. */
@@ -69,7 +76,7 @@ export interface ScreenSettings {
   whenClosed?: string | null;
 }
 
-export const DEFAULT_SETTINGS: ScreenSettings = { touch: false, header: true };
+export const DEFAULT_SETTINGS: ScreenSettings = { touch: false, header: true, theme: "dark", rotate: 0 };
 
 export interface Template {
   key: string;
@@ -125,9 +132,10 @@ export function cleanPlaylist(raw: unknown, audience: Audience): Slide[] {
     if (title) slide.title = title;
     if (body) slide.body = body;
     if (typeof s.mediaId === "string" && UUID.test(s.mediaId)) slide.mediaId = s.mediaId;
+    if (typeof s.bgMediaId === "string" && UUID.test(s.bgMediaId) && type !== "image" && type !== "video") slide.bgMediaId = s.bgMediaId;
     if (typeof s.staffId === "string" && UUID.test(s.staffId)) slide.staffId = s.staffId;
     if (typeof s.until === "string" && DATE.test(s.until)) slide.until = s.until;
-    if (type === "image" && !slide.mediaId) continue;
+    if ((type === "image" || type === "video") && !slide.mediaId) continue;
     if (type === "message" && !slide.title && !slide.body) continue;
     out.push(slide);
   }
@@ -139,12 +147,14 @@ export function cleanSettings(raw: unknown): ScreenSettings {
   const pin = typeof r.exitPin === "string" && /^\d{4,6}$/.test(r.exitPin) ? r.exitPin : null;
   const schedule = cleanSchedule(r.schedule);
   const whenClosed = typeof r.whenClosed === "string" && /^[0-9a-f-]{36}$/.test(r.whenClosed) ? r.whenClosed : null;
-  return { touch: r.touch === true, header: r.header !== false, ...(pin ? { exitPin: pin } : {}), ...(schedule.length ? { schedule } : {}), ...(whenClosed ? { whenClosed } : {}) };
+  const theme = r.theme === "light" || r.theme === "brand" ? r.theme : "dark";
+  const rotate = r.rotate === 90 || r.rotate === 270 ? r.rotate : 0;
+  return { touch: r.touch === true, header: r.header !== false, theme, rotate, ...(pin ? { exitPin: pin } : {}), ...(schedule.length ? { schedule } : {}), ...(whenClosed ? { whenClosed } : {}) };
 }
 
 /** Settings safe to hand to the screen itself (no PIN). */
 export function playerSettings(s: ScreenSettings): ScreenSettings {
-  return { touch: s.touch, header: s.header };
+  return { touch: s.touch, header: s.header, theme: s.theme ?? "dark", rotate: s.rotate ?? 0 };
 }
 
 /** Slides still running today (an "until" date in the past drops out). */

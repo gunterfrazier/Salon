@@ -10,7 +10,7 @@ import menuJson from "../../../../seed/service-menu.json";
 /** Development-only preview of the screen player with sample data (404 in production). ?t=window|lobby|station|desk|colorbar&s=slide index */
 export const dynamic = "force-dynamic";
 
-export default async function DevScreen({ searchParams }: { searchParams: Promise<{ t?: string; s?: string }> }) {
+export default async function DevScreen({ searchParams }: { searchParams: Promise<{ t?: string; s?: string; theme?: string; r?: string; bg?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
   const sp = await searchParams;
   const tpl = TEMPLATES.find((x) => x.key === sp.t) ?? TEMPLATES[0];
@@ -31,7 +31,7 @@ export default async function DevScreen({ searchParams }: { searchParams: Promis
     reviews: [{ text: "Karissa is amazing! My color has never looked better.", name: "Morgan T." }],
     photos: [{ url: "/brand/og.png", caption: "Balayage", staffId: "k" }],
     products: [{ name: "Shades EQ Gloss Shampoo", brand: "Redken", priceCents: 2400 }, { name: "Extreme Length Primer", brand: "Redken", priceCents: 2900 }, { name: "Dream Coat", brand: "Color WOW", priceCents: 2800 }],
-    media: {},
+    media: sp.bg ? { bg: { url: "/brand/og.png", title: "Background", kind: "image" } } : {},
     openings: [{ stylist: "Karissa", start: at("17:30"), minutes: 90 }],
     board: { columns: [{ staffId: "k", stylist: "Karissa", rows: [{ id: "1", start: at("15:30"), end: at("17:00"), name: "Jamie R.", services: "All Over Color + Cut", state: "now" }, { id: "2", start: at("17:00"), end: at("17:45"), name: "Morgan T.", services: "Women's Cut", state: "next" }] }], next: null },
     today: { appts: [appt("1", "15:30", "17:00", "Jamie Rivers", ["All Over Color", "Women's Cut"], "in_service", "Wants it a little lighter"), appt("2", "17:00", "17:45", "Morgan Tate", ["Women's Cut"]), appt("3", "18:00", "18:45", "Riley Park", ["Blowout"], "checked_in")], next: null },
@@ -43,6 +43,9 @@ export default async function DevScreen({ searchParams }: { searchParams: Promis
     data.board = { columns: [], next: nextAppointmentLine({ start: at("07:15", "2026-12-05"), clientName: "Gunter Frazier", services: ["Women's Cut"] }, "2026-12-04", TZ, { anyToday: false }) };
   }
   const all: Slide[] = sp.t === "empty" ? [{ id: "b", type: "board", seconds: 30 }] : fromTemplate(tpl);
-  const slides = sp.s ? [all[Number(sp.s)] ?? all[0]] : all;
-  return <ScreenPlayer name={tpl.name} slides={slides} settings={{ touch: tpl.touch, header: true }} data={data} />;
+  const picked = sp.s ? [all[Number(sp.s)] ?? all[0]] : all;
+  const slides = sp.bg ? picked.map((x) => ({ ...x, bgMediaId: "bg" })) : picked;
+  const theme = sp.theme === "light" || sp.theme === "brand" ? sp.theme : "dark";
+  const rotate = sp.r === "90" ? 90 : sp.r === "270" ? 270 : 0;
+  return <ScreenPlayer name={tpl.name} slides={slides} settings={{ touch: tpl.touch, header: true, theme, rotate }} data={data} />;
 }

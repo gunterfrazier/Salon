@@ -34,6 +34,14 @@ describe("screen playlists", () => {
     expect(cleanPlaylist("nope", "public")).toEqual([]);
   });
 
+  it("keeps video and background pictures only where they make sense", () => {
+    const id = "00000000-0000-0000-0000-000000000009";
+    const p = cleanPlaylist([{ type: "video" }, { type: "video", mediaId: id }, { type: "specials", bgMediaId: id }, { type: "image", mediaId: id, bgMediaId: id }], "public");
+    expect(p.map((s) => s.type)).toEqual(["video", "specials", "image"]);
+    expect(p[1].bgMediaId).toBe(id);
+    expect(p[2].bgMediaId).toBeUndefined();
+  });
+
   it("drops slides whose end date has passed", () => {
     const p = cleanPlaylist([{ type: "message", title: "Closed Thanksgiving", until: "2026-11-26" }, { type: "hours" }], "public");
     expect(liveSlides(p, "2026-11-27").map((s) => s.type)).toEqual(["hours"]);
@@ -41,7 +49,9 @@ describe("screen playlists", () => {
   });
 
   it("reads settings", () => {
-    expect(cleanSettings({ touch: true })).toEqual({ touch: true, header: true });
-    expect(cleanSettings(null)).toEqual({ touch: false, header: true });
+    expect(cleanSettings({ touch: true })).toEqual({ touch: true, header: true, theme: "dark", rotate: 0 });
+    expect(cleanSettings(null)).toEqual({ touch: false, header: true, theme: "dark", rotate: 0 });
+    expect(cleanSettings({ theme: "brand", rotate: 90 })).toMatchObject({ theme: "brand", rotate: 90 });
+    expect(cleanSettings({ theme: "neon", rotate: 45 })).toMatchObject({ theme: "dark", rotate: 0 });
   });
 });

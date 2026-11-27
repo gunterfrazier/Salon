@@ -15,7 +15,7 @@ export default async function EditScreenPage({ params }: { params: Promise<{ id:
   const ctx = await requirePermission("settings.salon");
   const [{ data: s }, { data: media }, { data: staff }, { data: devices }, { data: others }] = await Promise.all([
     ctx.supabase.from("screens").select("id,name,audience,token,playlist,settings").eq("id", id).eq("business_id", ctx.business.id).maybeSingle(),
-    ctx.supabase.from("signage_media").select("id,path,title").eq("business_id", ctx.business.id).order("created_at", { ascending: false }).limit(200),
+    ctx.supabase.from("signage_media").select("id,path,title,kind").eq("business_id", ctx.business.id).order("created_at", { ascending: false }).limit(200),
     ctx.supabase.from("staff").select(STAFF_COLS).eq("business_id", ctx.business.id),
     ctx.supabase.from("screen_devices").select("id,name,paired_at,last_seen,health,user_agent").eq("screen_id", id).eq("business_id", ctx.business.id).order("paired_at"),
     ctx.supabase.from("screens").select("id,name").eq("business_id", ctx.business.id).neq("id", id).order("name"),
@@ -28,7 +28,7 @@ export default async function EditScreenPage({ params }: { params: Promise<{ id:
       <AppNav current="/app/screens" businessName={ctx.business.name} />
       <ScreenEditor
         screen={{ id: s.id, name: s.name, audience, playlist: cleanPlaylist(s.playlist, "staff"), settings: cleanSettings(s.settings), link: audience === "public" ? `${site}/tv/${s.token}` : null }}
-        media={(media ?? []).map((m) => ({ id: m.id, url: mediaUrl(m.path)!, title: m.title }))}
+        media={(media ?? []).map((m) => ({ id: m.id, url: mediaUrl(m.path)!, title: m.title, kind: (m.kind === "video" ? "video" : "image") as "image" | "video" }))}
         stylists={toStylists((staff ?? []) as StaffRow[]).map((x) => ({ id: x.id, name: x.name }))}
         devices={(devices ?? []).map((d) => ({ id: d.id, name: d.name, pairedAt: d.paired_at, lastSeen: d.last_seen, slide: (d.health as { slide?: string | null } | null)?.slide ?? null, saved: (d.health as { saved?: number | null } | null)?.saved ?? null, total: (d.health as { total?: number | null } | null)?.total ?? null }))}
         otherScreens={others ?? []}

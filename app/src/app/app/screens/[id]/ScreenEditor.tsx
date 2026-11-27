@@ -8,7 +8,7 @@ import type { ScheduleRule } from "@/lib/screens/playback";
 import { newSlide, SLIDE_TYPES, SLIDES, type ScreenSettings, type Slide, type SlideType } from "@/lib/screens/slides";
 import { deleteScreen, moveTv, newScreenLink, pairTv, removeTv, saveScreen } from "../actions";
 
-type Media = { id: string; url: string; title: string | null };
+type Media = { id: string; url: string; title: string | null; kind?: "image" | "video" };
 type Device = { id: string; name: string; pairedAt: string; lastSeen: string | null; slide: string | null; saved?: number | null; total?: number | null };
 const input = "w-full rounded-xl border border-line bg-background px-3 py-2 text-base";
 const btn = "rounded-full border border-line px-3 py-1.5 text-sm hover:bg-background disabled:opacity-50";
@@ -33,9 +33,12 @@ export default function ScreenEditor({ screen, media, stylists, devices = [], ot
     [next[i], next[j]] = [next[j], next[i]];
     setSlides(next);
   };
+  const pictures = media.filter((m) => m.kind !== "video");
+  const videos = media.filter((m) => m.kind === "video");
   const add = (t: SlideType) => {
     const s = newSlide(t);
-    if (t === "image" && media[0]) s.mediaId = media[0].id;
+    if (t === "image" && pictures[0]) s.mediaId = pictures[0].id;
+    if (t === "video" && videos[0]) s.mediaId = videos[0].id;
     if (t === "message") s.title = "Holiday hours";
     setSlides([...slides, s]);
     setAdding(false);
@@ -80,6 +83,22 @@ export default function ScreenEditor({ screen, media, stylists, devices = [], ot
           <span><span className="font-medium">Show salon name and clock</span><span className="block text-muted">Across the top of the screen.</span></span>
           <input type="checkbox" className="mt-0.5 h-5 w-5" checked={settings.header} onChange={(e) => setSettings({ ...settings, header: e.target.checked })} />
         </label>
+        <label className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <span className="font-medium">Look</span>
+          <select className="rounded-lg border border-line bg-background px-2 py-1.5" value={settings.theme ?? "dark"} onChange={(e) => setSettings({ ...settings, theme: e.target.value as "dark" | "light" | "brand" })}>
+            <option value="dark">Dark (best for TVs)</option>
+            <option value="light">Light</option>
+            <option value="brand">Your accent color</option>
+          </select>
+        </label>
+        <label className="flex flex-wrap items-start justify-between gap-3 text-sm">
+          <span><span className="font-medium">TV mounted on its side</span><span className="block text-muted">For a tall window sign when the TV can&rsquo;t turn its picture itself.</span></span>
+          <select className="rounded-lg border border-line bg-background px-2 py-1.5" value={settings.rotate ?? 0} onChange={(e) => setSettings({ ...settings, rotate: Number(e.target.value) as 0 | 90 | 270 })}>
+            <option value={0}>No (wide)</option>
+            <option value={90}>Turned right</option>
+            <option value={270}>Turned left</option>
+          </select>
+        </label>
         <label className="flex flex-wrap items-start justify-between gap-3 text-sm">
           <span><span className="font-medium">Exit PIN</span><span className="block text-muted">4–6 digits needed to unpair a TV from the TV itself. Leave blank for none.</span></span>
           <input inputMode="numeric" maxLength={6} className="w-28 rounded-lg border border-line bg-background px-2 py-1.5 text-center font-mono tracking-widest" value={settings.exitPin ?? ""} onChange={(e) => setSettings({ ...settings, exitPin: e.target.value.replace(/\D/g, "") || null })} aria-label="Exit PIN" placeholder="none" />
@@ -114,6 +133,15 @@ export default function ScreenEditor({ screen, media, stylists, devices = [], ot
                   <button type="button" className="px-2" aria-label="Remove" onClick={() => setSlides(slides.filter((_, j) => j !== i))}>×</button>
                 </div>
                 <SlideOptions slide={s} media={media} stylists={stylists} onChange={(p) => update(i, p)} />
+                {s.type !== "image" && s.type !== "video" && pictures.length > 0 && (
+                  <label className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
+                    Background picture
+                    <select className="rounded-lg border border-line bg-background px-2 py-1 text-sm" value={s.bgMediaId ?? ""} onChange={(e) => update(i, { bgMediaId: e.target.value || undefined })}>
+                      <option value="">None</option>
+                      {pictures.map((m) => <option key={m.id} value={m.id}>{m.title ?? "Picture"}</option>)}
+                    </select>
+                  </label>
+                )}
               </li>
             );
           })}
@@ -124,9 +152,9 @@ export default function ScreenEditor({ screen, media, stylists, devices = [], ot
             <ul className="mt-2 grid gap-2 sm:grid-cols-2">
               {SLIDE_TYPES.filter((t) => audience === "staff" || SLIDES[t].audience === "public").map((t) => (
                 <li key={t}>
-                  <button type="button" onClick={() => add(t)} disabled={t === "image" && !media.length} className="h-full w-full rounded-lg border border-line p-2 text-left text-sm hover:border-accent disabled:opacity-40">
+                  <button type="button" onClick={() => add(t)} disabled={(t === "image" && !pictures.length) || (t === "video" && !videos.length)} className="h-full w-full rounded-lg border border-line p-2 text-left text-sm hover:border-accent disabled:opacity-40">
                     <span className="font-medium">{SLIDES[t].label}</span>
-                    <span className="block text-xs text-muted">{t === "image" && !media.length ? "Add a picture on the Screens page first." : SLIDES[t].hint}</span>
+                    <span className="block text-xs text-muted">{t === "image" && !pictures.length ? "Add a picture on the Screens page first." : t === "video" && !videos.length ? "Upload a video on the Screens page first." : SLIDES[t].hint}</span>
                   </button>
                 </li>
               ))}
@@ -194,11 +222,22 @@ function SlideOptions({ slide, media, stylists, onChange }: { slide: Slide; medi
       </div>
     );
   }
+  if (t === "video") {
+    return (
+      <div className="mt-2 space-y-2">
+        <select className={`${input} text-sm`} value={slide.mediaId ?? ""} onChange={(e) => onChange({ mediaId: e.target.value })} aria-label="Video">
+          {media.filter((m) => m.kind === "video").map((m) => <option key={m.id} value={m.id}>{m.title ?? "Video"}</option>)}
+        </select>
+        <input className={input} value={slide.title ?? ""} maxLength={80} onChange={(e) => onChange({ title: e.target.value })} placeholder="Caption (optional)" aria-label="Caption" />
+        {until}
+      </div>
+    );
+  }
   if (t === "image") {
     return (
       <div className="mt-2 space-y-2">
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {media.map((m) => (
+          {media.filter((m) => m.kind !== "video").map((m) => (
             <button key={m.id} type="button" onClick={() => onChange({ mediaId: m.id })} aria-pressed={slide.mediaId === m.id} className={`shrink-0 overflow-hidden rounded-lg border ${slide.mediaId === m.id ? "border-accent ring-2 ring-accent" : "border-line"}`}>
               <img src={m.url} alt={m.title ?? ""} className="size-20 bg-background object-contain" />
             </button>
