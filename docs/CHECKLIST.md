@@ -137,7 +137,9 @@ Use a second email address (a Gmail you control) as a pretend client, and a thir
 - [ ] **New appointment**: pick a date; open times show soonest first. Add a long service: the list shrinks to times it fits.
 - [ ] **Other time**: pick one outside your hours or on top of a booking; confirm **Book anyway**; it saves.
 - [ ] New client with a deposit: lower it below the minimum, then try **Don't require one**.
-- [ ] **Settings → Payments → Deposits**: switch the team option off; the deposit choices disappear when booking.
+- [ ] **Settings → Policies**: switch the team deposit option off; the deposit choices disappear when booking.
+- [ ] **Settings → Policies**: set your real deposit amounts, notice hours and fees; check the client wording at the bottom.
+- [ ] Move an appointment to an **Other time** on top of another booking; confirm **Move anyway**.
 - [ ] **Team** → the pretend employee → **Access**: turn off *Lower prices*; at their checkout a lower price is refused.
 - [ ] **Team → What each role can do**: turn off *Move and cancel* for Stylist; the buttons disappear for them.
 
