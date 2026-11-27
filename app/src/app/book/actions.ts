@@ -18,6 +18,7 @@ import type { PublicBusiness, PublicService } from "@/lib/data/public-booking";
 import { salonOpenings } from "@/lib/discovery/openings";
 import { notifyAppointment, notifyStaff } from "@/lib/notify/events";
 import { checkPromo } from "@/lib/promo/server";
+import { welcomeReferral } from "@/lib/promo/rewards";
 import { promoLabel } from "@/lib/promo/promo";
 import { linePrice } from "@/lib/schedule/plan";
 import { cleanEntry } from "@/lib/data/waitlist";
@@ -94,6 +95,8 @@ export interface OnlineBookingRequest {
   textOk?: boolean;
   /** Promo code typed by the client. */
   promoCode?: string;
+  /** Friend's referral code from the booking link. */
+  ref?: string;
   /** Honeypot: real people leave this empty. */
   website?: string;
   /** "Remember my favorites": saved on the client record. */
@@ -179,6 +182,8 @@ export async function submitOnlineBooking(req: OnlineBookingRequest): Promise<On
       .single();
     if (error) return { ok: false, error: "Couldn't save your details. Please try again." };
     clientId = data.id as string;
+    // New client from a friend's link: welcome reward, and the friend is rewarded after the first visit.
+    if (req.ref) await welcomeReferral(admin, b.id, clientId, req.ref.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 16), todayIn(b.timezone)).catch(() => null);
   } else {
     const patch: Record<string, unknown> = {};
     if (email && !match?.email) patch.email = email;

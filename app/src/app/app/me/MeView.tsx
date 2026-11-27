@@ -17,7 +17,9 @@ const btn = "rounded-lg border border-line px-3 py-2 text-sm disabled:opacity-50
 const primary = "rounded-lg bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-50";
 
 /** The customer's own page: every salon they use, upcoming visits, balances, history and preferences. */
-export default function MeView({ me, salons, waiting = [], packages = [] }: { me: CustomerHome; salons: PortalData[]; waiting?: Waiting[]; packages?: { id: string; text: string; salon: string }[] }) {
+export type Perks = { salon: string; card: { filled: number; toGo: number; visits: number; reward: string } | null; rewards: { id: string; label: string; until: string | null }[]; refLink: string | null; friend: string; you: string };
+
+export default function MeView({ me, salons, waiting = [], packages = [], perks = [] }: { me: CustomerHome; salons: PortalData[]; waiting?: Waiting[]; packages?: { id: string; text: string; salon: string }[]; perks?: Perks[] }) {
   const upcoming = salons.flatMap((d) => d.upcoming.map((a) => ({ a, d }))).sort((x, y) => x.a.start.localeCompare(y.a.start));
   const past = salons.flatMap((d) => d.past.map((p) => ({ p, d }))).sort((x, y) => y.p.start.localeCompare(x.p.start)).slice(0, 20);
   const owed = salons.filter((d) => d.balance > 0);
@@ -69,6 +71,8 @@ export default function MeView({ me, salons, waiting = [], packages = [] }: { me
             <Upcoming key={a.id} a={a} tz={d.salon.timezone} policy={d.policy} salonPhone={d.salon.phone} salon={many || !me.preferredSalon ? d.salon : null} />
           ))}
         </section>
+
+        {perks.map((p) => <PerksCard key={p.salon} p={p} many={many} />)}
 
         {packages.length > 0 && (
           <section className={card}>
@@ -496,5 +500,58 @@ function DateBlock({ day, time, tz }: { day: string; time: Date; tz: string }) {
       <span className="font-display text-3xl leading-none">{Number(day.slice(8))}</span>
       <span className="mt-1 font-mono text-[11px] text-muted">{formatTime(time, tz)}</span>
     </div>
+  );
+}
+
+function PerksCard({ p, many }: { p: Perks; many: boolean }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <section className={`${card} space-y-3`}>
+      <h2 className="font-semibold">Rewards{many ? ` · ${p.salon}` : ""}</h2>
+      {p.rewards.length > 0 && (
+        <ul className="space-y-1">
+          {p.rewards.map((r) => (
+            <li key={r.id} className="rounded-lg bg-accent/15 px-3 py-2 text-sm">
+              🎁 <strong>{r.label}</strong>
+              <span className="text-muted">{r.until ? ` · use by ${r.until}` : ""} · taken off at checkout</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {p.card && (() => {
+        const c = p.card;
+        return (
+        <div>
+          <div className="flex gap-1.5" role="img" aria-label={`Loyalty card: ${c.filled} of ${c.visits} visits`}>
+            {Array.from({ length: c.visits }, (_, i) => (
+              <span key={i} className={`flex size-7 items-center justify-center rounded-full border-2 text-[10px] ${i < c.filled ? "border-foreground bg-foreground text-background" : "border-line"}`}>{i < c.filled ? "✓" : ""}</span>
+            ))}
+          </div>
+          <p className="mt-1 text-sm text-muted">{c.toGo === 1 ? "Your next visit" : `${c.toGo} more visits`} earns {c.reward}.</p>
+        </div>
+        );
+      })()}
+      {p.refLink && (
+        <div className="text-sm">
+          <p>
+            <strong>Give {p.friend}, get {p.you}.</strong> Share your link: friends get {p.friend} their first visit, and you get {p.you} after they come in.
+          </p>
+          <button
+            className={`${btn} mt-2`}
+            onClick={async () => {
+              try {
+                if (navigator.share) await navigator.share({ text: `Book at ${p.salon} with my link and get ${p.friend} your first visit:`, url: p.refLink! });
+                else {
+                  await navigator.clipboard.writeText(p.refLink!);
+                  setCopied(true);
+                }
+              } catch {}
+            }}
+          >
+            {copied ? "Link copied" : "Share my link"}
+          </button>
+        </div>
+      )}
+    </section>
   );
 }

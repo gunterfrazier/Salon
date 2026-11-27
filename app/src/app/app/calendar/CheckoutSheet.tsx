@@ -4,7 +4,9 @@ import { useEffect, useState, useTransition } from "react";
 import { checkoutTotals, tipPresets } from "@/lib/checkout/settle";
 import type { CalAppointment, CalendarData } from "@/lib/data/calendar-types";
 import { money } from "@/lib/format";
-import { checkoutAppointment, lookupGiftCard, packagesForCheckout, promoForCheckout, sellableProducts } from "./actions";
+import { checkoutAppointment, lookupGiftCard, packagesForCheckout, promoForCheckout, rewardsForCheckout, sellableProducts } from "./actions";
+import type { Reward } from "@/lib/promo/rewards";
+import { promoDiscounts } from "@/lib/promo/promo";
 import type { ClientPackageInfo } from "@/lib/data/prepaid";
 import { Row, Sheet, toCents } from "./CloseSheet";
 
@@ -30,9 +32,12 @@ export default function CheckoutSheet({ a, data, onClose, onDone }: { a: CalAppo
   const [promoCode, setPromoCode] = useState("");
   const [promo, setPromo] = useState<{ id: string; code: string; label: string; total: number } | null>(null);
   const [promoMsg, setPromoMsg] = useState<string | null>(null);
+  const [rewards, setRewards] = useState<Reward[]>([]);
+  const [reward, setReward] = useState<{ id: string; label: string; total: number } | null>(null);
   useEffect(() => {
     sellableProducts().then(setCatalog).catch(() => setCatalog([]));
     packagesForCheckout(a.id).then(setPackages).catch(() => setPackages([]));
+    rewardsForCheckout(a.id).then(setRewards).catch(() => setRewards([]));
   }, [a.id]);
   const packageLeft = (id: string) => (packages.find((p) => p.id === id)?.left ?? 0) - Object.values(uses).filter((x) => x === id).length;
   const retailCents = retail.reduce((n, r) => n + Math.round(Number(r.qty || 0) * toCents(r.price || "0")), 0);
@@ -71,6 +76,7 @@ export default function CheckoutSheet({ a, data, onClose, onDone }: { a: CalAppo
         gift: gift && giftCents > 0 ? { cardId: gift.id, cents: giftCents } : null,
         packageUses: Object.entries(uses).map(([lineId, packageId]) => ({ lineId, packageId })),
         promo: promo ? { id: promo.id, cents: promo.total } : null,
+        reward: reward ? { id: reward.id, cents: reward.total } : null,
       });
       if (res.ok) onDone();
       else setError(res.error);
@@ -134,6 +140,49 @@ export default function CheckoutSheet({ a, data, onClose, onDone }: { a: CalAppo
           </label>
         ))}
       </section>
+
+      {(rewards.length > 0 || reward) && (
+        <section className="space-y-2 rounded-xl border border-accent/50 bg-accent/10 p-3">
+          <h3 className="text-sm font-semibold">Rewards</h3>
+          {reward ? (
+            <p className="flex flex-wrap items-center justify-between gap-2 text-sm">
+              <span>{reward.label}: −{money(reward.total)}</span>
+              <button
+                type="button"
+                className="underline"
+                onClick={() => {
+                  setPrices(Object.fromEntries(a.services.map((x) => [x.id, (x.finalPrice / 100).toFixed(2)])));
+                  setReward(null);
+                  setPromo(null);
+                  setPaid(null);
+                }}
+              >
+                Remove
+              </button>
+            </p>
+          ) : (
+            rewards.map((r) => (
+              <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <span>{r.label}{r.expiresOn ? <span className="text-muted"> · until {r.expiresOn}</span> : null}</span>
+                <button
+                  type="button"
+                  className="rounded-lg bg-foreground px-3 py-1.5 font-semibold text-background"
+                  onClick={() => {
+                    const lines = a.services.map((x, i) => ({ serviceId: x.serviceId, cents: uses[x.id] ? 0 : Number.isFinite(priceCents[i]) ? priceCents[i] : 0 }));
+                    const d = promoDiscounts({ id: r.id, code: "", description: null, kind: r.discountKind, value: r.value, serviceIds: null, newClientsOnly: false, minSpendCents: 0, startsOn: null, endsOn: null, maxUses: null, perClient: 1, active: true }, lines);
+                    if (d.problem || d.total === 0) return;
+                    setPrices(Object.fromEntries(a.services.map((x, i) => [x.id, ((lines[i].cents - d.perLine[i]) / 100).toFixed(2)])));
+                    setReward({ id: r.id, label: r.label, total: d.total });
+                    setPaid(null);
+                  }}
+                >
+                  Use
+                </button>
+              </div>
+            ))
+          )}
+        </section>
+      )}
 
       <section className="space-y-1">
         {promo ? (

@@ -6,10 +6,12 @@ import { loadClosedChecker, loadPublicBusiness, loadPublicServices } from "@/lib
 import { policyText } from "@/lib/policy/text";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { todayIn } from "@/lib/time/zone";
+import { loadLoyalty } from "@/lib/promo/rewards";
+import { rewardLabel } from "@/lib/promo/loyalty";
 
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ services?: string; staff?: string; date?: string; time?: string }> };
+type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ services?: string; staff?: string; date?: string; time?: string; ref?: string }> };
 
 export async function generateMetadata({ params }: Props) {
   const b = await loadPublicBusiness({ slug: (await params).slug });
@@ -30,8 +32,20 @@ export default async function SalonBookPage({ params, searchParams }: Props) {
     const { data: c } = await createAdminClient().from("customers").select("first_name,last_name,phone,email").eq("id", who.customerId).single();
     if (c) prefill = { firstName: c.first_name ?? "", lastName: c.last_name ?? "", phone: c.phone ?? "", email: c.email ?? who.user.email ?? "" };
   }
+  // A friend's referral link (?ref=CODE): show what the new client gets.
+  let referral: { code: string; from: string; reward: string } | null = null;
+  const ref = (sp.ref ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 16);
+  if (ref.length >= 4) {
+    const db = createAdminClient();
+    const s = await loadLoyalty(db, b.id);
+    if (s.referral.enabled) {
+      const { data: r } = await db.from("clients").select("first_name").eq("business_id", b.id).eq("referral_code", ref).maybeSingle();
+      if (r) referral = { code: ref, from: r.first_name, reward: rewardLabel(s.referral.friend) };
+    }
+  }
   return (
     <BookingWizard
+      referral={referral}
       salon={b.slug}
       business={{ name: b.name, timezone: b.timezone, hours: b.hours, policy: b.policy, rules: b.rules }}
       services={services}

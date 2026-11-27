@@ -38,8 +38,7 @@ const input = "w-full rounded-xl border border-line bg-surface px-4 py-3 text-ba
 const STAGES = { consult: 0, chemical: 1, treatment: 2, cut: 3, style: 4, wax: 5, fee: 9 };
 
 export default function BookingWizard({
-  salon, business, services, dates, policyLines, initialPicked = [], prefill, stylists = [], initialStaff = null, initialSlot = null,
-}: {
+  salon, business, services, dates, policyLines, initialPicked = [], prefill, stylists = [], initialStaff = null, initialSlot = null, referral = null}: {
   /** The salon's web address (slug). */
   salon: string;
   business: { name: string; timezone: string; hours: Hours; policy: PolicySettings; rules: BundleRule[] };
@@ -55,6 +54,8 @@ export default function BookingWizard({
   initialStaff?: string | null;
   /** An opening chosen elsewhere (Find): go straight to details. */
   initialSlot?: { date: string; time: string } | null;
+  /** Arrived from a friend's referral link. */
+  referral?: { code: string; from: string; reward: string } | null;
 }) {
   const [staffId, setStaffId] = useState<string>(initialStaff ?? "any");
   const [step, setStep] = useState<Step>(initialSlot && initialPicked.length ? "details" : "services");
@@ -199,7 +200,7 @@ export default function BookingWizard({
     setError(null);
     startSaving(async () => {
       const fav: Favorites | null = remember ? cleanFavorites({ serviceIds: ordered.map((s) => s.id), weekdays: criteria.weekdays, block: criteria.block }) : null;
-      const r = await submitOnlineBooking({ salon, serviceIds: ordered.map((s) => s.id), staffId, date: date!, time: time!, ...f, agreed, textOk, promoCode: promo?.code, favorites: fav ?? undefined });
+      const r = await submitOnlineBooking({ salon, serviceIds: ordered.map((s) => s.id), staffId, date: date!, time: time!, ...f, agreed, textOk, promoCode: promo?.code, ref: referral?.code, favorites: fav ?? undefined });
       if (r.ok) {
         writeFavorites(fav);
         setDone(r);
@@ -227,6 +228,11 @@ export default function BookingWizard({
     <header className="mb-5">
       <p className="text-sm text-muted">Book online</p>
       <h1 className="font-display text-3xl">{business.name}</h1>
+      {referral && (
+        <p className="mt-3 rounded-2xl border border-accent/50 bg-accent/10 px-4 py-3 text-sm">
+          <strong>{referral.from}</strong> sent you! New clients get <strong>{referral.reward}</strong> their first visit, taken off at checkout.
+        </p>
+      )}
     </header>
   );
 

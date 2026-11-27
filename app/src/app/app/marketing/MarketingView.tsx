@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import QRCode, { downloadQR } from "@/components/QRCode";
 import { SOCIAL_KEYS, SOCIAL_LABEL, type Social } from "@/lib/social";
-import { savePromo, saveSocial, setPromoActive } from "./actions";
+import { saveLoyalty, savePromo, saveSocial, setPromoActive } from "./actions";
+import { DEFAULT_LOYALTY, rewardLabel, type LoyaltySettings, type RewardValue } from "@/lib/promo/loyalty";
 import { promoLabel, type Promo } from "@/lib/promo/promo";
 import { money } from "@/lib/format";
 
@@ -13,7 +14,7 @@ type PromoRow = Promo & { uses: number; saved: number };
 const btn = "rounded-full border border-line px-3 py-1.5 text-sm hover:bg-background";
 const input = "w-full rounded-xl border border-line bg-background px-3 py-2.5 text-base";
 
-export default function MarketingView({ salon, pageUrl, bookUrl, googleReview, social, promos = [], services = [] }: { salon: string; pageUrl: string; bookUrl: string; googleReview: string | null; social: Record<string, string>; promos?: PromoRow[]; services?: { id: string; name: string }[] }) {
+export default function MarketingView({ salon, pageUrl, bookUrl, googleReview, social, promos = [], services = [], loyalty = DEFAULT_LOYALTY }: { salon: string; pageUrl: string; bookUrl: string; googleReview: string | null; social: Record<string, string>; promos?: PromoRow[]; services?: { id: string; name: string }[]; loyalty?: LoyaltySettings }) {
   const codes = [
     { key: "book", title: "Book online", hint: "Mirror clings, cards, receipts, flyers", url: bookUrl },
     { key: "page", title: "Your salon page", hint: "Instagram and TikTok bio, business cards", url: pageUrl },
@@ -68,6 +69,8 @@ export default function MarketingView({ salon, pageUrl, bookUrl, googleReview, s
       </section>
 
       <Promos promos={promos} services={services} bookUrl={bookUrl} />
+
+      <LoyaltyForm initial={loyalty} />
 
       <SocialForm social={social} />
     </main>
@@ -236,5 +239,81 @@ function PromoForm({ p, services, onClose }: { p: PromoRow | null; services: { i
         <button className={btn} onClick={onClose}>Cancel</button>
       </div>
     </div>
+  );
+}
+
+function RewardInput({ value, onChange, label }: { value: RewardValue; onChange: (v: RewardValue) => void; label: string }) {
+  return (
+    <label className="text-sm font-medium">
+      {label}
+      <div className="mt-1 flex gap-2">
+        <select className={`${input} w-24`} value={value.kind} onChange={(e) => onChange({ kind: e.target.value as RewardValue["kind"], value: e.target.value === "percent" ? 10 : 1000 })} aria-label={`${label}: kind`}>
+          <option value="amount">$ off</option>
+          <option value="percent">% off</option>
+        </select>
+        <input className={input} inputMode="decimal" aria-label={`${label}: amount`} value={value.kind === "amount" ? String(value.value / 100) : String(value.value)} onChange={(e) => onChange({ ...value, value: value.kind === "amount" ? Math.round(Number(e.target.value || 0) * 100) : Math.round(Number(e.target.value || 0)) })} />
+      </div>
+    </label>
+  );
+}
+
+function LoyaltyForm({ initial }: { initial: LoyaltySettings }) {
+  const [s, setS] = useState<LoyaltySettings>(initial);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [pending, start] = useTransition();
+  return (
+    <section className="space-y-4 rounded-2xl border border-line bg-surface p-4">
+      <h2 className="font-semibold">Loyalty &amp; referrals</h2>
+      <div className="space-y-3 rounded-xl border border-line p-3">
+        <label className="flex items-center gap-2 font-medium">
+          <input type="checkbox" className="size-5" checked={s.card.enabled} onChange={(e) => setS({ ...s, card: { ...s.card, enabled: e.target.checked } })} /> Punch card
+        </label>
+        {s.card.enabled && (
+          <div className="grid gap-2 sm:grid-cols-2">
+            <label className="text-sm font-medium">
+              Every
+              <div className="mt-1 flex items-center gap-2">
+                <input className={`${input} w-20`} inputMode="numeric" value={s.card.visits} onChange={(e) => setS({ ...s, card: { ...s.card, visits: Number(e.target.value) || 0 } })} aria-label="Visits" />
+                <span>paid visits</span>
+              </div>
+            </label>
+            <RewardInput label="Reward" value={s.card.reward} onChange={(v) => setS({ ...s, card: { ...s.card, reward: v } })} />
+            <p className="text-xs text-muted sm:col-span-2">Clients see their card on their home page. The reward is offered at checkout after their {s.card.visits}th visit: {rewardLabel(s.card.reward)}.</p>
+          </div>
+        )}
+      </div>
+      <div className="space-y-3 rounded-xl border border-line p-3">
+        <label className="flex items-center gap-2 font-medium">
+          <input type="checkbox" className="size-5" checked={s.referral.enabled} onChange={(e) => setS({ ...s, referral: { ...s.referral, enabled: e.target.checked } })} /> Referrals
+        </label>
+        {s.referral.enabled && (
+          <div className="grid gap-2 sm:grid-cols-2">
+            <RewardInput label="New friend gets" value={s.referral.friend} onChange={(v) => setS({ ...s, referral: { ...s.referral, friend: v } })} />
+            <RewardInput label="Client who referred gets" value={s.referral.referrer} onChange={(v) => setS({ ...s, referral: { ...s.referral, referrer: v } })} />
+            <p className="text-xs text-muted sm:col-span-2">Every client gets a personal booking link on their home page. The friend&rsquo;s reward is offered at their first checkout; the referrer&rsquo;s after that first visit.</p>
+          </div>
+        )}
+      </div>
+      <label className="block text-sm font-medium">
+        Rewards expire
+        <select className={`${input} mt-1 sm:w-60`} value={s.expireMonths ?? ""} onChange={(e) => setS({ ...s, expireMonths: e.target.value ? Number(e.target.value) : null })}>
+          <option value="">Never</option>
+          {[3, 6, 12, 24].map((m) => <option key={m} value={m}>After {m} months</option>)}
+        </select>
+      </label>
+      {msg && <p role={msg.ok ? "status" : "alert"} className={`text-sm ${msg.ok ? "" : "font-semibold text-red-700 dark:text-red-300"}`}>{msg.text}</p>}
+      <button
+        className="rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-background disabled:opacity-50"
+        disabled={pending}
+        onClick={() =>
+          start(async () => {
+            const r = await saveLoyalty(s);
+            setMsg(r.ok ? { ok: true, text: "Saved." } : { ok: false, text: r.error });
+          })
+        }
+      >
+        {pending ? "Saving…" : "Save"}
+      </button>
+    </section>
   );
 }

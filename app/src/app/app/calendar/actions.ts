@@ -5,6 +5,7 @@ import { buildBooking, toBookable, type ServiceRow } from "@/lib/booking/build";
 import { checkoutTotals, settleCancel, splitGift } from "@/lib/checkout/settle";
 import { findGiftCard, usablePackages, type ClientPackageInfo } from "@/lib/data/prepaid";
 import { checkPromo } from "@/lib/promo/server";
+import { afterCheckout, availableRewards, type Reward } from "@/lib/promo/rewards";
 import { promoLabel } from "@/lib/promo/promo";
 import { cancelDefaults, type ChargeOption } from "@/lib/policy/engine";
 import { denied, getContext } from "@/lib/context";
@@ -316,6 +317,8 @@ export interface CheckoutRequest {
   packageUses?: { lineId: string; packageId: string }[];
   /** Promo code applied at checkout (prices already reduced). */
   promo?: { id: string; cents: number } | null;
+  /** Loyalty / referral reward used (prices already reduced). */
+  reward?: { id: string; cents: number } | null;
 }
 
 export async function checkoutAppointment(req: CheckoutRequest): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -380,6 +383,10 @@ export async function checkoutAppointment(req: CheckoutRequest): Promise<{ ok: t
   if (req.promo && /^[0-9a-f-]{36}$/.test(req.promo.id) && Number.isInteger(req.promo.cents) && req.promo.cents > 0) {
     await ctx.supabase.from("promo_redemptions").upsert({ business_id: ctx.business.id, promo_id: req.promo.id, client_id: a.clientId ?? null, appointment_id: req.appointmentId, discount_cents: req.promo.cents }, { onConflict: "promo_id,appointment_id", ignoreDuplicates: true });
   }
+  if (req.reward && /^[0-9a-f-]{36}$/.test(req.reward.id) && Number.isInteger(req.reward.cents) && req.reward.cents > 0) {
+    await ctx.supabase.from("client_rewards").update({ redeemed_at: new Date().toISOString(), redeemed_appointment_id: req.appointmentId, redeemed_cents: req.reward.cents }).eq("id", req.reward.id).eq("client_id", a.clientId).is("redeemed_at", null);
+  }
+  await afterCheckout(ctx.supabase, ctx.business.id, req.appointmentId, a.clientId, todayIn(ctx.business.timezone));
   await notifyAppointment(ctx.business.id, req.appointmentId, "checked_out", {
     lines: [...a.lines.map((l, i) => ({ name: free.has(l.id) ? `${l.name} (package visit)` : l.name, cents: prices[i] })), ...retail.names],
     tip: t.tip,
@@ -578,4 +585,12 @@ export async function promoForCheckout(appointmentId: string, code: string, line
   const r = await checkPromo(ctx.supabase, ctx.business.id, code, { clientId: a.clientId ?? null, date: todayIn(ctx.business.timezone), lines: mine.map((l) => ({ serviceId: l.serviceId, cents: l.cents })), ignoreAppointment: appointmentId });
   if (!r.ok) return r;
   return { ok: true, promoId: r.promo.id, code: r.promo.code, label: r.promo.description ?? promoLabel(r.promo), off: Object.fromEntries(mine.map((l, i) => [l.id, r.perLine[i]])), total: r.total };
+}
+
+/** Loyalty and referral rewards the client can use at this checkout. */
+export async function rewardsForCheckout(appointmentId: string): Promise<Reward[]> {
+  const ctx = await getContext();
+  if (!ctx.can("checkout") || !/^[0-9a-f-]{36}$/.test(appointmentId)) return [];
+  const { data: a } = await ctx.supabase.from("appointments").select("client_id").eq("id", appointmentId).eq("business_id", ctx.business.id).maybeSingle();
+  return a ? availableRewards(ctx.supabase, ctx.business.id, a.client_id, todayIn(ctx.business.timezone)) : [];
 }
