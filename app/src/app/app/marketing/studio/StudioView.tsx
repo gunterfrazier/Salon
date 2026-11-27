@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { onAccent } from "@/lib/branding";
 import type { Wrapped } from "@/lib/studio/wrapped";
 import { draw, type Fonts, type Template } from "./draw";
+import { uploadScreenImage } from "../../screens/actions";
 
 type Props = {
   salon: string;
@@ -163,6 +164,23 @@ export default function StudioView(p: Props) {
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
 
+  /** Save the design to the picture library for salon screens. */
+  async function toScreens() {
+    setBusy(true);
+    const b = await blob();
+    if (!b) {
+      setBusy(false);
+      return setNote("That photo can't be saved into an image. Try a different one.");
+    }
+    const f = new FormData();
+    f.set("file", new File([b], fileName, { type: "image/png" }));
+    f.set("source", "studio");
+    f.set("title", `${TEMPLATES.find((t) => t.key === template)?.label ?? "Design"}${story ? " (story)" : ""}`);
+    const r = await uploadScreenImage(f);
+    setBusy(false);
+    setNote(r.ok ? "Sent to Screens. Add it to a playlist with a Picture slide." : r.error);
+  }
+
   async function share() {
     setBusy(true);
     const b = await blob();
@@ -277,6 +295,7 @@ export default function StudioView(p: Props) {
             <button onClick={download} disabled={busy || !fonts} className="flex-1 rounded-full bg-accent px-4 py-3 font-semibold text-on-accent disabled:opacity-50">Save image</button>
             <button onClick={share} disabled={busy || !fonts} className="flex-1 rounded-full border border-line px-4 py-3 font-semibold disabled:opacity-50">Share</button>
           </div>
+          <button onClick={toScreens} disabled={busy || !fonts} className="w-full rounded-full border border-line px-4 py-3 font-semibold disabled:opacity-50">Send to salon screens</button>
           {note && <p className="text-sm text-muted" role="status">{note}</p>}
           <p className="text-xs text-muted">Tip: on Instagram, add a link sticker to your story pointing to your booking link.</p>
         </aside>
