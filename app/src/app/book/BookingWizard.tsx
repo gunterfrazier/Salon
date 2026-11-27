@@ -13,7 +13,8 @@ import type { BundleRule } from "@/lib/pricing/discounts";
 import { suggestOrder } from "@/lib/schedule/plan";
 import { formatDay, formatSlot, parseHHMM, toHHMM, tzAbbrev, WEEKDAY_KEYS, zonedToUtc, zoneLabel } from "@/lib/time/zone";
 import { NEW_CLIENT_STATE } from "@/lib/ui/standing";
-import { findPublicOpenings, getTimes, joinWaitlistOnline, submitOnlineBooking, type OnlineBookingResult } from "./actions";
+import MonthCalendar from "./MonthCalendar";
+import { dayCounts, findPublicOpenings, getTimes, joinWaitlistOnline, submitOnlineBooking, type OnlineBookingResult } from "./actions";
 
 const FAV_KEY = "chairvana.favorites.v1";
 function readFavorites(): Favorites | null {
@@ -67,6 +68,8 @@ export default function BookingWizard({
   /** Joining the waitlist instead of booking a time. */
   const [waiting, setWaiting] = useState(false);
   const [waitWeeks, setWaitWeeks] = useState(4);
+  /** Open start times per day, for the calendar dots. */
+  const [counts, setCounts] = useState<Record<string, number> | null>(null);
   const [joined, setJoined] = useState<string | null>(null);
   const [criteria, setCriteria] = useState<SearchCriteria>({ weekdays: [], block: "any", start: { kind: "next" } });
   const [openings, setOpenings] = useState<Opening[] | null>(null);
@@ -110,6 +113,21 @@ export default function BookingWizard({
     setCriteria({ weekdays: fav.weekdays.filter((d) => openDays.includes(d)), block: fav.block, start: { kind: "next" } });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Calendar dots: how open each day is for these services and stylist.
+  const countsKey = step === "when" ? JSON.stringify([ordered.map((s) => s.id), staffId]) : "";
+  useEffect(() => {
+    if (!countsKey) return;
+    let live = true;
+    const [ids, who] = JSON.parse(countsKey) as [string[], string];
+    if (!ids.length) return;
+    dayCounts(salon, ids, who)
+      .then((c) => live && setCounts(c))
+      .catch(() => live && setCounts(null));
+    return () => {
+      live = false;
+    };
+  }, [countsKey, salon]);
 
   // Search whenever services or criteria change.
   const searchKey = JSON.stringify([ordered.map((s) => s.id), criteria, staffId]);
@@ -327,36 +345,98 @@ export default function BookingWizard({
       )}
 
       {step === "when" && stylists.length > 1 && (
-        <section className="mb-4 rounded-2xl border border-line bg-surface p-4">
+        <section className="mb-4">
           <h2 className="font-semibold">With</h2>
-          <div className="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-label="Stylist">
-            {[{ id: "any", name: "Anyone available", title: null, serviceIds: null }, ...stylists]
+          <div className="-mx-1 mt-2 flex gap-3 overflow-x-auto px-1 pb-1" role="radiogroup" aria-label="Stylist">
+            {[{ id: "any", name: "No preference", title: null, serviceIds: null }, ...stylists]
               .filter((s) => s.id === "any" || !s.serviceIds || ordered.every((o) => s.serviceIds!.includes(o.id)))
-              .map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={staffId === s.id}
-                  onClick={() => {
-                    setStaffId(s.id);
-                    setDate(null);
-                    setTime(null);
-                    setTimes(null);
-                  }}
-                  className={`rounded-xl border px-3 py-2 text-left text-sm ${staffId === s.id ? "border-foreground bg-foreground font-semibold text-background" : "border-line"}`}
-                >
-                  {s.name}
-                  {s.title && <span className="block text-xs opacity-80">{s.title}</span>}
-                </button>
-              ))}
+              .map((s) => {
+                const on = staffId === s.id;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    onClick={() => {
+                      setStaffId(s.id);
+                      setDate(null);
+                      setTime(null);
+                      setTimes(null);
+                      setCounts(null);
+                    }}
+                    className="flex w-20 shrink-0 flex-col items-center gap-1 text-center text-xs"
+                  >
+                    <span className={`flex size-14 items-center justify-center rounded-full border-2 text-lg font-semibold ${on ? "border-foreground bg-foreground text-background" : "border-line bg-surface"}`}>
+                      {s.id === "any" ? (
+                        <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><circle cx="9" cy="9" r="3.2" /><circle cx="16" cy="10" r="2.6" /><path d="M3.5 19c.7-3 2.8-4.6 5.5-4.6s4.8 1.6 5.5 4.6M14.5 14.6c2.6-.4 5 .9 5.8 4.2" /></svg>
+                      ) : (
+                        s.name.split(" ").map((w) => w[0]).slice(0, 2).join("")
+                      )}
+                    </span>
+                    <span className={on ? "font-semibold" : "text-muted"}>{s.name.split(" ")[0]}</span>
+                  </button>
+                );
+              })}
           </div>
         </section>
       )}
 
       {step === "when" && (
-        <section className="mb-6 space-y-4 rounded-2xl border border-line bg-surface p-4" aria-live="polite">
-          <h2 className="font-semibold">Find a time</h2>
+        <section className="space-y-4">
+          <div className="rounded-2xl border border-line bg-surface p-4">
+            <h2 className="font-semibold">Select date &amp; time</h2>
+            <p className="text-sm text-muted">All times are {zoneLabel(business.timezone, date ? zonedToUtc(date, 12 * 60, business.timezone) : new Date())}, the salon&rsquo;s local time.</p>
+            <div className="mt-3">
+              <MonthCalendar dates={dates} counts={counts} selected={date} onPick={pickDate} />
+            </div>
+          </div>
+          {date && (
+            <div>
+              <h2 className="font-semibold">{formatDay(date, { weekday: "long", month: "long", day: "numeric" })}</h2>
+              {loading && <p className="mt-2 text-muted">Finding open times…</p>}
+              {!loading && times && times.length === 0 && <p className="mt-2 text-muted">No open times that day. Try another day.</p>}
+              {!loading && times && times.length > 0 && (
+                <div className="mt-2 space-y-3">
+                  {(
+                    [
+                      ["Morning", 0, 720],
+                      ["Afternoon", 720, 1020],
+                      ["Evening", 1020, 1440],
+                    ] as const
+                  ).map(([label, lo, hi]) => {
+                    const list = times.filter((t) => parseHHMM(t) >= lo && parseHHMM(t) < hi);
+                    if (!list.length) return null;
+                    return (
+                      <div key={label}>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</p>
+                        <div className="mt-1.5 flex flex-wrap gap-2">
+                          {list.map((t) => (
+                            <button
+                              key={t}
+                              type="button"
+                              onClick={() => setTime(t)}
+                              aria-pressed={time === t}
+                              className={`rounded-full border px-4 py-2 font-mono text-sm ${time === t ? "border-foreground bg-foreground text-background" : "border-line bg-surface hover:border-foreground"}`}
+                            >
+                              {formatSlot(date, parseHHMM(t), business.timezone)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
+      {step === "when" && (
+        <details className="mt-6 rounded-2xl border border-line bg-surface p-4" open={!!savedFav}>
+          <summary className="cursor-pointer font-semibold">Prefer certain days or times? Let us find one</summary>
+          <section className="mt-3 space-y-4" aria-live="polite">
           <SearchControls criteria={criteria} onChange={setCriteria} openDays={openDays} zone={tzAbbrev(new Date(), business.timezone)} />
           <div>
             {searching && <p className="text-sm text-muted">Finding openings…</p>}
@@ -379,50 +459,8 @@ export default function BookingWizard({
               </button>
             </div>
           )}
-        </section>
-      )}
-
-      {step === "when" && (
-        <section className="space-y-4">
-          <div>
-            <h2 className="font-semibold">Or pick a day</h2>
-            <p className="text-sm text-muted">All times are {zoneLabel(business.timezone, date ? zonedToUtc(date, 12 * 60, business.timezone) : new Date())}, the salon&rsquo;s local time.</p>
-            <div className="mt-2 flex gap-2 overflow-x-auto pb-2">
-              {dates.map((d) => (
-                <button
-                  key={d}
-                  onClick={() => pickDate(d)}
-                  aria-pressed={date === d}
-                  className={`shrink-0 rounded-xl border px-3 py-2 text-center ${date === d ? "border-accent bg-accent text-on-accent" : "border-line bg-surface"}`}
-                >
-                  <span className="block text-xs">{formatDay(d, { weekday: "short" })}</span>
-                  <span className="block font-semibold">{formatDay(d, { month: "short", day: "numeric" })}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          {date && (
-            <div>
-              <h2 className="font-semibold">{formatDay(date, { weekday: "long", month: "long", day: "numeric" })}</h2>
-              {loading && <p className="mt-2 text-muted">Finding open times…</p>}
-              {!loading && times && times.length === 0 && <p className="mt-2 text-muted">No open times that day. Try another day.</p>}
-              {!loading && times && times.length > 0 && (
-                <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
-                  {times.map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setTime(t)}
-                      aria-pressed={time === t}
-                      className={`rounded-xl border py-2.5 font-semibold ${time === t ? "border-accent bg-accent text-on-accent" : "border-line bg-surface"}`}
-                    >
-                      {formatSlot(date, parseHHMM(t), business.timezone)}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </section>
+          </section>
+        </details>
       )}
 
       {step === "details" && waiting && (

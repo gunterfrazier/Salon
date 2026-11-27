@@ -204,3 +204,10 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+/* Room for the phone tab bar at the bottom of every page that has one. */
+@media (max-width: 639px) {
+  body:has(.tabbar) {
+    padding-bottom: calc(4.75rem + env(safe-area-inset-bottom));
+  }
+}

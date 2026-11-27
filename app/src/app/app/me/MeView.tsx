@@ -4,11 +4,13 @@ import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import type { PortalAppt, PortalData } from "@/lib/data/portal";
 import { money } from "@/lib/format";
-import { formatDay, formatMinutes, formatTimeRange, parseHHMM, tzAbbrev, wallParts, zoneLabel, zonedToUtc } from "@/lib/time/zone";
+import { formatDay, formatMinutes, formatTime, formatTimeRange, parseHHMM, tzAbbrev, wallParts, zoneLabel, zonedToUtc } from "@/lib/time/zone";
 import { leaveWaitlist, myOpenings, portalCancel, portalMove, portalMoveOptions, portalUpdateContact, savePreferences, type Level } from "./actions";
 import { OpeningsCard } from "@/app/find/FindView";
 import type { SalonResult } from "@/lib/discovery/openings";
 import type { CustomerHome } from "@/lib/data/customer";
+import { ClientTabs } from "@/components/TabBar";
+import { BrandMark } from "@/components/Brand";
 
 const card = "rounded-xl border border-line bg-surface p-4";
 const btn = "rounded-lg border border-line px-3 py-2 text-sm disabled:opacity-50";
@@ -29,17 +31,18 @@ export default function MeView({ me, salons, waiting = [], packages = [] }: { me
     <>
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-2 px-4 py-3">
-          <div>
-            <p className="text-xs text-muted">Chairvana</p>
-            <p className="font-semibold">Hi{me.firstName ? `, ${me.firstName}` : ""}</p>
+          <div className="flex items-center gap-3">
+            <Link href="/" aria-label="Chairvana home"><BrandMark className="h-8 w-auto" /></Link>
+            <p className="font-display text-2xl">Hi{me.firstName ? `, ${me.firstName}` : ""}</p>
           </div>
-          <nav className="flex gap-1 text-sm">
+          <nav className="hidden gap-1 text-sm sm:flex">
             <Link href={home} className="rounded-lg bg-foreground px-3 py-2 font-semibold text-background">Book</Link>
             <Link href="/find" className="rounded-lg px-3 py-2 hover:bg-background">Find</Link>
             <Link href="/app/account" className="rounded-lg px-3 py-2 hover:bg-background">Account</Link>
           </nav>
         </div>
       </header>
+      <ClientTabs current="/app/me" bookHref={home} />
       <main className="mx-auto max-w-2xl space-y-4 px-4 py-4">
         {zones.length > 0 && <p className="text-xs text-muted">Times are {zones.map((z) => zoneLabel(z)).join(" / ")}.</p>}
 
@@ -93,20 +96,26 @@ export default function MeView({ me, salons, waiting = [], packages = [] }: { me
             <h2 className="font-semibold">Past visits</h2>
             <ul className="mt-2 divide-y divide-line text-sm">
               {past.map(({ p, d }) => (
-                <li key={p.id} className="flex flex-wrap justify-between gap-x-3 py-2">
-                  <span>
-                    {formatDay(wallParts(new Date(p.start), d.salon.timezone).date, { month: "short", day: "numeric", year: "numeric" })} · {p.services.join(", ")}
-                    {many && <span className="text-muted"> · {d.salon.name}</span>}
+                <li key={p.id} className="flex items-center gap-3 py-3">
+                  <span className="min-w-0 flex-1">
+                    <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${p.status === "completed" ? "bg-background text-muted" : "bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-200"}`}>
+                      {p.status === "completed" ? "Finished" : p.status === "cancelled" ? "Cancelled" : p.status === "no_show" ? "Missed" : p.status}
+                    </span>
+                    <span className="mt-1 block font-medium">{p.services.join(" + ")}</span>
+                    <span className="block text-muted">
+                      {formatDay(wallParts(new Date(p.start), d.salon.timezone).date, { month: "short", day: "numeric", year: "numeric" })}
+                      {p.status === "completed" ? ` · ${money(p.total)}` : ""}
+                      {many ? ` · ${d.salon.name}` : ""}
+                    </span>
                   </span>
-                  <span className="text-muted">{p.status === "completed" ? money(p.total) : p.status === "cancelled" ? "Cancelled" : p.status === "no_show" ? "Missed" : ""}</span>
+                  {p.serviceIds.length > 0 && (
+                    <Link href={`/s/${d.salon.slug}/book?services=${p.serviceIds.join(",")}`} className="shrink-0 rounded-full bg-foreground px-4 py-2 text-xs font-semibold text-background">
+                      Book again
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>
-            {bookAgain && (
-              <p className="mt-2 text-sm">
-                <Link className="underline" href={bookAgain}>Book {lastDone!.p.services.join(", ")} again</Link>
-              </p>
-            )}
           </section>
         )}
 
@@ -162,7 +171,7 @@ function OpeningsForYou({ me }: { me: CustomerHome }) {
   const load = (l: Level, text = service) =>
     start(async () => {
       setError(null);
-      const r = await myOpenings(l, text);
+      const r = await myOpenings(l, text).catch(() => ({ ok: false as const, error: "Couldn't load openings right now. Try again in a moment." }));
       if (r.ok) {
         setRes(r);
         if (!text) setService(r.services.join(" + "));
@@ -284,10 +293,17 @@ function Upcoming({ a, tz, policy, salonPhone, salon }: { a: PortalAppt; tz: str
 
   return (
     <article className={card}>
-      {salon && <p className="text-xs text-muted"><Link href={`/s/${salon.slug}`} className="underline">{salon.name}</Link></p>}
-      <p className="font-semibold">{formatDay(day, { weekday: "long", month: "long", day: "numeric" })}</p>
-      <p className="text-sm">{formatTimeRange(new Date(a.start), new Date(a.end), tz)}</p>
-      <p className="mt-1 text-sm text-muted">{a.services.map((s) => s.name).join(", ")} · est. {money(a.total)}</p>
+      <div className="flex gap-3">
+        <div className="min-w-0 flex-1">
+          <StatusBadge status={a.status} due={due} />
+          <p className="mt-1.5 font-semibold">{a.services.map((s) => s.name).join(" + ")}</p>
+          <p className="text-sm text-muted">
+            {formatTimeRange(new Date(a.start), new Date(a.end), tz)} · est. {money(a.total)}
+          </p>
+          {salon && <p className="text-sm text-muted"><Link href={`/s/${salon.slug}`} className="underline">{salon.name}</Link></p>}
+        </div>
+        <DateBlock day={day} time={new Date(a.start)} tz={tz} />
+      </div>
       {a.status === "pending" && due > 0 && (
         <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:bg-amber-950 dark:text-amber-100">
           Your time is held until your {money(due)} deposit arrives. <PayLinks text={a.payWith} />
@@ -317,7 +333,13 @@ function Upcoming({ a, tz, policy, salonPhone, salon }: { a: PortalAppt; tz: str
               {policy.lateCancelCharge === "full" ? `Per the salon's policy, the full ${money(a.total)} may be charged.` : "Per the salon's policy, a fee may be charged."} It also stays on your record.
             </p>
           ) : (
-            <p>Cancel this appointment? You&apos;re outside the {policy.lateCancelWindowHours}-hour window, so there&apos;s no charge.</p>
+            <>
+              <p className="font-display text-xl">Prefer to reschedule?</p>
+              <p>Plans change. You can pick a new time instead of cancelling. If you do cancel, you&apos;re outside the {policy.lateCancelWindowHours}-hour window, so there&apos;s no charge.</p>
+              {a.canChange && (
+                <button className={`${primary} w-full`} onClick={() => setMode("move")}>Reschedule appointment</button>
+              )}
+            </>
           )}
           <div className="flex gap-2">
             <button
@@ -329,7 +351,7 @@ function Upcoming({ a, tz, policy, salonPhone, salon }: { a: PortalAppt; tz: str
                 setMode("view");
               })}
             >
-              {pending ? "Cancelling…" : "Yes, cancel"}
+              {pending ? "Cancelling…" : "Cancel appointment"}
             </button>
             <button className={btn} onClick={() => setMode("view")}>Keep it</button>
           </div>
@@ -453,5 +475,26 @@ function PayLinks({ text }: { text: string | null }) {
         ),
       )}
     </span>
+  );
+}
+
+function StatusBadge({ status, due }: { status: string; due: number }) {
+  const [text, cls] =
+    status === "pending" && due > 0
+      ? ["Deposit due", "bg-amber-100 text-amber-950 dark:bg-amber-950 dark:text-amber-100"]
+      : status === "checked_in"
+        ? ["Checked in", "bg-accent/20 text-foreground"]
+        : ["Confirmed", "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200"];
+  return <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${cls}`}>{text}</span>;
+}
+
+/** Month / day / time, like a tear-off calendar. */
+function DateBlock({ day, time, tz }: { day: string; time: Date; tz: string }) {
+  return (
+    <div className="flex w-16 shrink-0 flex-col items-center justify-center border-l border-line pl-3 text-center">
+      <span className="text-xs text-muted">{formatDay(day, { month: "short" })}</span>
+      <span className="font-display text-3xl leading-none">{Number(day.slice(8))}</span>
+      <span className="mt-1 font-mono text-[11px] text-muted">{formatTime(time, tz)}</span>
+    </div>
   );
 }

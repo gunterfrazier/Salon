@@ -60,6 +60,19 @@ export async function getTimes(salon: string, date: string, serviceIds: string[]
   return { ok: true, times: [...all].sort((x, y) => x - y).map(toHHMM) };
 }
 
+/** Open start times per day for these services (for the calendar's dots). */
+export async function dayCounts(salon: string, serviceIds: string[], staffId?: string | null): Promise<Record<string, number>> {
+  const b = await loadPublicBusiness({ slug: salon });
+  if (!b || !Array.isArray(serviceIds) || !serviceIds.length || serviceIds.length > 8) return {};
+  const menu = await loadPublicServices(b.id);
+  const services = serviceIds.map((id) => menu.find((m) => m.id === id));
+  if (services.some((x) => !x) || !eligible(b, serviceIds, staffId).length) return {};
+  const all = await salonOpenings(b, services as PublicService[], { weekdays: [], block: "any", start: { kind: "next" } }, staffId, { limit: 5000, perDay: 40 });
+  const out: Record<string, number> = {};
+  for (const o of all) out[o.date] = (out[o.date] ?? 0) + 1;
+  return out;
+}
+
 export interface OnlineBookingRequest {
   /** The salon's web address (slug). */
   salon: string;

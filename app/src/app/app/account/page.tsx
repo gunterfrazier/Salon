@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppNav } from "@/components/AppNav";
+import { ClientTabs } from "@/components/TabBar";
+import { BrandMark } from "@/components/Brand";
 import { whoAmI } from "@/lib/auth/whoami";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signOutEverywhere } from "./actions";
@@ -35,9 +37,10 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
       ) : (
         <header className="border-b border-line bg-surface">
           <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
-            <span className="font-semibold">Chairvana</span>
+            <Link href="/" aria-label="Chairvana home"><BrandMark className="h-7 w-auto" /></Link>
             {who.kind === "customer" && <Link href="/app/me" className="text-sm underline">My appointments</Link>}
           </div>
+          {who.kind === "customer" && <ClientTabs current="/app/account" />}
         </header>
       )}
       <main className="mx-auto max-w-md space-y-6 px-4 py-6">

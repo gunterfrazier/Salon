@@ -1,3 +1,4 @@
+import { ClientTabs } from "@/components/TabBar";
 import SiteFooter from "@/components/SiteFooter";
 import { whoAmI } from "@/lib/auth/whoami";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -21,6 +22,7 @@ export default async function FindPage({ searchParams }: { searchParams: Promise
   return (
     <>
       <FindView initialWhere={where} initialMiles={miles} initialService={sp.service ?? ""} signedIn={signedIn} />
+      {signedIn && <ClientTabs current="/find" />}
       <SiteFooter />
     </>
   );

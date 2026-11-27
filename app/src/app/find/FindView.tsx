@@ -10,6 +10,7 @@ import { formatDay, formatMinutes, toHHMM, tzAbbrev, zonedToUtc } from "@/lib/ti
 import { searchArea, type AreaSearch } from "./actions";
 
 const input = "w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-base";
+const POPULAR = ["Women's cut", "Men's cut", "Color", "Highlights", "Blowout", "Balayage", "Kids cut", "Waxing"];
 
 /** Find salons and openings near a ZIP or city. */
 export default function FindView({ initialWhere, initialMiles, initialService, signedIn }: { initialWhere: string; initialMiles: number; initialService: string; signedIn: boolean }) {
@@ -34,7 +35,7 @@ export default function FindView({ initialWhere, initialMiles, initialService, s
   return (
     <main className="mx-auto max-w-2xl space-y-4 px-4 py-6">
       <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-3xl font-bold">Find a salon</h1>
+        <h1 className="font-display text-4xl">Find a salon</h1>
         <nav className="text-sm">
           {signedIn ? <Link href="/app/me" className="underline">My appointments</Link> : <><Link href="/app/login" className="underline">Sign in</Link> · <Link href="/signup" className="underline">Create an account</Link></>}
         </nav>
@@ -49,8 +50,15 @@ export default function FindView({ initialWhere, initialMiles, initialService, s
       >
         <label className="block text-sm font-medium">
           What do you need? (optional)
-          <input className={`${input} mt-1`} value={service} onChange={(e) => setService(e.target.value)} placeholder="Women's cut, highlights, blowout…" />
+          <input className={`${input} mt-1`} value={service} onChange={(e) => setService(e.target.value)} placeholder="Search services, e.g. highlights" />
         </label>
+        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" aria-label="Popular services">
+          {POPULAR.map((p) => (
+            <button key={p} type="button" onClick={() => setService(service === p ? "" : p)} aria-pressed={service === p} className={`shrink-0 rounded-full border px-3 py-1.5 text-sm ${service === p ? "border-foreground bg-foreground text-background" : "border-line"}`}>
+              {p}
+            </button>
+          ))}
+        </div>
         <div className="grid grid-cols-[1fr_8rem] gap-2">
           <label className="text-sm font-medium">
             Near
