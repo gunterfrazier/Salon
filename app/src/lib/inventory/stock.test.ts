@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { catalogLines, containersUsed, productsFromCatalog, reorderList, stockLevel, supplyCheck, usageLabel, type Product } from "./stock";
+import { catalogLines, containersUsed, productsFromCatalog, reorderList, stockLevel, supplyCheck, usageLabel, type Product, catalogItems, inInventory, searchCatalog } from "./stock";
 
 const base: Product = {
   id: "", kind: "color", brand: "Redken", line: "Shades EQ Gloss", shade: null, name: "", size: 2, unit: "oz", barcode: null,
@@ -54,5 +54,27 @@ describe("catalog", () => {
     const rows = productsFromCatalog(eq, [{ code: "09V", type: "gloss" }, { code: "nope" }], { size: 2, unit: "oz", vendor: "saloncentric", minQty: 1, maxQty: 3, costCents: null });
     expect(rows).toEqual([{ kind: "color", brand: "Redken", line: "Shades EQ Gloss", shade: "09V", name: "09V Platinum Ice", size: 2, unit: "oz", vendor: "saloncentric", min_qty: 1, max_qty: 3, cost_cents: null }]);
     expect(catalogLines().find((l) => l.line === "Kenra Simply Blonde")!.kind).toBe("lightener");
+  });
+});
+
+describe("catalog search", () => {
+  const items = catalogItems();
+  it("finds a shade code first, across lines and kinds", () => {
+    const r = searchCatalog(items, "6N");
+    expect(r[0].code).toBe("6N");
+    expect(r.every((i) => /6N/i.test(`${i.code} ${i.name ?? ""}`) || i.lineLabel.includes("6N"))).toBe(true);
+    expect(new Set(r.filter((i) => i.code === "6N").map((i) => i.lineLabel)).size).toBeGreaterThan(1);
+  });
+  it("narrows with more words", () => {
+    const r = searchCatalog(items, "shades eq 09v");
+    expect(r.length).toBeGreaterThan(0);
+    expect(r.every((i) => i.lineLabel.includes("Shades EQ") && i.code.startsWith("09V"))).toBe(true);
+    expect(r[0].code).toBe("09V");
+    expect(searchCatalog(items, "  ")).toEqual([]);
+  });
+  it("knows what's already in inventory", () => {
+    const i = searchCatalog(items, "kenra color permanent 6N")[0];
+    expect(inInventory(i, [{ brand: i.brand, line: `${i.line} Permanent`, shade: "6n", archived: false }])).toBe(true);
+    expect(inInventory(i, [{ brand: i.brand, line: `${i.line} Demi`, shade: "6N", archived: false }])).toBe(false);
   });
 });

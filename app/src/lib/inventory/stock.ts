@@ -137,7 +137,7 @@ export function catalogLines(): CatalogLine[] {
 /** Products to create for chosen shades of one catalog line (one per shade, or per type when a shade comes in two). */
 export function productsFromCatalog(
   line: CatalogLine,
-  pick: { code: string; type?: string }[],
+  pick: { code: string; type?: string; barcode?: string | null }[],
   opts: { size: number | null; unit: Unit; vendor: Vendor | null; minQty: number | null; maxQty: number | null; costCents: number | null },
 ) {
   const byCode = new Map(line.shades.map((s) => [s.code, s]));
@@ -159,6 +159,7 @@ export function productsFromCatalog(
         min_qty: opts.minQty,
         max_qty: opts.maxQty,
         cost_cents: opts.costCents,
+        ...(x.barcode ? { barcode: x.barcode.slice(0, 64) } : {}),
       };
     });
 }
@@ -173,4 +174,53 @@ export function lineTitle(p: { brand: string; line: string | null }): string {
   const brand = shortBrand(p.brand);
   if (!p.line) return brand;
   return p.line.toLowerCase().startsWith(brand.toLowerCase()) ? p.line : `${brand} ${p.line}`;
+}
+
+/** One pickable catalog item: a shade in a line (and a type, when the shade comes in more than one). */
+export interface CatalogItem {
+  key: string;
+  brand: string;
+  line: string;
+  type: string | null;
+  code: string;
+  name: string | null;
+  family: string;
+  /** "Kenra Color Permanent" */
+  lineLabel: string;
+}
+
+export function catalogItems(lines: CatalogLine[] = catalogLines()): CatalogItem[] {
+  return lines.flatMap((l) =>
+    l.shades.flatMap((s) => {
+      const types = s.types?.length ? s.types : [null];
+      return types.map((t) => ({
+        key: `${l.brand}|${l.line}|${t ?? ""}|${s.code}`,
+        brand: l.brand,
+        line: l.line,
+        type: t,
+        code: s.code,
+        name: s.name ?? null,
+        family: s.family,
+        lineLabel: lineTitle({ brand: l.brand, line: t ? `${l.line} ${TYPE_LABEL[t] ?? t}` : l.line }),
+      }));
+    }),
+  );
+}
+
+/** Type-to-find over the catalog: every word must match; exact shade codes first. */
+export function searchCatalog(items: CatalogItem[], q: string, limit = 12): CatalogItem[] {
+  const words = q.toLowerCase().trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+  const hits = items.filter((i) => {
+    const hay = `${i.lineLabel} ${i.code} ${i.name ?? ""} ${i.family}`.toLowerCase();
+    return words.every((w) => hay.includes(w));
+  });
+  const exact = (i: CatalogItem) => (words.some((w) => i.code.toLowerCase() === w) ? 0 : words.some((w) => i.code.toLowerCase().startsWith(w)) ? 1 : 2);
+  return hits.sort((a, b) => exact(a) - exact(b) || a.lineLabel.localeCompare(b.lineLabel) || a.code.localeCompare(b.code, "en", { numeric: true })).slice(0, limit);
+}
+
+/** Is this catalog item already a product? (same brand, line name and shade) */
+export function inInventory(i: CatalogItem, products: Pick<Product, "brand" | "line" | "shade" | "archived">[]): boolean {
+  const line = i.type ? `${i.line} ${TYPE_LABEL[i.type] ?? i.type}` : i.line;
+  return products.some((p) => !p.archived && p.brand === i.brand && (p.line ?? "") === line && (p.shade ?? "").toLowerCase() === i.code.toLowerCase());
 }

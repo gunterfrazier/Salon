@@ -19,7 +19,7 @@ function done() {
 export interface CatalogAdd {
   brand: string;
   line: string;
-  picks: { code: string; type?: string }[];
+  picks: { code: string; type?: string; barcode?: string | null }[];
   size: number | null;
   unit: Unit;
   vendor: Vendor | null;
@@ -36,7 +36,8 @@ export async function addFromCatalog(req: CatalogAdd): Promise<Result<{ added: n
   if (!UNITS.has(req.unit)) return { ok: false, error: "Pick a size unit." };
   if (req.size !== null && !(req.size > 0 && req.size < 1000)) return { ok: false, error: "Size should be a number like 2 or 60." };
   if (req.minQty !== null && req.maxQty !== null && req.maxQty < req.minQty) return { ok: false, error: "Max can't be less than min." };
-  const rows = productsFromCatalog(line, req.picks.slice(0, 300), { size: req.size, unit: req.unit, vendor: req.vendor && VENDORS.has(req.vendor) ? req.vendor : null, minQty: req.minQty, maxQty: req.maxQty, costCents: req.costCents });
+  const picks = req.picks.slice(0, 300).map((p) => ({ code: p.code, type: p.type, barcode: typeof p.barcode === "string" && /^[\w-]{4,64}$/.test(p.barcode) ? p.barcode : null }));
+  const rows = productsFromCatalog(line, picks, { size: req.size, unit: req.unit, vendor: req.vendor && VENDORS.has(req.vendor) ? req.vendor : null, minQty: req.minQty, maxQty: req.maxQty, costCents: req.costCents });
 
   const ctx = await getContext();
 
@@ -51,6 +52,10 @@ export async function addFromCatalog(req: CatalogAdd): Promise<Result<{ added: n
   if (fresh.length) {
     const { error } = await ctx.supabase.from("products").insert(fresh.map((r) => ({ ...r, business_id: ctx.business.id })));
     if (error) return { ok: false, error: error.message };
+  }
+  // Scanned a barcode for a product that's already here: attach it if it has none.
+  for (const r of rows.filter((x) => have.has(key(x)) && "barcode" in x && x.barcode)) {
+    await ctx.supabase.from("products").update({ barcode: (r as { barcode: string }).barcode }).eq("business_id", ctx.business.id).eq("brand", r.brand).eq("line", r.line).eq("shade", r.shade).is("barcode", null);
   }
   done();
   return { ok: true, added: fresh.length, skipped: rows.length - fresh.length };
