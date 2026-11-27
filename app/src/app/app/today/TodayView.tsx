@@ -68,6 +68,9 @@ export default function TodayView({
           <Link href="/app/kiosk" className="rounded-lg border border-line px-3 py-2 text-sm hover:bg-background">
             Check-in kiosk
           </Link>
+          <Link href="/app/display" className="rounded-lg border border-line px-3 py-2 text-sm hover:bg-background">
+            TV display
+          </Link>
         </nav>
       </div>
 
