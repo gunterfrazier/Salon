@@ -22,7 +22,7 @@ const isCtx = (x: Ctx | Result): x is Ctx => "business" in x;
 /** Save the stylists who offer a service (their staff.service_ids lists). */
 async function saveOfferedBy(ctx: Ctx, serviceId: string, offeredBy: string[]): Promise<Result> {
   const [{ data: staff }, { data: svc }] = await Promise.all([
-    ctx.supabase.from("staff").select("id,service_ids").eq("business_id", ctx.business.id).eq("active", true).eq("bookable", true),
+    ctx.supabase.from("staff").select("id,service_ids").eq("business_id", ctx.business.id).eq("active", true).eq("bookable", true).is("suspended_at", null),
     ctx.supabase.from("services").select("id").eq("business_id", ctx.business.id).eq("archived", false),
   ]);
   const stylists = (staff ?? []).map((s) => ({ id: s.id as string, serviceIds: (s.service_ids as string[] | null)?.length ? (s.service_ids as string[]) : null }));

@@ -2,7 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { PERMISSIONS, permissionsFor, ROLES, roleLabel, type Overrides, type Permission, type Role, type RoleOverrides } from "@/lib/auth/permissions";
-import { addTeamMember, saveMemberPermissions, saveRolePermissions, saveStylistSettings, updateTeamMember } from "./actions";
+import { acceptJoinRequest, addTeamMember, createJoinCode, declineJoinRequest, reinstateMember, revokeJoinCode, saveMemberPermissions, saveRolePermissions, saveStylistSettings, suspendMember, updateTeamMember } from "./actions";
+import QRCode from "@/components/QRCode";
+import { joinLink, JOIN_ROLES } from "@/lib/team/codes";
 import type { Hours } from "@/lib/context";
 import { STYLIST_COLORS } from "@/lib/staff/stylists";
 
@@ -13,6 +15,8 @@ interface Member {
   phone: string | null;
   role: string;
   active: boolean;
+  /** Suspended (e.g. leave): can't sign in to the salon or be booked. */
+  suspended?: { at: string; note: string | null } | null;
   /** Has signed in at least once. */
   joined: boolean;
   /** Access changes just for this person. */
@@ -26,7 +30,7 @@ const input = "rounded-lg border border-line bg-background px-3 py-2 text-base";
 const btn = "rounded-lg border border-line px-3 py-2 text-sm disabled:opacity-50";
 const EDITABLE: Role[] = ["manager", "stylist", "front_desk", "renter"];
 
-export default function TeamView({ me, isOwner, salon, members, overrides, services = [], salonHours = {} }: { me: string; isOwner: boolean; salon: string; members: Member[]; overrides: RoleOverrides; services?: Svc[]; salonHours?: Hours }) {
+export default function TeamView({ me, isOwner, salon, members, overrides, services = [], salonHours = {}, site = "https://chairvana.app", requests = [], codes = [] }: { me: string; isOwner: boolean; salon: string; members: Member[]; overrides: RoleOverrides; services?: Svc[]; salonHours?: Hours; site?: string; requests?: JoinRequest[]; codes?: JoinCode[] }) {
   const [editing, setEditing] = useState<Member | null>(null);
   const [access, setAccess] = useState<Member | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -37,7 +41,8 @@ export default function TeamView({ me, isOwner, salon, members, overrides, servi
       setMsg(r.ok ? (okText ? { ok: true, text: okText } : null) : { ok: false, text: r.error });
     });
   const roleChoices = ROLES.filter((r) => isOwner || r.key !== "owner");
-  const active = members.filter((m) => m.active);
+  const active = members.filter((m) => m.active && !m.suspended);
+  const suspended = members.filter((m) => m.active && m.suspended);
   const off = members.filter((m) => !m.active);
 
   return (
@@ -48,6 +53,8 @@ export default function TeamView({ me, isOwner, salon, members, overrides, servi
       </div>
       {msg && <p role={msg.ok ? "status" : "alert"} className={`rounded-xl border border-line bg-surface p-3 text-sm ${msg.ok ? "" : "font-semibold text-red-700 dark:text-red-300"}`}>{msg.text}</p>}
 
+      {requests.length > 0 && <JoinRequests requests={requests} pending={pending} run={run} />}
+
       <section className="rounded-xl border border-line bg-surface">
         <h2 className="border-b border-line px-4 py-2 font-semibold">People ({active.length})</h2>
         <ul className="divide-y divide-line">
@@ -55,9 +62,25 @@ export default function TeamView({ me, isOwner, salon, members, overrides, servi
             <MemberRow key={m.id} m={m} me={me} roleChoices={roleChoices} isOwner={isOwner} pending={pending} run={run} salon={salon} onSchedule={() => setEditing(m)} onAccess={() => setAccess(m)} />
           ))}
         </ul>
+        {suspended.length > 0 && (
+          <div className="border-t border-line px-4 py-2 text-sm">
+            <p className="font-semibold">Suspended ({suspended.length})</p>
+            <ul className="mt-1 space-y-1">
+              {suspended.map((m) => (
+                <li key={m.id} className="flex flex-wrap items-center justify-between gap-2">
+                  <span>
+                    {m.name} · {roleLabel(m.role)}
+                    <span className="block text-xs text-muted">Since {new Date(m.suspended!.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}{m.suspended!.note ? ` · ${m.suspended!.note}` : ""}. Not booked, can&rsquo;t open the salon, not billed.</span>
+                  </span>
+                  <button className={btn} disabled={pending} onClick={() => run(() => reinstateMember(m.id), `${m.name} is back: bookable and can sign in again.`)}>Reinstate</button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {off.length > 0 && (
           <details className="border-t border-line px-4 py-2 text-sm">
-            <summary className="cursor-pointer">Turned off ({off.length})</summary>
+            <summary className="cursor-pointer">Removed ({off.length})</summary>
             <ul className="mt-2 space-y-1">
               {off.map((m) => (
                 <li key={m.id} className="flex items-center justify-between gap-2">
@@ -73,8 +96,144 @@ export default function TeamView({ me, isOwner, salon, members, overrides, servi
       {access && <AccessSheet m={access} roleOverrides={overrides} onClose={() => setAccess(null)} onSaved={(text) => { setAccess(null); setMsg({ ok: true, text }); }} />}
       {editing && <StylistSheet m={editing} services={services} salonHours={salonHours} onClose={() => setEditing(null)} onSaved={(text) => { setEditing(null); setMsg({ ok: true, text }); }} />}
       <AddMember roleChoices={roleChoices} pending={pending} run={run} salon={salon} />
+      <JoinCodes codes={codes} site={site} salon={salon} pending={pending} run={run} />
       <RoleMatrix overrides={overrides} isOwner={isOwner} />
     </main>
+  );
+}
+
+type JoinRequest = { id: string; name: string; email: string; phone: string | null; message: string | null; viaCode: boolean; at: string };
+type JoinCode = { id: string; code: string; role: string; autoApprove: boolean; maxUses: number | null; uses: number; expiresAt: string | null; expired: boolean; note: string | null };
+type Run = (fn: () => Promise<{ ok: true } | { ok: false; error: string }>, ok?: string) => void;
+
+/** Stylists asking to join: accept with a role, or decline. */
+function JoinRequests({ requests, pending, run }: { requests: JoinRequest[]; pending: boolean; run: Run }) {
+  const [roles, setRoles] = useState<Record<string, string>>({});
+  return (
+    <section className="rounded-xl border border-accent bg-accent/10">
+      <h2 className="border-b border-line px-4 py-2 font-semibold">Asking to join ({requests.length})</h2>
+      <ul className="divide-y divide-line">
+        {requests.map((r) => (
+          <li key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
+            <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
+              <p className="font-medium">{r.name}{r.viaCode && <span className="ml-2 text-xs text-muted">used a join code</span>}</p>
+              <p className="text-xs text-muted">{r.email}{r.phone ? ` · ${r.phone}` : ""} · asked {new Date(r.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
+              {r.message && <p className="mt-1 text-sm">&ldquo;{r.message}&rdquo;</p>}
+            </div>
+            <select className={input} aria-label={`Role for ${r.name}`} value={roles[r.id] ?? "stylist"} onChange={(e) => setRoles({ ...roles, [r.id]: e.target.value })}>
+              {JOIN_ROLES.map((k) => <option key={k} value={k}>{roleLabel(k)}</option>)}
+            </select>
+            <button className="rounded-lg bg-foreground px-3 py-2 text-sm font-semibold text-background disabled:opacity-50" disabled={pending} onClick={() => run(() => acceptJoinRequest(r.id, roles[r.id] ?? "stylist"), `${r.name} joined the team. They keep their own account too.`)}>Accept</button>
+            <button className={btn} disabled={pending} onClick={() => confirm(`Decline ${r.name}'s request?`) && run(() => declineJoinRequest(r.id), `Declined ${r.name}.`)}>Decline</button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** Codes (and QR codes) that sign a stylist up and add them to the team. */
+function JoinCodes({ codes, site, salon, pending, run }: { codes: JoinCode[]; site: string; salon: string; pending: boolean; run: Run }) {
+  const [f, setF] = useState({ role: "stylist", autoApprove: true, maxUses: "1", days: "14", note: "" });
+  const [shown, setShown] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+  const copy = async (c: string) => {
+    const text = `Join ${salon} on Chairvana: ${joinLink(site, c)} (or enter code ${c} when you sign up).`;
+    try {
+      if (navigator.share) await navigator.share({ text });
+      else await navigator.clipboard.writeText(text);
+      setCopied(c);
+    } catch {
+      /* closed the share sheet */
+    }
+  };
+  return (
+    <section className="space-y-3 rounded-xl border border-line bg-surface p-4">
+      <div>
+        <h2 className="font-semibold">Join codes</h2>
+        <p className="text-sm text-muted">Give a new stylist a code or let them scan its QR code. They sign up (or sign in), and join the team with the role you pick. Approved right away, or as a request you accept.</p>
+      </div>
+      {codes.length > 0 && (
+        <ul className="divide-y divide-line rounded-lg border border-line">
+          {codes.map((c) => {
+            const expired = c.expired;
+            const usedUp = c.maxUses !== null && c.uses >= c.maxUses;
+            return (
+              <li key={c.id} className="space-y-2 px-3 py-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-lg tracking-widest">{c.code}</span>
+                  <span className="text-xs text-muted">
+                    {roleLabel(c.role)} · {c.autoApprove ? "joins right away" : "you approve"} · {c.maxUses === null ? `${c.uses} used` : `${c.uses} of ${c.maxUses} used`}
+                    {c.expiresAt ? ` · ${expired ? "expired" : `until ${new Date(c.expiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}` : ""}
+                    {c.note ? ` · ${c.note}` : ""}
+                  </span>
+                  {(expired || usedUp) && <span className="rounded-full bg-background px-2 text-[11px] font-semibold text-muted">not usable</span>}
+                  <span className="ml-auto flex gap-1">
+                    <button className={btn} onClick={() => setShown(shown === c.id ? null : c.id)}>{shown === c.id ? "Hide QR" : "QR code"}</button>
+                    <button className={btn} onClick={() => copy(c.code)}>{copied === c.code ? "Copied" : "Share"}</button>
+                    <button className={btn} disabled={pending} onClick={() => confirm(`Turn off code ${c.code}? It stops working right away.`) && run(() => revokeJoinCode(c.id), `Code ${c.code} turned off.`)}>Turn off</button>
+                  </span>
+                </div>
+                {shown === c.id && (
+                  <div className="flex flex-wrap items-center gap-4 rounded-lg bg-white p-3 text-black">
+                    <QRCode text={joinLink(site, c.code)} label={`Join ${salon}`} />
+                    <p className="text-sm">Scan to join <strong>{salon}</strong><br />or enter code <span className="font-mono font-semibold">{c.code}</span><br />at chairvana.app/signup</p>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <div className="grid gap-2 sm:grid-cols-2">
+        <label className="text-sm">
+          Role
+          <select className={`${input} mt-1 w-full`} value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })}>
+            {JOIN_ROLES.map((k) => <option key={k} value={k}>{roleLabel(k)}</option>)}
+          </select>
+        </label>
+        <label className="text-sm">
+          Note (only you see it)
+          <input className={`${input} mt-1 w-full`} value={f.note} maxLength={80} placeholder="e.g. Jamie, new assistant" onChange={(e) => setF({ ...f, note: e.target.value })} />
+        </label>
+        <label className="text-sm">
+          Can be used
+          <select className={`${input} mt-1 w-full`} value={f.maxUses} onChange={(e) => setF({ ...f, maxUses: e.target.value })}>
+            <option value="1">Once (one person)</option>
+            <option value="5">5 times</option>
+            <option value="20">20 times</option>
+            <option value="">No limit</option>
+          </select>
+        </label>
+        <label className="text-sm">
+          Works for
+          <select className={`${input} mt-1 w-full`} value={f.days} onChange={(e) => setF({ ...f, days: e.target.value })}>
+            <option value="1">1 day</option>
+            <option value="7">1 week</option>
+            <option value="14">2 weeks</option>
+            <option value="30">30 days</option>
+            <option value="">Until I turn it off</option>
+          </select>
+        </label>
+      </div>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={f.autoApprove} onChange={(e) => setF({ ...f, autoApprove: e.target.checked })} />
+        Join right away (untick to approve each person yourself)
+      </label>
+      <button
+        className="rounded-lg bg-foreground px-4 py-2 font-semibold text-background disabled:opacity-50"
+        disabled={pending}
+        onClick={() =>
+          run(async () => {
+            const r = await createJoinCode({ role: f.role, autoApprove: f.autoApprove, maxUses: f.maxUses ? Number(f.maxUses) : null, days: f.days ? Number(f.days) : null, note: f.note });
+            if (r.ok && r.code) setF({ ...f, note: "" });
+            return r;
+          }, "New join code ready. Tap QR code to show it, or Share to send it.")
+        }
+      >
+        Make a join code
+      </button>
+    </section>
   );
 }
 
@@ -156,9 +315,25 @@ function MemberRow({ m, me, roleChoices, isOwner, pending, run, salon, onSchedul
         ))}
       </select>
       {m.id !== me && !lockedOwner && (
-        <button className={btn} disabled={pending} onClick={() => confirm(`Turn off ${m.name}? They won't be able to sign in. Their history stays.`) && run(() => updateTeamMember(m.id, { active: false }), `${m.name} is turned off.`)}>
-          Turn off
-        </button>
+        <>
+          <button
+            className={btn}
+            disabled={pending}
+            onClick={() => {
+              const note = prompt(`Suspend ${m.name}? For time away they'll come back from (like medical leave). They stay on the team but can't sign in to ${salon} or be booked, and won't be billed. Reason (optional):`, "");
+              if (note === null) return;
+              run(async () => {
+                const r = await suspendMember(m.id, note);
+                return r.ok && r.upcoming ? { ok: false as const, error: `${m.name} is suspended. They still have ${r.upcoming} upcoming appointment${r.upcoming === 1 ? "" : "s"}: move or cancel them in Calendar.` } : r;
+              }, `${m.name} is suspended.`);
+            }}
+          >
+            Suspend
+          </button>
+          <button className={btn} disabled={pending} onClick={() => confirm(`Remove ${m.name} from the team? They won't be able to sign in to ${salon}. Their history stays, and you can turn them back on later.`) && run(() => updateTeamMember(m.id, { active: false }), `${m.name} was removed from the team.`)}>
+            Remove
+          </button>
+        </>
       )}
     </li>
   );

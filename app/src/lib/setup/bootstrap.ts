@@ -1,7 +1,33 @@
 import "server-only";
+import { cookies } from "next/headers";
 import { isOwnerEmail } from "@/lib/auth/owners";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { businessRow, categoryRows, serviceRows } from "./seed";
+
+/** Which business a login with several is working in (set by Switch). */
+export const BUSINESS_COOKIE = "cv_business";
+
+async function chosenBusiness(): Promise<string | null> {
+  try {
+    const v = (await cookies()).get(BUSINESS_COOKIE)?.value ?? null;
+    return v && /^[0-9a-f-]{36}$/i.test(v) ? v : null;
+  } catch {
+    return null; // not in a request (scripts, tests)
+  }
+}
+
+/** Every business this login can work in: active, not suspended. */
+export async function membershipsOf(userId: string): Promise<{ businessId: string; name: string; kind: "salon" | "solo"; role: string; status: string }[]> {
+  const { data } = await createAdminClient()
+    .from("staff")
+    .select("business_id,role,created_at,businesses(name,kind,status)")
+    .eq("auth_user_id", userId)
+    .eq("active", true)
+    .is("suspended_at", null)
+    .order("created_at");
+  type Row = { business_id: string; role: string; businesses: { name: string; kind: string; status: string } | null };
+  return ((data ?? []) as unknown as Row[]).map((r) => ({ businessId: r.business_id, name: r.businesses?.name ?? "Salon", kind: r.businesses?.kind === "solo" ? "solo" : "salon", role: r.role, status: r.businesses?.status ?? "approved" }));
+}
 
 const DEFAULT_NAME = process.env.BUSINESS_NAME ?? "Intensity Salon";
 
@@ -14,19 +40,24 @@ const DEFAULT_NAME = process.env.BUSINESS_NAME ?? "Intensity Salon";
 export async function ensureBusinessFor(user: { id: string; email?: string | null }): Promise<string | null> {
   const admin = createAdminClient();
 
-  const { data: existing, error: lookupErr } = await admin.from("staff").select("business_id").eq("auth_user_id", user.id).eq("active", true).limit(1);
-  if (lookupErr) throw new Error(`staff lookup failed: ${lookupErr.message}`);
-  if (existing?.length) return existing[0].business_id as string;
-
-  // Invited team member signing in for the first time: link their login by email.
+  // Invited team member (any salon) signing in for the first time: link their login by email.
   if (user.email) {
-    const { data: invited } = await admin.from("staff").select("id,business_id").ilike("email", user.email).is("auth_user_id", null).eq("active", true).limit(1);
-    if (invited?.length) {
-      await admin.from("staff").update({ auth_user_id: user.id }).eq("id", invited[0].id);
-      return invited[0].business_id as string;
-    }
+    const { data: invited } = await admin.from("staff").select("id").ilike("email", user.email).is("auth_user_id", null).eq("active", true);
+    for (const row of invited ?? []) await admin.from("staff").update({ auth_user_id: user.id }).eq("id", row.id);
+  }
+
+  const { data: existing, error: lookupErr } = await admin.from("staff").select("business_id").eq("auth_user_id", user.id).eq("active", true).is("suspended_at", null).order("created_at");
+  if (lookupErr) throw new Error(`staff lookup failed: ${lookupErr.message}`);
+  if (existing?.length) {
+    // Several salons (or a salon and their own business): the one they last picked.
+    const ids = existing.map((r) => r.business_id as string);
+    const picked = await chosenBusiness();
+    return picked && ids.includes(picked) ? picked : ids[0];
   }
   if (!user.email || !isOwnerEmail(user.email)) return null;
+  // Suspended or turned off on that team: no access (and no second staff record).
+  const { data: anyRow } = await admin.from("staff").select("id").eq("auth_user_id", user.id).limit(1);
+  if (anyRow?.length) return null;
 
   // Single-salon mode: join the existing business if there is one.
   const { data: biz } = await admin.from("businesses").select("id").order("created_at").limit(1);

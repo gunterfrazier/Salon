@@ -34,11 +34,13 @@ export interface StaffRow {
   sort: number;
   active: boolean;
   service_prices?: unknown;
+  /** Suspended (e.g. leave): not bookable, not listed. */
+  suspended_at?: string | null;
   /** The salon's "stylists can have their own price and time" switch (joined in STAFF_COLS). */
   businesses?: { stylist_pricing?: boolean } | null;
 }
 
-export const STAFF_COLS = "id,display_name,role,color,hours,service_ids,bookable,title,sort,active,service_prices,businesses(stylist_pricing)";
+export const STAFF_COLS = "id,display_name,role,color,hours,service_ids,bookable,title,sort,active,suspended_at,service_prices,businesses(stylist_pricing)";
 
 /** Stored own prices, cleaned: whole cents up to $100,000 and 1–720 minutes; anything else is dropped. */
 export function cleanOwnPrices(raw: unknown): OwnPrices {
@@ -57,7 +59,7 @@ export function cleanOwnPrices(raw: unknown): OwnPrices {
 /** Rows → stylists, in display order, with colors filled in by position. */
 export function toStylists(rows: StaffRow[], opts: { includeUnbookable?: boolean } = {}): Stylist[] {
   return rows
-    .filter((r) => r.active && (opts.includeUnbookable || r.bookable))
+    .filter((r) => r.active && !r.suspended_at && (opts.includeUnbookable || r.bookable))
     .sort((a, b) => a.sort - b.sort)
     .map((r, i) => ({
       id: r.id,

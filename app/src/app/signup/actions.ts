@@ -4,6 +4,8 @@ import { headers } from "next/headers";
 import { phoneKey } from "@/lib/clients/import";
 import { locatePlace, parsePlace } from "@/lib/geo";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createBusiness } from "@/lib/platform/salons";
+import { TIMEZONES } from "@/lib/platform/zones";
 import { createClient } from "@/lib/supabase/server";
 
 export type SignupState = { status: "idle" | "sent" | "error"; message?: string };
@@ -41,13 +43,53 @@ export async function signUp(_: SignupState, form: FormData): Promise<SignupStat
     if (error && error.code !== "23505") return { status: "error", message: "Couldn't create your account. Try again." };
   }
 
-  // A login for this email, then the sign-in link (same as the sign-in page).
+  return sendLink(email, "/app/account?welcome=1");
+}
+
+/** A login for this email, then a sign-in link to it (same as the sign-in page). */
+async function sendLink(email: string, next: string): Promise<SignupState> {
+  const db = createAdminClient();
   const { error: createErr } = await db.auth.admin.createUser({ email, email_confirm: true });
   if (createErr && !/already|exists|registered/i.test(createErr.message)) return { status: "error", message: "Couldn't send the link. Try again in a minute." };
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("x-forwarded-host") ?? h.get("host")}`;
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent("/app/account?welcome=1")}` } });
+  const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}` } });
   if (error) return { status: "error", message: /rate|seconds/i.test(error.message) ? "Too many emails just now. Wait a minute and try again." : "Couldn't send the link. Try again in a minute." };
   return { status: "sent", message: email };
+}
+
+/**
+ * Stylist sign-up: their own business right away (clients, calendar, payments),
+ * with a starter menu and hours. Its public booking page opens once the
+ * platform approves it. A join code (from a salon) is kept for after sign-in.
+ */
+export async function signUpStylist(_: SignupState, form: FormData): Promise<SignupState> {
+  if (clean(form.get("company"))) return { status: "sent" }; // honeypot
+  const first = clean(form.get("first"));
+  const last = clean(form.get("last"));
+  const email = clean(form.get("email"), 200).toLowerCase();
+  const phone = clean(form.get("phone"), 40);
+  const zip = clean(form.get("zip"), 10);
+  const timezone = clean(form.get("timezone"), 40);
+  const business = clean(form.get("business"), 80) || [first, last].filter(Boolean).join(" ");
+  const code = clean(form.get("code"), 12).toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!first || !last) return { status: "error", message: "Enter your first and last name." };
+  if (!EMAIL.test(email)) return { status: "error", message: "Enter a valid email. It's how you'll sign in." };
+  if (phone && phoneKey(phone).length < 10) return { status: "error", message: "Enter a 10-digit mobile number, or leave it blank." };
+  if (!/^\d{5}$/.test(zip)) return { status: "error", message: "Enter your 5-digit ZIP code." };
+  if (!TIMEZONES.some(([tz]) => tz === timezone)) return { status: "error", message: "Pick your time zone." };
+
+  const db = createAdminClient();
+  // Already signed up as a stylist: just send a new link.
+  const { data: had } = await db.from("salon_applications").select("id").ilike("email", email).eq("kind", "solo").limit(1);
+  if (!had?.length) {
+    try {
+      const biz = await createBusiness(db, { name: business, kind: "solo", status: "pending", timezone, zip, phone: phone || null, owner: { name: `${first} ${last}`, email, phone: phone || null } });
+      await db.from("salon_applications").insert({ salon_name: business, owner_name: `${first} ${last}`, email, phone: phone || null, zip, timezone, stylists: 1, kind: "solo", business_id: biz.id, message: "Independent stylist sign-up" });
+    } catch {
+      return { status: "error", message: "Couldn't set up your account. Please try again." };
+    }
+  }
+  return sendLink(email, code ? `/app/join-salon?code=${code}` : "/app/today?welcome=stylist");
 }

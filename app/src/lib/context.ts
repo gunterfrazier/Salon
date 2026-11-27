@@ -24,6 +24,8 @@ export interface Business {
   holidays: { rules?: HolidayRule[] } | null;
   notification_settings: Record<string, unknown> | null;
   role_permissions: Record<string, unknown> | null;
+  /** A salon, or a stylist's own business. */
+  kind?: "salon" | "solo";
 }
 
 /**
@@ -45,7 +47,7 @@ export const getContext = cache(async function getContext() {
   }
 
   const [{ data: business, error }, { data: staff }] = await Promise.all([
-    supabase.from("businesses").select("id,name,timezone,business_hours,policy_settings,pricing_rules,payment_methods,booking_settings,holidays,notification_settings,role_permissions").eq("id", businessId).single(),
+    supabase.from("businesses").select("id,name,timezone,business_hours,policy_settings,pricing_rules,payment_methods,booking_settings,holidays,notification_settings,role_permissions,kind").eq("id", businessId).single(),
     supabase.from("staff").select("id,display_name,role,permissions").eq("business_id", businessId).eq("auth_user_id", user.id).single(),
   ]);
   if (error || !business || !staff) throw new Error(`Couldn't load salon: ${error?.message ?? "missing staff record"}`);

@@ -3,6 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { cleanOverrides, ROLES, type Role, cleanPersonal } from "@/lib/auth/permissions";
 import { denied, getContext, type Ctx } from "@/lib/context";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { cleanJoinRole, newJoinCode } from "@/lib/team/codes";
+import { addToTeam } from "@/lib/team/join";
 
 type Result = { ok: true } | { ok: false; error: string };
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -160,5 +163,114 @@ export async function saveStylistSettings(id: string, s: StylistSettings): Promi
   done();
   revalidatePath("/app/calendar");
   revalidatePath("/book");
+  return { ok: true };
+}
+
+// --- Joining the team: requests and join codes -------------------------------
+
+const UUID_RE = /^[0-9a-f-]{36}$/i;
+
+/** Accept a stylist's request: they join the team with this role (they keep their own business too). */
+export async function acceptJoinRequest(id: string, role: string): Promise<Result> {
+  const ctx = await getContext();
+  const no = denied(ctx, "team.manage");
+  if (no) return no;
+  if (!UUID_RE.test(id)) return { ok: false, error: "Refresh and try again." };
+  const db = createAdminClient();
+  const { data: req } = await db.from("salon_join_requests").select("id,auth_user_id,name,email,phone").eq("id", id).eq("business_id", ctx.business.id).eq("status", "pending").maybeSingle();
+  if (!req) return { ok: false, error: "That request was already answered." };
+  const r = await addToTeam(db, ctx.business.id, { authUserId: req.auth_user_id as string, name: req.name as string, email: req.email as string, phone: (req.phone as string | null) ?? null }, cleanJoinRole(role));
+  if (!r.ok) return r;
+  await db.from("salon_join_requests").update({ status: "approved", staff_id: r.staffId, decided_at: new Date().toISOString(), decided_by: ctx.staff.id }).eq("id", id);
+  done();
+  return { ok: true };
+}
+
+export async function declineJoinRequest(id: string): Promise<Result> {
+  const ctx = await getContext();
+  const no = denied(ctx, "team.manage");
+  if (no) return no;
+  if (!UUID_RE.test(id)) return { ok: false, error: "Refresh and try again." };
+  const { error } = await createAdminClient().from("salon_join_requests").update({ status: "declined", decided_at: new Date().toISOString(), decided_by: ctx.staff.id }).eq("id", id).eq("business_id", ctx.business.id).eq("status", "pending");
+  if (error) return { ok: false, error: error.message };
+  done();
+  return { ok: true };
+}
+
+/** A join code to hand a new stylist (or print as a QR code). */
+export async function createJoinCode(input: { role: string; autoApprove: boolean; maxUses: number | null; days: number | null; note: string }): Promise<Result & { code?: string }> {
+  const ctx = await getContext();
+  const no = denied(ctx, "team.manage");
+  if (no) return no;
+  const maxUses = input.maxUses === null ? null : Math.trunc(Number(input.maxUses));
+  if (maxUses !== null && !(maxUses >= 1 && maxUses <= 500)) return { ok: false, error: "Uses must be between 1 and 500, or no limit." };
+  const days = input.days === null ? null : Math.trunc(Number(input.days));
+  if (days !== null && !(days >= 1 && days <= 365)) return { ok: false, error: "Expiry must be 1 to 365 days, or never." };
+  for (let i = 0; i < 5; i++) {
+    const code = newJoinCode();
+    const { error } = await ctx.supabase.from("salon_join_codes").insert({
+      business_id: ctx.business.id,
+      code,
+      role: cleanJoinRole(input.role),
+      auto_approve: !!input.autoApprove,
+      max_uses: maxUses,
+      expires_at: days ? new Date(Date.now() + days * 86_400_000).toISOString() : null,
+      note: input.note.trim().slice(0, 80) || null,
+      created_by: ctx.staff.id,
+    });
+    if (!error) {
+      done();
+      return { ok: true, code };
+    }
+    if (error.code !== "23505") return { ok: false, error: error.message };
+  }
+  return { ok: false, error: "Couldn't make a code. Try again." };
+}
+
+export async function revokeJoinCode(id: string): Promise<Result> {
+  const ctx = await getContext();
+  const no = denied(ctx, "team.manage");
+  if (no) return no;
+  const { error } = await ctx.supabase.from("salon_join_codes").update({ revoked_at: new Date().toISOString() }).eq("business_id", ctx.business.id).eq("id", id).is("revoked_at", null);
+  if (error) return { ok: false, error: error.message };
+  done();
+  return { ok: true };
+}
+
+// --- Suspending (e.g. medical leave) ------------------------------------------
+
+/**
+ * Suspend a team member: they can't open the salon and can't be booked, but
+ * stay on the team (and won't be billed while suspended, once billing starts).
+ * Their upcoming appointments are left for you to move: the count comes back.
+ */
+export async function suspendMember(id: string, note: string): Promise<Result & { upcoming?: number }> {
+  const ctx = await getContext();
+  const no = denied(ctx, "team.manage");
+  if (no) return no;
+  if (id === ctx.staff.id) return { ok: false, error: "You can't suspend yourself." };
+  const { data: m } = await ctx.supabase.from("staff").select("id,role,active,suspended_at").eq("business_id", ctx.business.id).eq("id", id).single();
+  if (!m || !m.active) return { ok: false, error: "Team member not found." };
+  if (m.role === "owner") {
+    const o = ownerOnly(ctx);
+    if (o) return o;
+    if ((await activeOwners(ctx)).filter((x) => x !== id).length === 0) return { ok: false, error: "The salon needs at least one owner who isn't suspended." };
+  }
+  const { error } = await ctx.supabase.from("staff").update({ suspended_at: new Date().toISOString(), suspended_note: note.trim().slice(0, 200) || null }).eq("business_id", ctx.business.id).eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  const { count } = await ctx.supabase.from("appointments").select("id", { count: "exact", head: true }).eq("business_id", ctx.business.id).eq("staff_id", id).gte("start_at", new Date().toISOString()).not("status", "in", "(cancelled,no_show,completed)");
+  done();
+  revalidatePath("/app/calendar");
+  return { ok: true, upcoming: count ?? 0 };
+}
+
+export async function reinstateMember(id: string): Promise<Result> {
+  const ctx = await getContext();
+  const no = denied(ctx, "team.manage");
+  if (no) return no;
+  const { error } = await ctx.supabase.from("staff").update({ suspended_at: null, suspended_note: null }).eq("business_id", ctx.business.id).eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  done();
+  revalidatePath("/app/calendar");
   return { ok: true };
 }

@@ -44,7 +44,7 @@ export default function AdminView({ applications, salons, mySalon }: { applicati
         <ul className="divide-y divide-line">
           {waiting.map((a) => (
             <li key={a.id} className="space-y-1 px-4 py-3 text-sm">
-              <p className="font-semibold">{a.salon_name}</p>
+              <p className="font-semibold">{a.salon_name}{a.kind === "solo" && <span className="ml-2 rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold">Independent stylist · already using the app</span>}</p>
               <p>{a.owner_name} · {a.email}{a.phone ? ` · ${a.phone}` : ""}</p>
               <p className="text-muted">{[a.street, a.city, a.state, a.zip].filter(Boolean).join(", ")} · {a.stylists ?? "?"} stylist(s) · {a.timezone.replace("America/", "").replace("_", " ")}</p>
               {a.website && <p className="text-muted">{a.website}</p>}

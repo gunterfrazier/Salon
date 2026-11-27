@@ -17,7 +17,7 @@ export default async function ServicesPage() {
       .eq("business_id", id)
       .order("sort")
       .order("name"),
-    ctx.supabase.from("staff").select("id,display_name,service_ids,service_prices,sort").eq("business_id", id).eq("active", true).eq("bookable", true).order("sort"),
+    ctx.supabase.from("staff").select("id,display_name,service_ids,service_prices,sort").eq("business_id", id).eq("active", true).eq("bookable", true).is("suspended_at", null).order("sort"),
     ctx.supabase.from("businesses").select("stylist_pricing").eq("id", id).single(),
   ]);
   const groups: EditorGroup[] = (cats ?? []).map((c) => ({ id: c.id, name: c.name }));

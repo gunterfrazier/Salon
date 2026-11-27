@@ -22,6 +22,13 @@ export async function approveApplication(id: string): Promise<Result> {
   const { data: claimed } = await db.from("salon_applications").update({ status: "approved", decided_at: new Date().toISOString(), decided_by: ctx.user.email }).eq("id", id).eq("status", "pending").select("id");
   if (!claimed?.length) return { ok: false, error: "That request was already handled." };
   try {
+    // A stylist's own business already exists (they use it while waiting): just open its booking page.
+    if (app.kind === "solo" && app.business_id) {
+      const { data: biz, error } = await db.from("businesses").update({ status: "approved" }).eq("id", app.business_id).select("slug").single();
+      if (error) throw new Error(error.message);
+      revalidatePath("/app/admin");
+      return { ok: true, slug: biz.slug as string };
+    }
     const salon = await createSalonFromApplication(db, app as Application);
     await db.from("salon_applications").update({ business_id: salon.id }).eq("id", id);
     revalidatePath("/app/admin");
