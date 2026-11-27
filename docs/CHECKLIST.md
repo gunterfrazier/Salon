@@ -141,7 +141,7 @@ Use a second email address (a Gmail you control) as a pretend client, and a thir
 - [ ] After Twilio: book a test appointment for your own phone, then check the confirmation, a reminder, and a cancel notice arrive, and nothing arrives during quiet hours.
 
 ## Part 3: Known gaps (not built yet)
-- Texts and email don't send until Twilio and Resend keys are added.
+- Texts don't send until Twilio is set up; email needs Cloudflare Workers Paid (or a Brevo key) to reach clients.
 - Clients without an email can't sign in (text-message sign-in can come with Twilio).
 - Card payments / Tap to Pay (Stripe) aren't set up.
 - There's no way to delete test clients or appointments yet; cancel test appointments instead. I can add cleanup tools if you need them.
