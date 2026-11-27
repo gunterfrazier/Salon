@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MoreMenu } from "./MoreMenu";
 
 /** Simple line icons (24×24, currentColor). */
 export function Icon({ name, className = "size-6" }: { name: "today" | "calendar" | "clients" | "sell" | "more" | "home" | "search" | "account" | "waitlist" | "book"; className?: string }) {
@@ -91,13 +92,17 @@ export function TabBar({ tabs, current, more = [], label = "Main" }: { tabs: Tab
             </Link>
           ))}
           {more.length > 0 && (
-            <details className="group relative flex flex-1">
+            <MoreMenu
+              className="group relative flex flex-1"
+              summary={
               <summary className={`${item} cursor-pointer list-none ${moreActive ? "font-semibold text-foreground" : "text-muted"}`}>
                 <span className={`flex h-7 w-12 items-center justify-center rounded-full ${moreActive ? "bg-accent/20" : ""}`}>
                   <Icon name="more" className="size-[22px]" />
                 </span>
                 More
               </summary>
+              }
+            >
               <div className="absolute bottom-full right-0 mb-2 w-56 overflow-hidden rounded-2xl border border-line bg-surface shadow-xl">
                 {more.map((m) => (
                   <Link key={m.href} href={m.href} aria-current={active(m.href) ? "page" : undefined} className={`block px-4 py-3 text-sm ${active(m.href) ? "bg-background font-semibold" : "hover:bg-background"}`}>
@@ -105,7 +110,7 @@ export function TabBar({ tabs, current, more = [], label = "Main" }: { tabs: Tab
                   </Link>
                 ))}
               </div>
-            </details>
+            </MoreMenu>
           )}
         </div>
       </nav>

@@ -1,4 +1,5 @@
 /* eslint-disable @next/next/no-img-element -- static brand art */
+import { cookies } from "next/headers";
 import Link from "next/link";
 import SiteFooter from "@/components/SiteFooter";
 import TideMark from "@/components/landing/TideMark";
@@ -25,7 +26,13 @@ const QUESTIONS = [
   ["What about texting rules?", "Clients only get texts if they agree, and every text says how to stop. See our texting terms."],
 ];
 
-export default function Home() {
+/** Signed in on this device? (Just the session cookie; the app checks it properly.) */
+async function signedIn() {
+  return (await cookies()).getAll().some((c) => c.name.startsWith("sb-") && c.name.includes("-auth-token"));
+}
+
+export default async function Home() {
+  const inApp = await signedIn();
   return (
     <div className="brand-dark min-h-dvh">
       <header className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4">
@@ -37,7 +44,7 @@ export default function Home() {
           <a href="#owners" className="rounded-full px-3 py-2 text-muted hover:text-foreground">For salons</a>
           <a href="#clients" className="rounded-full px-3 py-2 text-muted hover:text-foreground">For clients</a>
           <a href="#questions" className="rounded-full px-3 py-2 text-muted hover:text-foreground">Questions</a>
-          <Link href="/app" className="rounded-full border border-line px-4 py-2 hover:bg-surface">Sign in</Link>
+          <Link href="/app" className="rounded-full border border-line px-4 py-2 hover:bg-surface">{inApp ? "Open app" : "Sign in"}</Link>
         </nav>
       </header>
 
@@ -132,7 +139,7 @@ export default function Home() {
           <p className="font-display text-3xl italic">Where your schedule finds its flow.</p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Link href="/join" className="rounded-full bg-foreground px-6 py-3 text-sm font-semibold text-background">List your salon</Link>
-            <Link href="/app" className="rounded-full border border-line px-6 py-3 text-sm font-semibold hover:bg-surface">Sign in</Link>
+            <Link href="/app" className="rounded-full border border-line px-6 py-3 text-sm font-semibold hover:bg-surface">{inApp ? "Open app" : "Sign in"}</Link>
           </div>
         </section>
       </main>

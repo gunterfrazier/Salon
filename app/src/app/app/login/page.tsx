@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import { BrandLogo } from "@/components/Brand";
 import SiteFooter from "@/components/SiteFooter";
 import LoginForm from "./LoginForm";
@@ -10,8 +12,19 @@ const ERRORS: Record<string, string> = {
   noaccess: "That account isn't on the salon team or linked to a client yet. Ask the salon to add your email, then try again.",
 };
 
+async function alreadySignedIn() {
+  try {
+    const { data } = await (await createClient()).auth.getClaims();
+    return Boolean(data?.claims);
+  } catch {
+    return false; // not configured (local preview) or the check failed: just show the page
+  }
+}
+
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
+  // Already signed in: skip this page. (Not after an error, so "no access" can still be read.)
+  if (!error && (await alreadySignedIn())) redirect("/app");
   return (
     <>
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-4 py-10">

@@ -30,7 +30,8 @@ export async function signInWithPassword(_: LoginState, form: FormData): Promise
     if (/rate|too many/i.test(error.message)) return { status: "error", message: "Too many tries. Wait a minute and try again." };
     return { status: "error", message: "Email or password didn't match. No password yet? Use “Email me a sign-in link” below, then set one in Account." };
   }
-  redirect("/");
+  // Straight into the app: /app sends owners, team members and clients to their own start page.
+  redirect("/app");
 }
 
 /**
