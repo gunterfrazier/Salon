@@ -24,3 +24,13 @@ describe("stylists' own prices", () => {
     expect(asDoneBy(svc, null)).toBe(svc);
   });
 });
+
+describe("expired licenses", () => {
+  it("only hide a stylist when the salon asks", () => {
+    const lapsed = { license_expires_on: "2020-01-01" };
+    expect(toStylists([row({ ...lapsed, businesses: { block_expired_license: true } })])).toHaveLength(0);
+    expect(toStylists([row({ ...lapsed, businesses: { block_expired_license: false } })])).toHaveLength(1);
+    expect(toStylists([row({ license_expires_on: "2099-01-01", businesses: { block_expired_license: true } })])).toHaveLength(1);
+    expect(toStylists([row({ license_expires_on: null, businesses: { block_expired_license: true } })])).toHaveLength(1);
+  });
+});

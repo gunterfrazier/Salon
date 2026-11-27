@@ -36,11 +36,13 @@ export interface StaffRow {
   service_prices?: unknown;
   /** Suspended (e.g. leave): not bookable, not listed. */
   suspended_at?: string | null;
-  /** The salon's "stylists can have their own price and time" switch (joined in STAFF_COLS). */
-  businesses?: { stylist_pricing?: boolean } | null;
+  /** Latest expiry among their practicing licenses (null: none on file). */
+  license_expires_on?: string | null;
+  /** Salon switches joined in STAFF_COLS: own prices, and not booking expired licenses. */
+  businesses?: { stylist_pricing?: boolean; block_expired_license?: boolean } | null;
 }
 
-export const STAFF_COLS = "id,display_name,role,color,hours,service_ids,bookable,title,sort,active,suspended_at,service_prices,businesses(stylist_pricing)";
+export const STAFF_COLS = "id,display_name,role,color,hours,service_ids,bookable,title,sort,active,suspended_at,license_expires_on,service_prices,businesses(stylist_pricing,block_expired_license)";
 
 /** Stored own prices, cleaned: whole cents up to $100,000 and 1–720 minutes; anything else is dropped. */
 export function cleanOwnPrices(raw: unknown): OwnPrices {
@@ -56,10 +58,15 @@ export function cleanOwnPrices(raw: unknown): OwnPrices {
   return out;
 }
 
+/** The salon doesn't book stylists whose license has expired, and this one's has. */
+function licenseLapsed(r: StaffRow): boolean {
+  return !!r.businesses?.block_expired_license && !!r.license_expires_on && r.license_expires_on < new Date().toISOString().slice(0, 10);
+}
+
 /** Rows → stylists, in display order, with colors filled in by position. */
 export function toStylists(rows: StaffRow[], opts: { includeUnbookable?: boolean } = {}): Stylist[] {
   return rows
-    .filter((r) => r.active && !r.suspended_at && (opts.includeUnbookable || r.bookable))
+    .filter((r) => r.active && !r.suspended_at && (opts.includeUnbookable || r.bookable) && !licenseLapsed(r))
     .sort((a, b) => a.sort - b.sort)
     .map((r, i) => ({
       id: r.id,
