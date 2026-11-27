@@ -30,7 +30,8 @@ _Updated Nov 26, 2026. Check items off as you go. The app is now at **chairvana.
 
 ### Texting and email (Twilio is Friday Nov 27, 9:00 AM)
 - [ ] Before Twilio: make the mailbox **hello@chairvana.app** work (free: Cloudflare → chairvana.app → Email → Email Routing → forward it to your Gmail). The privacy and texting pages list it.
-- [ ] Twilio: create the account, register for business texting (Sole Proprietor A2P 10DLC), buy a local number.
+- [ ] Get an EIN (free at IRS.gov, "Apply for an EIN online"; never pay a third-party site). Decide first which business it's for: whoever runs chairvana.app (form an LLC first if you plan to). Stripe uses it too.
+- [ ] Twilio: register for business texting as a standard (low-volume) brand with the EIN (A2P 10DLC), buy a local number.
 - [ ] In the Twilio registration form, use these links:
   - Website / privacy policy: https://chairvana.app/privacy
   - Terms: https://chairvana.app/terms (texting terms: https://chairvana.app/texting)
