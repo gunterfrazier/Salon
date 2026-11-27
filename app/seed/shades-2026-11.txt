@@ -1,0 +1,351 @@
+# Shades from the salon's Beauty Supplier Master List (2026-11-27), merged into color-catalog.json by scripts/merge-shades.py.
+# Block header: ## brand | line | kind ; rows: code | name | family
+## Wella Professionals | Koleston Perfect ME+ | permanent
+4/0 | Medium Brown | Pure Natural
+4/00 | Medium Brown Intense Natural | Intense Natural
+44/0 | Intensive Medium Brown | Resistant Gray
+4/07 | Medium Brown Natural Brown | Natural Brown
+44/02 | Intensive Medium Brown Natural Matte | Natural Matte
+4/82 | Medium Brown Pearl Matte | Pearl Matte
+44/65 | Intensive Medium Brown Violet Mahogany | Violet Mahogany
+4/3 | Medium Golden Brown | Gold
+4/75 | Medium Brown Brown Mahogany | Brown Mahogany
+4/77 | Medium Brown Intense Brown | Intense Brown
+5/0 | Light Brown | Pure Natural
+5/00 | Light Brown Intense Natural | Intense Natural
+55/0 | Intensive Light Brown | Resistant Gray
+5/05 | Light Brown Natural Mahogany | Natural Mahogany
+5/07 | Light Brown Natural Brown | Natural Brown
+55/02 | Intensive Light Brown Natural Matte | Natural Matte
+5/1 | Light Ash Brown | Ash
+5/18 | Light Brown Ash Pearl | Ash Pearl
+5/82 | Light Brown Pearl Matte | Pearl Matte
+55/66 | Intensive Light Brown Intense Violet | Intense Violet
+55/65 | Intensive Light Brown Violet Mahogany | Violet Mahogany
+5/3 | Light Golden Brown | Gold
+5/37 | Light Brown Golden Brown | Gold Brown
+5/5 | Light Mahogany Brown | Mahogany
+55/55 | Intensive Light Brown Intense Mahogany | Intense Mahogany
+5/41 | Light Brown Red Ash | Red Ash
+55/46 | Intensive Light Brown Red Violet | Red Violet
+5/43 | Light Brown Red Golden | Red Gold
+6/0 | Dark Blonde | Pure Natural
+66/0 | Intensive Dark Blonde | Resistant Gray
+6/07 | Dark Blonde Natural Brown | Natural Brown
+6/71 | Dark Blonde Brown Ash | Brown Ash
+7/0 | Medium Blonde | Pure Natural
+77/0 | Intensive Medium Blonde | Resistant Gray
+77/43 | Intensive Medium Blonde Red Gold | Red Gold
+8/0 | Light Blonde | Pure Natural
+8/00 | Light Blonde Intense Natural | Intense Natural
+88/0 | Intensive Light Blonde | Resistant Gray
+8/01 | Light Blonde Natural Ash | Natural Ash
+8/03 | Light Blonde Natural Golden | Natural Gold
+8/04 | Light Blonde Natural Red | Natural Red
+8/07 | Light Blonde Natural Brown | Natural Brown
+88/02 | Intensive Light Blonde Natural Matte | Natural Matte
+8/1 | Light Ash Blonde | Ash
+8/96 | Light Blonde Cendré Violet | Cendré Violet
+8/97 | Light Blonde Cendré Brown | Cendré Brown
+8/3 | Light Golden Blonde | Gold
+8/38 | Light Blonde Golden Pearl | Gold Pearl
+8/34 | Light Blonde Golden Red | Gold Red
+8/41 | Light Blonde Red Ash | Red Ash
+8/43 | Light Blonde Red Golden | Red Gold
+## Wella Professionals | Illumina Color | permanent
+4/ | Medium Brown | Natural
+5/ | Light Brown | Natural
+5/02 | Light Brown Natural Matte | Natural Matte
+5/81 | Light Brown Pearl Ash | Pearl Ash
+5/35 | Light Brown Gold Mahogany | Gold Mahogany
+8/ | Light Blonde | Natural
+8/05 | Light Natural Mahogany Blonde | Natural Mahogany
+8/1 | Light Ash Blonde | Ash
+8/13 | Light Ash Gold Blonde | Ash Gold
+8/69 | Light Violet Cendré Blonde | Violet Cendré
+8/38 | Light Gold Pearl Blonde | Gold Pearl
+8/36 | Light Gold Violet Blonde | Gold Violet
+8/37 | Light Blonde Gold Brown | Gold Brown
+## Schwarzkopf Professional | IGORA Royal | permanent
+0-00 | Diluter | Mix Tone
+0-11 | Anti-Yellow Concentrate | Mix Tone
+0-22 | Anti-Orange Concentrate | Mix Tone
+0-33 | Anti-Red Concentrate | Mix Tone
+0-55 | Gold Concentrate | Mix Tone
+0-77 | Orange Concentrate | Mix Tone
+0-88 | Red Concentrate | Mix Tone
+0-89 | Red Violet Concentrate | Mix Tone
+0-99 | Violet Concentrate | Mix Tone
+1-0 | Black Natural | Natural
+1-1 | Black Cendré | Cendré
+3-0 | Dark Brown Natural | Natural
+3-65 | Dark Brown Chocolate Gold | Chocolate
+3-68 | Dark Brown Chocolate Red | Chocolate Red
+4-0 | Medium Brown Natural | Natural
+4-13 | Medium Brown Cendré Matt | Cendré Matt
+4-46 | Medium Brown Beige Chocolate | Beige
+4-6 | Medium Brown Chocolate | Chocolate
+4-63 | Medium Brown Chocolate Matt | Chocolate Matt
+4-68 | Medium Brown Chocolate Red | Chocolate Red
+4-88 | Medium Brown Red Extra | Red
+4-99 | Medium Brown Violet Extra | Violet
+5-0 | Light Brown Natural | Natural
+5-00 | Light Brown Natural Extra | Natural Extra
+5-1 | Light Brown Cendré | Cendré
+5-16 | Light Brown Cendré Chocolate | Cendré Chocolate
+5-21 | Light Brown Ash Cendré | Ash Cendré
+5-4 | Light Brown Beige | Beige
+5-5 | Light Brown Gold | Gold
+5-57 | Light Brown Gold Copper | Gold Copper
+5-6 | Light Brown Chocolate | Chocolate
+5-63 | Light Brown Chocolate Matt | Chocolate Matt
+5-65 | Light Brown Chocolate Gold | Chocolate Gold
+5-68 | Light Brown Chocolate Red | Chocolate Red
+5-7 | Light Brown Copper | Copper
+5-88 | Light Brown Red Extra | Red
+5-99 | Light Brown Violet Extra | Violet
+6-0 | Dark Blonde Natural | Natural
+6-00 | Dark Blonde Natural Extra | Natural Extra
+6-1 | Dark Blonde Cendré | Cendré
+6-12 | Dark Blonde Cendré Ash | Cendré Ash
+6-16 | Dark Blonde Cendré Chocolate | Cendré Chocolate
+6-4 | Dark Blonde Beige | Beige
+6-5 | Dark Blonde Gold | Gold
+6-6 | Dark Blonde Chocolate | Chocolate
+6-68 | Dark Blonde Chocolate Red | Chocolate Red
+6-77 | Dark Blonde Copper Extra | Copper
+6-88 | Dark Blonde Red Extra | Red
+6-99 | Dark Blonde Violet Extra | Violet
+7-0 | Medium Blonde Natural | Natural
+7-00 | Medium Blonde Natural Extra | Natural Extra
+7-1 | Medium Blonde Cendré | Cendré
+7-12 | Medium Blonde Cendré Ash | Cendré Ash
+7-4 | Medium Blonde Beige | Beige
+7-55 | Medium Blonde Gold Extra | Gold
+7-65 | Medium Blonde Chocolate Gold | Chocolate Gold
+7-77 | Medium Blonde Copper Extra | Copper
+8-0 | Light Blonde Natural | Natural
+8-00 | Light Blonde Natural Extra | Natural Extra
+8-1 | Light Blonde Cendré | Cendré
+8-11 | Light Blonde Cendré Extra | Cendré
+8-19 | Light Blonde Cendré Violet | Cendré Violet
+8-4 | Light Blonde Beige | Beige
+8-55 | Light Blonde Gold Extra | Gold
+8-65 | Light Blonde Chocolate Gold | Chocolate Gold
+9-0 | Extra Light Blonde Natural | Natural
+9-00 | Extra Light Blonde Natural Extra | Natural Extra
+9-1 | Extra Light Blonde Cendré | Cendré
+9-4 | Extra Light Blonde Beige | Beige
+9-55 | Extra Light Blonde Gold Extra | Gold
+9-7 | Extra Light Blonde Copper | Copper
+9-77 | Extra Light Blonde Copper Extra | Copper
+9,5-1 | Pastel Pearl Cendré | Pastel Toner
+9,5-4 | Pastel Beige | Pastel Toner
+9,5-22 | Pastel Ash Extra | Pastel Toner
+9,5-49 | Pastel Beige Violet | Pastel Toner
+10-0 | Ultra Blonde Natural | Highlift
+10-1 | Ultra Blonde Cendré | Highlift
+10-4 | Ultra Blonde Beige | Highlift
+10-46 | Ultra Blonde Beige Chocolate | Highlift
+12-0 | Special Blonde Natural | Special Blonde
+12-1 | Special Blonde Cendré | Special Blonde
+12-11 | Special Blonde Cendré Extra | Special Blonde
+12-19 | Special Blonde Cendré Violet | Special Blonde
+## Redken | Color Gels Lacquers | permanent
+9N | Cafe au Lait | Natural
+9NW | Cream Soda | Natural Warm
+9NA | Mist | Natural Ash
+9VRo | Rosé | Violet Rose
+9GB | Butter Cream | Gold Beige
+## Matrix | Super Sync Pre-Bonded | demi
+Clear | Clear Diluter / Gloss | Clear
+2N | Natural Black | Neutral
+3N | Darkest Brown Neutral | Neutral
+3NN | Darkest Brown Neutral Neutral | Extra Coverage
+4A | Dark Brown Ash | Ash
+4N | Dark Brown Neutral | Neutral
+5N | Medium Brown Neutral | Neutral
+5NN | Medium Brown Neutral Neutral | Extra Coverage
+6A | Light Brown Ash | Ash
+6BC | Light Brown Brown Copper | Brown Copper
+6N | Light Brown Neutral | Neutral
+6NN | Light Brown Neutral Neutral | Extra Coverage
+6NNA | Light Brown Extra Neutral Ash | Extra Coverage
+6P | Light Brown Pearl | Pearl
+6RC+ | Light Brown Red Copper+ | Red Copper
+6WN | Light Brown Warm Neutral | Warm Neutral
+7CC+ | Dark Blonde Copper Copper+ | Copper
+7N | Dark Blonde Neutral | Neutral
+7NA | Dark Blonde Neutral Ash | Neutral Ash
+7NN | Dark Blonde Neutral Neutral | Extra Coverage
+8A | Medium Blonde Ash | Ash
+8BC | Medium Blonde Brown Copper | Brown Copper
+8G | Medium Blonde Gold | Gold
+8GV | Medium Blonde Gold Violet | Gold Violet
+8M | Medium Blonde Mocha | Mocha
+8N | Medium Blonde Neutral | Neutral
+8NN | Medium Blonde Neutral Neutral | Extra Coverage
+8NNG | Medium Blonde Extra Neutral Gold | Extra Coverage
+8V | Medium Blonde Violet | Violet
+8VG | Medium Blonde Violet Gold | Violet Gold
+9GV | Light Blonde Gold Violet | Gold Violet
+9MM | Light Blonde Mocha Mocha | Mocha
+9N | Light Blonde Neutral | Neutral
+9NA | Light Blonde Neutral Ash | Neutral Ash
+10A | Extra Light Blonde Ash | Ash
+10AG | Extra Light Blonde Ash Gold | Sparkling Blondes
+10G | Extra Light Blonde Gold | Gold
+10M | Extra Light Blonde Mocha | Mocha
+10MM | Extra Light Blonde Mocha Mocha | Mocha
+10N | Extra Light Blonde Neutral | Neutral
+10NN | Extra Light Blonde Neutral Neutral | Extra Coverage
+10NNG | Extra Light Blonde Extra Neutral Gold | Extra Coverage
+10NR | Extra Light Blonde Neutral Red | Sparkling Blondes
+10NV | Extra Light Blonde Neutral Violet | Neutral Violet
+10P | Extra Light Blonde Pearl | Pearl
+10V | Extra Light Blonde Violet | Violet
+11A | Extra Light Blonde+ Ash | Ash
+11GV | Extra Light Blonde+ Gold Violet | Sparkling Blondes
+11P | Extra Light Blonde+ Pearl | Pearl
+11V | Extra Light Blonde+ Violet | Violet
+11VG | Extra Light Blonde+ Violet Gold | Violet Gold
+SPA | Sheer Pastel Ash | Sheer Pastel
+SPM | Sheer Pastel Mocha | Sheer Pastel
+SPN | Sheer Pastel Neutral | Sheer Pastel
+SPP | Sheer Pastel Pearl | Sheer Pastel
+SPV | Sheer Pastel Violet | Sheer Pastel
+HDRR | High Definition Red Red | High Definition
+HDRV | High Definition Red Violet | High Definition
+## Joico | LumiShine Demi-Permanent Liquid | demi
+3VV | Dark Brown Violet Violet (3.22) | Violet Violet
+4M | Medium Brown Mocha (4.037) | Mocha
+4NWB | Medium Brown Natural Warm Beige (4.07) | Natural Warm Beige
+4NV | Medium Brown Natural Violet (4.02) | Natural Violet
+4RR | Medium Brown Red Red (4.66) | Red Red
+4SB | Medium Brown Silver Blue (4.8) | Silver Blue
+5AA | Light Brown Ash Ash (5.11) | Ash Ash
+5M | Light Brown Mocha (5.037) | Mocha
+5N | Light Brown Natural (5.0) | Natural
+5NA | Light Brown Natural Ash (5.01) | Natural Ash
+5RRV | Light Brown Red Red Violet (5.662) | Red Red Violet
+5WC | Light Brown Warm Copper (5.774) | Warm Copper
+6AA | Dark Blonde Ash Ash (6.11) | Ash Ash
+6CCR | Dark Blonde Copper Copper Red (6.446) | Copper Copper Red
+6M | Dark Blonde Mocha (6.037) | Mocha
+6N | Dark Blonde Natural (6.0) | Natural
+6NA | Dark Blonde Natural Ash (6.01) | Natural Ash
+6NB | Dark Blonde Natural Beige (6.072) | Natural Beige
+6NC | Dark Blonde Natural Copper (6.04) | Natural Copper
+6NG | Dark Blonde Natural Gold (6.03) | Natural Gold
+6NV | Dark Blonde Natural Violet (6.02) | Natural Violet
+6NWB | Dark Blonde Natural Warm Beige (6.07) | Natural Warm Beige
+6SB | Dark Blonde Silver Blue (6.8) | Silver Blue
+6WC | Dark Blonde Warm Copper (6.774) | Warm Copper
+7AG | Medium Blonde Ash Gold (7.83) | Ash Gold
+7BV | Medium Blonde Blue Violet (7.82) | Blue Violet
+7G | Medium Blonde Gold (7.3) | Gold
+7M | Medium Blonde Mocha (7.037) | Mocha
+7N | Medium Blonde Natural (7.0) | Natural
+7NB | Medium Blonde Natural Beige (7.072) | Natural Beige
+7NC | Medium Blonde Natural Copper (7.04) | Natural Copper
+7NWB | Medium Blonde Natural Warm Beige (7.07) | Natural Warm Beige
+7SB | Medium Blonde Silver Blue (7.8) | Silver Blue
+7V | Medium Blonde Violet (7.2) | Violet
+7WC | Medium Blonde Warm Copper (7.774) | Warm Copper
+8AA | Light Blonde Ash Ash (8.11) | Ash Ash
+8N | Light Blonde Natural (8.0) | Natural
+8NA | Light Blonde Natural Ash (8.01) | Natural Ash
+8NC | Light Blonde Natural Copper (8.04) | Natural Copper
+8NG | Light Blonde Natural Gold (8.03) | Natural Gold
+8PV | Light Blonde Platinum Violet (8.92) | Platinum Violet
+8RR | Light Blonde Red Red (8.66) | Red Red
+8VG | Light Blonde Violet Gold (8.23) | Violet Gold
+9AG | Very Light Blonde Ash Gold (9.83) | Ash Gold
+9BV | Very Light Blonde Blue Violet (9.82) | Blue Violet
+9G | Very Light Blonde Gold (9.3) | Gold
+9NA | Very Light Blonde Natural Ash (9.01) | Natural Ash
+9NB | Very Light Blonde Natural Beige (9.072) | Natural Beige
+9NV | Very Light Blonde Natural Violet (9.02) | Natural Violet
+9NWB | Very Light Blonde Natural Warm Beige (9.07) | Natural Warm Beige
+9PV | Very Light Blonde Platinum Violet (9.92) | Platinum Violet
+9SB | Very Light Blonde Silver Blue (9.8) | Silver Blue
+9V | Very Light Blonde Violet (9.2) | Violet
+9VG | Very Light Blonde Violet Gold (9.23) | Violet Gold
+10AG | Lightest Blonde Ash Gold (10.83) | Ash Gold
+10BV | Lightest Blonde Blue Violet (10.82) | Blue Violet
+10N | Lightest Blonde Natural (10.0) | Natural
+10NG | Lightest Blonde Natural Gold (10.03) | Natural Gold
+10NWB | Lightest Blonde Natural Warm Beige (10.07) | Natural Warm Beige
+10PV | Lightest Blonde Platinum Violet (10.92) | Platinum Violet
+10SB | Lightest Blonde Silver Blue (10.8) | Silver Blue
+10V | Lightest Blonde Violet (10.2) | Violet
+10VG | Lightest Blonde Violet Gold (10.23) | Violet Gold
+## Pulp Riot | Semi-Permanent | semi
+CLEAR | Clear | Clear
+ABSINTHE | Emerald Green | Green
+AQUATIC | Turquoise | Aqua
+BLUSH | Warm Pastel Pink | Pastel
+CUPID | Mid-tone Pink | Pink
+FIREBALL | Bright Red | Red
+JAM | Pinky Purple | Purple
+LEMON | Bright Yellow | Yellow
+LILAC | Cool Pastel Purple | Pastel
+NIGHTFALL | Saturated Blue | Blue
+NOIR | Black | Black
+POWDER | Light Blue | Pastel
+SEA GLASS | Light Green | Pastel
+SMOKE | Grey | Grey
+VELVET | Deep Purple | Purple
+## Kenra Professional | Kenra Color | demi-merge
+Clear | Clear Gloss | Clear
+1N | Black Natural | Natural
+3N | Dark Brown Natural | Natural
+3VR | Dark Brown Violet Red | Violet Red
+4N | Medium Brown Natural | Natural
+4NUA | Medium Brown Natural Ultra Ash | Natural Ultra Ash
+4B | Medium Brown Brown | Brown
+4RR | Medium Brown Red Red | Red Red
+4VV | Medium Brown Violet Violet | Violet
+5N | Light Brown Natural | Natural
+5NB | Light Brown Natural Brown | Natural Brown
+5NUA | Light Brown Natural Ultra Ash | Natural Ultra Ash
+5B | Light Brown Brown | Brown
+5RB | Light Brown Red Brown | Red Brown
+5VR | Light Brown Violet Red | Violet Red
+6N | Dark Blonde Natural | Natural
+6NUA | Dark Blonde Natural Ultra Ash | Natural Ultra Ash
+6A | Dark Blonde Ash | Ash
+6BC | Dark Blonde Brown Copper | Brown Copper
+6C | Dark Blonde Copper | Copper
+6G | Dark Blonde Gold | Gold
+6GG | Dark Blonde Gold Gold | Gold
+6R | Dark Blonde Red | Red
+6RR | Dark Blonde Red Red | Red Red
+6VV | Dark Blonde Violet Violet | Violet
+7N | Medium Blonde Natural | Natural
+7NA | Medium Blonde Natural Ash | Natural Ash
+7NB | Medium Blonde Natural Brown | Natural Brown
+7A | Medium Blonde Ash | Ash
+7B | Medium Blonde Brown | Brown
+7SM | Medium Blonde Silver Metallic | Silver Metallic
+8N | Light Blonde Natural | Natural
+8NA | Light Blonde Natural Ash | Natural Ash
+8NUA | Light Blonde Natural Ultra Ash | Natural Ultra Ash
+8B | Light Blonde Brown | Brown
+8GB | Light Blonde Gold Brown Beige | Gold Brown Beige
+8RoM | Light Blonde Rose Metallic | Rose Metallic
+8SM | Light Blonde Silver Metallic | Silver Metallic
+8VM | Light Blonde Violet Metallic | Violet Metallic
+8VV | Light Blonde Violet Violet | Violet
+9N | Very Light Blonde Natural | Natural
+9CC | Very Light Blonde Copper Copper | Copper
+9GB | Very Light Blonde Gold Brown Beige | Gold Brown Beige
+9GG | Very Light Blonde Gold Gold | Gold
+9PV | Very Light Blonde Pearl Violet | Pearl Violet
+9VM | Very Light Blonde Violet Metallic | Violet Metallic
+10N | Lightest Blonde Natural | Natural
+10A | Lightest Blonde Ash | Ash
+10B | Lightest Blonde Brown | Brown
+10SM | Lightest Blonde Silver Metallic | Silver Metallic
+10V | Lightest Blonde Violet | Violet
+DF | Diamond Frost | Metallic

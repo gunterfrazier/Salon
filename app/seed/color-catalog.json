@@ -1,10 +1,11 @@
 {
  "version": 1,
  "updated": "2026-11-26",
- "about": "Starting color catalog for Intensity Salon's lines (Kenra, Redken). Transcribed from the brands' published shade charts. Sizes and item numbers are filled in at the first stock count or by scanning barcodes.",
+ "about": "Color catalog for the shade picker. Kenra and Redken Shades EQ transcribed from the brands' shade charts; Wella, Schwarzkopf, Matrix, Joico, Pulp Riot and Redken Color Gels Lacquers from the salon's supplier master list (2026-11-27).",
  "sources": {
   "kenra": "Kenra Color Shade Chart (cdn.shopify.com/.../Kenra-Color-Shade-Chart.pdf)",
-  "redken": "Redken US Product Guide 2026 (redkenpro.com), Shades EQ chart pp. 134-135 and mixing tables"
+  "redken": "Redken US Product Guide 2026 (redkenpro.com), Shades EQ chart pp. 134-135 and mixing tables",
+  "master_list": "Beauty Supplier Master List (salon-provided, 2026-11-27): blendsor.com Redken/Wella charts, paramountbeauty.com IGORA Royal, saloncentric.com Super Sync, joico.com LumiShine Demi, kenraprofessional.com Demi, pulpriothair.com OG semis"
  },
  "brands": [
   {
@@ -323,7 +324,8 @@
        "code": "6G",
        "family": "Gold",
        "types": [
-        "permanent"
+        "permanent",
+        "demi"
        ]
       },
       {
@@ -374,7 +376,8 @@
        "code": "6BC",
        "family": "Brown Copper",
        "types": [
-        "permanent"
+        "permanent",
+        "demi"
        ]
       },
       {
@@ -494,7 +497,8 @@
        "code": "4RR",
        "family": "Red Red",
        "types": [
-        "permanent"
+        "permanent",
+        "demi"
        ]
       },
       {
@@ -623,6 +627,38 @@
       {
        "code": "DF",
        "family": "Diamond Frost",
+       "types": [
+        "demi"
+       ]
+      },
+      {
+       "code": "6GG",
+       "name": "Dark Blonde Gold Gold",
+       "family": "Gold",
+       "types": [
+        "demi"
+       ]
+      },
+      {
+       "code": "9CC",
+       "name": "Very Light Blonde Copper Copper",
+       "family": "Copper",
+       "types": [
+        "demi"
+       ]
+      },
+      {
+       "code": "9GG",
+       "name": "Very Light Blonde Gold Gold",
+       "family": "Gold",
+       "types": [
+        "demi"
+       ]
+      },
+      {
+       "code": "10V",
+       "name": "Lightest Blonde Violet",
+       "family": "Violet",
        "types": [
         "demi"
        ]
@@ -1939,6 +1975,38 @@
        ]
       }
      ]
+    },
+    {
+     "line": "Color Gels Lacquers",
+     "kind": "permanent",
+     "source": "Supplier master list 2026-11-27",
+     "shades": [
+      {
+       "code": "9N",
+       "name": "Cafe au Lait",
+       "family": "Natural"
+      },
+      {
+       "code": "9NW",
+       "name": "Cream Soda",
+       "family": "Natural Warm"
+      },
+      {
+       "code": "9NA",
+       "name": "Mist",
+       "family": "Natural Ash"
+      },
+      {
+       "code": "9VRo",
+       "name": "Rosé",
+       "family": "Violet Rose"
+      },
+      {
+       "code": "9GB",
+       "name": "Butter Cream",
+       "family": "Gold Beige"
+      }
+     ]
     }
    ],
    "mixing": [
@@ -1979,6 +2047,1493 @@
      "ratio": "1:1",
      "developer": "20 vol Pro-Oxide Cream Developer, 35-45 min",
      "verified": true
+    }
+   ]
+  },
+  {
+   "brand": "Wella Professionals",
+   "lines": [
+    {
+     "line": "Koleston Perfect ME+",
+     "kind": "permanent",
+     "source": "Supplier master list 2026-11-27",
+     "shades": [
+      {
+       "code": "4/0",
+       "name": "Medium Brown",
+       "family": "Pure Natural"
+      },
+      {
+       "code": "4/00",
+       "name": "Medium Brown Intense Natural",
+       "family": "Intense Natural"
+      },
+      {
+       "code": "44/0",
+       "name": "Intensive Medium Brown",
+       "family": "Resistant Gray"
+      },
+      {
+       "code": "4/07",
+       "name": "Medium Brown Natural Brown",
+       "family": "Natural Brown"
+      },
+      {
+       "code": "44/02",
+       "name": "Intensive Medium Brown Natural Matte",
+       "family": "Natural Matte"
+      },
+      {
+       "code": "4/82",
+       "name": "Medium Brown Pearl Matte",
+       "family": "Pearl Matte"
+      },
+      {
+       "code": "44/65",
+       "name": "Intensive Medium Brown Violet Mahogany",
+       "family": "Violet Mahogany"
+      },
+      {
+       "code": "4/3",
+       "name": "Medium Golden Brown",
+       "family": "Gold"
+      },
+      {
+       "code": "4/75",
+       "name": "Medium Brown Brown Mahogany",
+       "family": "Brown Mahogany"
+      },
+      {
+       "code": "4/77",
+       "name": "Medium Brown Intense Brown",
+       "family": "Intense Brown"
+      },
+      {
+       "code": "5/0",
+       "name": "Light Brown",
+       "family": "Pure Natural"
+      },
+      {
+       "code": "5/00",
+       "name": "Light Brown Intense Natural",
+       "family": "Intense Natural"
+      },
+      {
+       "code": "55/0",
+       "name": "Intensive Light Brown",
+       "family": "Resistant Gray"
+      },
+      {
+       "code": "5/05",
+       "name": "Light Brown Natural Mahogany",
+       "family": "Natural Mahogany"
+      },
+      {
+       "code": "5/07",
+       "name": "Light Brown Natural Brown",
+       "family": "Natural Brown"
+      },
+      {
+       "code": "55/02",
+       "name": "Intensive Light Brown Natural Matte",
+       "family": "Natural Matte"
+      },
+      {
+       "code": "5/1",
+       "name": "Light Ash Brown",
+       "family": "Ash"
+      },
+      {
+       "code": "5/18",
+       "name": "Light Brown Ash Pearl",
+       "family": "Ash Pearl"
+      },
+      {
+       "code": "5/82",
+       "name": "Light Brown Pearl Matte",
+       "family": "Pearl Matte"
+      },
+      {
+       "code": "55/66",
+       "name": "Intensive Light Brown Intense Violet",
+       "family": "Intense Violet"
+      },
+      {
+       "code": "55/65",
+       "name": "Intensive Light Brown Violet Mahogany",
+       "family": "Violet Mahogany"
+      },
+      {
+       "code": "5/3",
+       "name": "Light Golden Brown",
+       "family": "Gold"
+      },
+      {
+       "code": "5/37",
+       "name": "Light Brown Golden Brown",
+       "family": "Gold Brown"
+      },
+      {
+       "code": "5/5",
+       "name": "Light Mahogany Brown",
+       "family": "Mahogany"
+      },
+      {
+       "code": "55/55",
+       "name": "Intensive Light Brown Intense Mahogany",
+       "family": "Intense Mahogany"
+      },
+      {
+       "code": "5/41",
+       "name": "Light Brown Red Ash",
+       "family": "Red Ash"
+      },
+      {
+       "code": "55/46",
+       "name": "Intensive Light Brown Red Violet",
+       "family": "Red Violet"
+      },
+      {
+       "code": "5/43",
+       "name": "Light Brown Red Golden",
+       "family": "Red Gold"
+      },
+      {
+       "code": "6/0",
+       "name": "Dark Blonde",
+       "family": "Pure Natural"
+      },
+      {
+       "code": "66/0",
+       "name": "Intensive Dark Blonde",
+       "family": "Resistant Gray"
+      },
+      {
+       "code": "6/07",
+       "name": "Dark Blonde Natural Brown",
+       "family": "Natural Brown"
+      },
+      {
+       "code": "6/71",
+       "name": "Dark Blonde Brown Ash",
+       "family": "Brown Ash"
+      },
+      {
+       "code": "7/0",
+       "name": "Medium Blonde",
+       "family": "Pure Natural"
+      },
+      {
+       "code": "77/0",
+       "name": "Intensive Medium Blonde",
+       "family": "Resistant Gray"
+      },
+      {
+       "code": "77/43",
+       "name": "Intensive Medium Blonde Red Gold",
+       "family": "Red Gold"
+      },
+      {
+       "code": "8/0",
+       "name": "Light Blonde",
+       "family": "Pure Natural"
+      },
+      {
+       "code": "8/00",
+       "name": "Light Blonde Intense Natural",
+       "family": "Intense Natural"
+      },
+      {
+       "code": "88/0",
+       "name": "Intensive Light Blonde",
+       "family": "Resistant Gray"
+      },
+      {
+       "code": "8/01",
+       "name": "Light Blonde Natural Ash",
+       "family": "Natural Ash"
+      },
+      {
+       "code": "8/03",
+       "name": "Light Blonde Natural Golden",
+       "family": "Natural Gold"
+      },
+      {
+       "code": "8/04",
+       "name": "Light Blonde Natural Red",
+       "family": "Natural Red"
+      },
+      {
+       "code": "8/07",
+       "name": "Light Blonde Natural Brown",
+       "family": "Natural Brown"
+      },
+      {
+       "code": "88/02",
+       "name": "Intensive Light Blonde Natural Matte",
+       "family": "Natural Matte"
+      },
+      {
+       "code": "8/1",
+       "name": "Light Ash Blonde",
+       "family": "Ash"
+      },
+      {
+       "code": "8/96",
+       "name": "Light Blonde Cendré Violet",
+       "family": "Cendré Violet"
+      },
+      {
+       "code": "8/97",
+       "name": "Light Blonde Cendré Brown",
+       "family": "Cendré Brown"
+      },
+      {
+       "code": "8/3",
+       "name": "Light Golden Blonde",
+       "family": "Gold"
+      },
+      {
+       "code": "8/38",
+       "name": "Light Blonde Golden Pearl",
+       "family": "Gold Pearl"
+      },
+      {
+       "code": "8/34",
+       "name": "Light Blonde Golden Red",
+       "family": "Gold Red"
+      },
+      {
+       "code": "8/41",
+       "name": "Light Blonde Red Ash",
+       "family": "Red Ash"
+      },
+      {
+       "code": "8/43",
+       "name": "Light Blonde Red Golden",
+       "family": "Red Gold"
+      }
+     ]
+    },
+    {
+     "line": "Illumina Color",
+     "kind": "permanent",
+     "source": "Supplier master list 2026-11-27",
+     "shades": [
+      {
+       "code": "4/",
+       "name": "Medium Brown",
+       "family": "Natural"
+      },
+      {
+       "code": "5/",
+       "name": "Light Brown",
+       "family": "Natural"
+      },
+      {
+       "code": "5/02",
+       "name": "Light Brown Natural Matte",
+       "family": "Natural Matte"
+      },
+      {
+       "code": "5/81",
+       "name": "Light Brown Pearl Ash",
+       "family": "Pearl Ash"
+      },
+      {
+       "code": "5/35",
+       "name": "Light Brown Gold Mahogany",
+       "family": "Gold Mahogany"
+      },
+      {
+       "code": "8/",
+       "name": "Light Blonde",
+       "family": "Natural"
+      },
+      {
+       "code": "8/05",
+       "name": "Light Natural Mahogany Blonde",
+       "family": "Natural Mahogany"
+      },
+      {
+       "code": "8/1",
+       "name": "Light Ash Blonde",
+       "family": "Ash"
+      },
+      {
+       "code": "8/13",
+       "name": "Light Ash Gold Blonde",
+       "family": "Ash Gold"
+      },
+      {
+       "code": "8/69",
+       "name": "Light Violet Cendré Blonde",
+       "family": "Violet Cendré"
+      },
+      {
+       "code": "8/38",
+       "name": "Light Gold Pearl Blonde",
+       "family": "Gold Pearl"
+      },
+      {
+       "code": "8/36",
+       "name": "Light Gold Violet Blonde",
+       "family": "Gold Violet"
+      },
+      {
+       "code": "8/37",
+       "name": "Light Blonde Gold Brown",
+       "family": "Gold Brown"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "brand": "Schwarzkopf Professional",
+   "lines": [
+    {
+     "line": "IGORA Royal",
+     "kind": "permanent",
+     "source": "Supplier master list 2026-11-27",
+     "shades": [
+      {
+       "code": "0-00",
+       "name": "Diluter",
+       "family": "Mix Tone"
+      },
+      {
+       "code": "0-11",
+       "name": "Anti-Yellow Concentrate",
+       "family": "Mix Tone"
+      },
+      {
+       "code": "0-22",
+       "name": "Anti-Orange Concentrate",
+       "family": "Mix Tone"
+      },
+      {
+       "code": "0-33",
+       "name": "Anti-Red Concentrate",
+       "family": "Mix Tone"
+      },
+      {
+       "code": "0-55",
+       "name": "Gold Concentrate",
+       "family": "Mix Tone"
+      },
+      {
+       "code": "0-77",
+       "name": "Orange Concentrate",
+       "family": "Mix Tone"
+      },
+      {
+       "code": "0-88",
+       "name": "Red Concentrate",
+       "family": "Mix Tone"
+      },
+      {
+       "code": "0-89",
+       "name": "Red Violet Concentrate",
+       "family": "Mix Tone"
+      },
+      {
+       "code": "0-99",
+       "name": "Violet Concentrate",
+       "family": "Mix Tone"
+      },
+      {
+       "code": "1-0",
+       "name": "Black Natural",
+       "family": "Natural"
+      },
+      {
+       "code": "1-1",
+       "name": "Black Cendré",
+       "family": "Cendré"
+      },
+      {
+       "code": "3-0",
+       "name": "Dark Brown Natural",
+       "family": "Natural"
+      },
+      {
+       "code": "3-65",
+       "name": "Dark Brown Chocolate Gold",
+       "family": "Chocolate"
+      },
+      {
+       "code": "3-68",
+       "name": "Dark Brown Chocolate Red",
+       "family": "Chocolate Red"
+      },
+      {
+       "code": "4-0",
+       "name": "Medium Brown Natural",
+       "family": "Natural"
+      },
+      {
+       "code": "4-13",
+       "name": "Medium Brown Cendré Matt",
+       "family": "Cendré Matt"
+      },
+      {
+       "code": "4-46",
+       "name": "Medium Brown Beige Chocolate",
+       "family": "Beige"
+      },
+      {
+       "code": "4-6",
+       "name": "Medium Brown Chocolate",
+       "family": "Chocolate"
+      },
+      {
+       "code": "4-63",
+       "name": "Medium Brown Chocolate Matt",
+       "family": "Chocolate Matt"
+      },
+      {
+       "code": "4-68",
+       "name": "Medium Brown Chocolate Red",
+       "family": "Chocolate Red"
+      },
+      {
+       "code": "4-88",
+       "name": "Medium Brown Red Extra",
+       "family": "Red"
+      },
+      {
+       "code": "4-99",
+       "name": "Medium Brown Violet Extra",
+       "family": "Violet"
+      },
+      {
+       "code": "5-0",
+       "name": "Light Brown Natural",
+       "family": "Natural"
+      },
+      {
+       "code": "5-00",
+       "name": "Light Brown Natural Extra",
+       "family": "Natural Extra"
+      },
+      {
+       "code": "5-1",
+       "name": "Light Brown Cendré",
+       "family": "Cendré"
+      },
+      {
+       "code": "5-16",
+       "name": "Light Brown Cendré Chocolate",
+       "family": "Cendré Chocolate"
+      },
+      {
+       "code": "5-21",
+       "name": "Light Brown Ash Cendré",
+       "family": "Ash Cendré"
+      },
+      {
+       "code": "5-4",
+       "name": "Light Brown Beige",
+       "family": "Beige"
+      },
+      {
+       "code": "5-5",
+       "name": "Light Brown Gold",
+       "family": "Gold"
+      },
+      {
+       "code": "5-57",
+       "name": "Light Brown Gold Copper",
+       "family": "Gold Copper"
+      },
+      {
+       "code": "5-6",
+       "name": "Light Brown Chocolate",
+       "family": "Chocolate"
+      },
+      {
+       "code": "5-63",
+       "name": "Light Brown Chocolate Matt",
+       "family": "Chocolate Matt"
+      },
+      {
+       "code": "5-65",
+       "name": "Light Brown Chocolate Gold",
+       "family": "Chocolate Gold"
+      },
+      {
+       "code": "5-68",
+       "name": "Light Brown Chocolate Red",
+       "family": "Chocolate Red"
+      },
+      {
+       "code": "5-7",
+       "name": "Light Brown Copper",
+       "family": "Copper"
+      },
+      {
+       "code": "5-88",
+       "name": "Light Brown Red Extra",
+       "family": "Red"
+      },
+      {
+       "code": "5-99",
+       "name": "Light Brown Violet Extra",
+       "family": "Violet"
+      },
+      {
+       "code": "6-0",
+       "name": "Dark Blonde Natural",
+       "family": "Natural"
+      },
+      {
+       "code": "6-00",
+       "name": "Dark Blonde Natural Extra",
+       "family": "Natural Extra"
+      },
+      {
+       "code": "6-1",
+       "name": "Dark Blonde Cendré",
+       "family": "Cendré"
+      },
+      {
+       "code": "6-12",
+       "name": "Dark Blonde Cendré Ash",
+       "family": "Cendré Ash"
+      },
+      {
+       "code": "6-16",
+       "name": "Dark Blonde Cendré Chocolate",
+       "family": "Cendré Chocolate"
+      },
+      {
+       "code": "6-4",
+       "name": "Dark Blonde Beige",
+       "family": "Beige"
+      },
+      {
+       "code": "6-5",
+       "name": "Dark Blonde Gold",
+       "family": "Gold"
+      },
+      {
+       "code": "6-6",
+       "name": "Dark Blonde Chocolate",
+       "family": "Chocolate"
+      },
+      {
+       "code": "6-68",
+       "name": "Dark Blonde Chocolate Red",
+       "family": "Chocolate Red"
+      },
+      {
+       "code": "6-77",
+       "name": "Dark Blonde Copper Extra",
+       "family": "Copper"
+      },
+      {
+       "code": "6-88",
+       "name": "Dark Blonde Red Extra",
+       "family": "Red"
+      },
+      {
+       "code": "6-99",
+       "name": "Dark Blonde Violet Extra",
+       "family": "Violet"
+      },
+      {
+       "code": "7-0",
+       "name": "Medium Blonde Natural",
+       "family": "Natural"
+      },
+      {
+       "code": "7-00",
+       "name": "Medium Blonde Natural Extra",
+       "family": "Natural Extra"
+      },
+      {
+       "code": "7-1",
+       "name": "Medium Blonde Cendré",
+       "family": "Cendré"
+      },
+      {
+       "code": "7-12",
+       "name": "Medium Blonde Cendré Ash",
+       "family": "Cendré Ash"
+      },
+      {
+       "code": "7-4",
+       "name": "Medium Blonde Beige",
+       "family": "Beige"
+      },
+      {
+       "code": "7-55",
+       "name": "Medium Blonde Gold Extra",
+       "family": "Gold"
+      },
+      {
+       "code": "7-65",
+       "name": "Medium Blonde Chocolate Gold",
+       "family": "Chocolate Gold"
+      },
+      {
+       "code": "7-77",
+       "name": "Medium Blonde Copper Extra",
+       "family": "Copper"
+      },
+      {
+       "code": "8-0",
+       "name": "Light Blonde Natural",
+       "family": "Natural"
+      },
+      {
+       "code": "8-00",
+       "name": "Light Blonde Natural Extra",
+       "family": "Natural Extra"
+      },
+      {
+       "code": "8-1",
+       "name": "Light Blonde Cendré",
+       "family": "Cendré"
+      },
+      {
+       "code": "8-11",
+       "name": "Light Blonde Cendré Extra",
+       "family": "Cendré"
+      },
+      {
+       "code": "8-19",
+       "name": "Light Blonde Cendré Violet",
+       "family": "Cendré Violet"
+      },
+      {
+       "code": "8-4",
+       "name": "Light Blonde Beige",
+       "family": "Beige"
+      },
+      {
+       "code": "8-55",
+       "name": "Light Blonde Gold Extra",
+       "family": "Gold"
+      },
+      {
+       "code": "8-65",
+       "name": "Light Blonde Chocolate Gold",
+       "family": "Chocolate Gold"
+      },
+      {
+       "code": "9-0",
+       "name": "Extra Light Blonde Natural",
+       "family": "Natural"
+      },
+      {
+       "code": "9-00",
+       "name": "Extra Light Blonde Natural Extra",
+       "family": "Natural Extra"
+      },
+      {
+       "code": "9-1",
+       "name": "Extra Light Blonde Cendré",
+       "family": "Cendré"
+      },
+      {
+       "code": "9-4",
+       "name": "Extra Light Blonde Beige",
+       "family": "Beige"
+      },
+      {
+       "code": "9-55",
+       "name": "Extra Light Blonde Gold Extra",
+       "family": "Gold"
+      },
+      {
+       "code": "9-7",
+       "name": "Extra Light Blonde Copper",
+       "family": "Copper"
+      },
+      {
+       "code": "9-77",
+       "name": "Extra Light Blonde Copper Extra",
+       "family": "Copper"
+      },
+      {
+       "code": "9,5-1",
+       "name": "Pastel Pearl Cendré",
+       "family": "Pastel Toner"
+      },
+      {
+       "code": "9,5-4",
+       "name": "Pastel Beige",
+       "family": "Pastel Toner"
+      },
+      {
+       "code": "9,5-22",
+       "name": "Pastel Ash Extra",
+       "family": "Pastel Toner"
+      },
+      {
+       "code": "9,5-49",
+       "name": "Pastel Beige Violet",
+       "family": "Pastel Toner"
+      },
+      {
+       "code": "10-0",
+       "name": "Ultra Blonde Natural",
+       "family": "Highlift"
+      },
+      {
+       "code": "10-1",
+       "name": "Ultra Blonde Cendré",
+       "family": "Highlift"
+      },
+      {
+       "code": "10-4",
+       "name": "Ultra Blonde Beige",
+       "family": "Highlift"
+      },
+      {
+       "code": "10-46",
+       "name": "Ultra Blonde Beige Chocolate",
+       "family": "Highlift"
+      },
+      {
+       "code": "12-0",
+       "name": "Special Blonde Natural",
+       "family": "Special Blonde"
+      },
+      {
+       "code": "12-1",
+       "name": "Special Blonde Cendré",
+       "family": "Special Blonde"
+      },
+      {
+       "code": "12-11",
+       "name": "Special Blonde Cendré Extra",
+       "family": "Special Blonde"
+      },
+      {
+       "code": "12-19",
+       "name": "Special Blonde Cendré Violet",
+       "family": "Special Blonde"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "brand": "Matrix",
+   "lines": [
+    {
+     "line": "Super Sync Pre-Bonded",
+     "kind": "demi",
+     "source": "Supplier master list 2026-11-27",
+     "shades": [
+      {
+       "code": "Clear",
+       "name": "Clear Diluter / Gloss",
+       "family": "Clear"
+      },
+      {
+       "code": "2N",
+       "name": "Natural Black",
+       "family": "Neutral"
+      },
+      {
+       "code": "3N",
+       "name": "Darkest Brown Neutral",
+       "family": "Neutral"
+      },
+      {
+       "code": "3NN",
+       "name": "Darkest Brown Neutral Neutral",
+       "family": "Extra Coverage"
+      },
+      {
+       "code": "4A",
+       "name": "Dark Brown Ash",
+       "family": "Ash"
+      },
+      {
+       "code": "4N",
+       "name": "Dark Brown Neutral",
+       "family": "Neutral"
+      },
+      {
+       "code": "5N",
+       "name": "Medium Brown Neutral",
+       "family": "Neutral"
+      },
+      {
+       "code": "5NN",
+       "name": "Medium Brown Neutral Neutral",
+       "family": "Extra Coverage"
+      },
+      {
+       "code": "6A",
+       "name": "Light Brown Ash",
+       "family": "Ash"
+      },
+      {
+       "code": "6BC",
+       "name": "Light Brown Brown Copper",
+       "family": "Brown Copper"
+      },
+      {
+       "code": "6N",
+       "name": "Light Brown Neutral",
+       "family": "Neutral"
+      },
+      {
+       "code": "6NN",
+       "name": "Light Brown Neutral Neutral",
+       "family": "Extra Coverage"
+      },
+      {
+       "code": "6NNA",
+       "name": "Light Brown Extra Neutral Ash",
+       "family": "Extra Coverage"
+      },
+      {
+       "code": "6P",
+       "name": "Light Brown Pearl",
+       "family": "Pearl"
+      },
+      {
+       "code": "6RC+",
+       "name": "Light Brown Red Copper+",
+       "family": "Red Copper"
+      },
+      {
+       "code": "6WN",
+       "name": "Light Brown Warm Neutral",
+       "family": "Warm Neutral"
+      },
+      {
+       "code": "7CC+",
+       "name": "Dark Blonde Copper Copper+",
+       "family": "Copper"
+      },
+      {
+       "code": "7N",
+       "name": "Dark Blonde Neutral",
+       "family": "Neutral"
+      },
+      {
+       "code": "7NA",
+       "name": "Dark Blonde Neutral Ash",
+       "family": "Neutral Ash"
+      },
+      {
+       "code": "7NN",
+       "name": "Dark Blonde Neutral Neutral",
+       "family": "Extra Coverage"
+      },
+      {
+       "code": "8A",
+       "name": "Medium Blonde Ash",
+       "family": "Ash"
+      },
+      {
+       "code": "8BC",
+       "name": "Medium Blonde Brown Copper",
+       "family": "Brown Copper"
+      },
+      {
+       "code": "8G",
+       "name": "Medium Blonde Gold",
+       "family": "Gold"
+      },
+      {
+       "code": "8GV",
+       "name": "Medium Blonde Gold Violet",
+       "family": "Gold Violet"
+      },
+      {
+       "code": "8M",
+       "name": "Medium Blonde Mocha",
+       "family": "Mocha"
+      },
+      {
+       "code": "8N",
+       "name": "Medium Blonde Neutral",
+       "family": "Neutral"
+      },
+      {
+       "code": "8NN",
+       "name": "Medium Blonde Neutral Neutral",
+       "family": "Extra Coverage"
+      },
+      {
+       "code": "8NNG",
+       "name": "Medium Blonde Extra Neutral Gold",
+       "family": "Extra Coverage"
+      },
+      {
+       "code": "8V",
+       "name": "Medium Blonde Violet",
+       "family": "Violet"
+      },
+      {
+       "code": "8VG",
+       "name": "Medium Blonde Violet Gold",
+       "family": "Violet Gold"
+      },
+      {
+       "code": "9GV",
+       "name": "Light Blonde Gold Violet",
+       "family": "Gold Violet"
+      },
+      {
+       "code": "9MM",
+       "name": "Light Blonde Mocha Mocha",
+       "family": "Mocha"
+      },
+      {
+       "code": "9N",
+       "name": "Light Blonde Neutral",
+       "family": "Neutral"
+      },
+      {
+       "code": "9NA",
+       "name": "Light Blonde Neutral Ash",
+       "family": "Neutral Ash"
+      },
+      {
+       "code": "10A",
+       "name": "Extra Light Blonde Ash",
+       "family": "Ash"
+      },
+      {
+       "code": "10AG",
+       "name": "Extra Light Blonde Ash Gold",
+       "family": "Sparkling Blondes"
+      },
+      {
+       "code": "10G",
+       "name": "Extra Light Blonde Gold",
+       "family": "Gold"
+      },
+      {
+       "code": "10M",
+       "name": "Extra Light Blonde Mocha",
+       "family": "Mocha"
+      },
+      {
+       "code": "10MM",
+       "name": "Extra Light Blonde Mocha Mocha",
+       "family": "Mocha"
+      },
+      {
+       "code": "10N",
+       "name": "Extra Light Blonde Neutral",
+       "family": "Neutral"
+      },
+      {
+       "code": "10NN",
+       "name": "Extra Light Blonde Neutral Neutral",
+       "family": "Extra Coverage"
+      },
+      {
+       "code": "10NNG",
+       "name": "Extra Light Blonde Extra Neutral Gold",
+       "family": "Extra Coverage"
+      },
+      {
+       "code": "10NR",
+       "name": "Extra Light Blonde Neutral Red",
+       "family": "Sparkling Blondes"
+      },
+      {
+       "code": "10NV",
+       "name": "Extra Light Blonde Neutral Violet",
+       "family": "Neutral Violet"
+      },
+      {
+       "code": "10P",
+       "name": "Extra Light Blonde Pearl",
+       "family": "Pearl"
+      },
+      {
+       "code": "10V",
+       "name": "Extra Light Blonde Violet",
+       "family": "Violet"
+      },
+      {
+       "code": "11A",
+       "name": "Extra Light Blonde+ Ash",
+       "family": "Ash"
+      },
+      {
+       "code": "11GV",
+       "name": "Extra Light Blonde+ Gold Violet",
+       "family": "Sparkling Blondes"
+      },
+      {
+       "code": "11P",
+       "name": "Extra Light Blonde+ Pearl",
+       "family": "Pearl"
+      },
+      {
+       "code": "11V",
+       "name": "Extra Light Blonde+ Violet",
+       "family": "Violet"
+      },
+      {
+       "code": "11VG",
+       "name": "Extra Light Blonde+ Violet Gold",
+       "family": "Violet Gold"
+      },
+      {
+       "code": "SPA",
+       "name": "Sheer Pastel Ash",
+       "family": "Sheer Pastel"
+      },
+      {
+       "code": "SPM",
+       "name": "Sheer Pastel Mocha",
+       "family": "Sheer Pastel"
+      },
+      {
+       "code": "SPN",
+       "name": "Sheer Pastel Neutral",
+       "family": "Sheer Pastel"
+      },
+      {
+       "code": "SPP",
+       "name": "Sheer Pastel Pearl",
+       "family": "Sheer Pastel"
+      },
+      {
+       "code": "SPV",
+       "name": "Sheer Pastel Violet",
+       "family": "Sheer Pastel"
+      },
+      {
+       "code": "HDRR",
+       "name": "High Definition Red Red",
+       "family": "High Definition"
+      },
+      {
+       "code": "HDRV",
+       "name": "High Definition Red Violet",
+       "family": "High Definition"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "brand": "Joico",
+   "lines": [
+    {
+     "line": "LumiShine Demi-Permanent Liquid",
+     "kind": "demi",
+     "source": "Supplier master list 2026-11-27",
+     "shades": [
+      {
+       "code": "3VV",
+       "name": "Dark Brown Violet Violet (3.22)",
+       "family": "Violet Violet"
+      },
+      {
+       "code": "4M",
+       "name": "Medium Brown Mocha (4.037)",
+       "family": "Mocha"
+      },
+      {
+       "code": "4NWB",
+       "name": "Medium Brown Natural Warm Beige (4.07)",
+       "family": "Natural Warm Beige"
+      },
+      {
+       "code": "4NV",
+       "name": "Medium Brown Natural Violet (4.02)",
+       "family": "Natural Violet"
+      },
+      {
+       "code": "4RR",
+       "name": "Medium Brown Red Red (4.66)",
+       "family": "Red Red"
+      },
+      {
+       "code": "4SB",
+       "name": "Medium Brown Silver Blue (4.8)",
+       "family": "Silver Blue"
+      },
+      {
+       "code": "5AA",
+       "name": "Light Brown Ash Ash (5.11)",
+       "family": "Ash Ash"
+      },
+      {
+       "code": "5M",
+       "name": "Light Brown Mocha (5.037)",
+       "family": "Mocha"
+      },
+      {
+       "code": "5N",
+       "name": "Light Brown Natural (5.0)",
+       "family": "Natural"
+      },
+      {
+       "code": "5NA",
+       "name": "Light Brown Natural Ash (5.01)",
+       "family": "Natural Ash"
+      },
+      {
+       "code": "5RRV",
+       "name": "Light Brown Red Red Violet (5.662)",
+       "family": "Red Red Violet"
+      },
+      {
+       "code": "5WC",
+       "name": "Light Brown Warm Copper (5.774)",
+       "family": "Warm Copper"
+      },
+      {
+       "code": "6AA",
+       "name": "Dark Blonde Ash Ash (6.11)",
+       "family": "Ash Ash"
+      },
+      {
+       "code": "6CCR",
+       "name": "Dark Blonde Copper Copper Red (6.446)",
+       "family": "Copper Copper Red"
+      },
+      {
+       "code": "6M",
+       "name": "Dark Blonde Mocha (6.037)",
+       "family": "Mocha"
+      },
+      {
+       "code": "6N",
+       "name": "Dark Blonde Natural (6.0)",
+       "family": "Natural"
+      },
+      {
+       "code": "6NA",
+       "name": "Dark Blonde Natural Ash (6.01)",
+       "family": "Natural Ash"
+      },
+      {
+       "code": "6NB",
+       "name": "Dark Blonde Natural Beige (6.072)",
+       "family": "Natural Beige"
+      },
+      {
+       "code": "6NC",
+       "name": "Dark Blonde Natural Copper (6.04)",
+       "family": "Natural Copper"
+      },
+      {
+       "code": "6NG",
+       "name": "Dark Blonde Natural Gold (6.03)",
+       "family": "Natural Gold"
+      },
+      {
+       "code": "6NV",
+       "name": "Dark Blonde Natural Violet (6.02)",
+       "family": "Natural Violet"
+      },
+      {
+       "code": "6NWB",
+       "name": "Dark Blonde Natural Warm Beige (6.07)",
+       "family": "Natural Warm Beige"
+      },
+      {
+       "code": "6SB",
+       "name": "Dark Blonde Silver Blue (6.8)",
+       "family": "Silver Blue"
+      },
+      {
+       "code": "6WC",
+       "name": "Dark Blonde Warm Copper (6.774)",
+       "family": "Warm Copper"
+      },
+      {
+       "code": "7AG",
+       "name": "Medium Blonde Ash Gold (7.83)",
+       "family": "Ash Gold"
+      },
+      {
+       "code": "7BV",
+       "name": "Medium Blonde Blue Violet (7.82)",
+       "family": "Blue Violet"
+      },
+      {
+       "code": "7G",
+       "name": "Medium Blonde Gold (7.3)",
+       "family": "Gold"
+      },
+      {
+       "code": "7M",
+       "name": "Medium Blonde Mocha (7.037)",
+       "family": "Mocha"
+      },
+      {
+       "code": "7N",
+       "name": "Medium Blonde Natural (7.0)",
+       "family": "Natural"
+      },
+      {
+       "code": "7NB",
+       "name": "Medium Blonde Natural Beige (7.072)",
+       "family": "Natural Beige"
+      },
+      {
+       "code": "7NC",
+       "name": "Medium Blonde Natural Copper (7.04)",
+       "family": "Natural Copper"
+      },
+      {
+       "code": "7NWB",
+       "name": "Medium Blonde Natural Warm Beige (7.07)",
+       "family": "Natural Warm Beige"
+      },
+      {
+       "code": "7SB",
+       "name": "Medium Blonde Silver Blue (7.8)",
+       "family": "Silver Blue"
+      },
+      {
+       "code": "7V",
+       "name": "Medium Blonde Violet (7.2)",
+       "family": "Violet"
+      },
+      {
+       "code": "7WC",
+       "name": "Medium Blonde Warm Copper (7.774)",
+       "family": "Warm Copper"
+      },
+      {
+       "code": "8AA",
+       "name": "Light Blonde Ash Ash (8.11)",
+       "family": "Ash Ash"
+      },
+      {
+       "code": "8N",
+       "name": "Light Blonde Natural (8.0)",
+       "family": "Natural"
+      },
+      {
+       "code": "8NA",
+       "name": "Light Blonde Natural Ash (8.01)",
+       "family": "Natural Ash"
+      },
+      {
+       "code": "8NC",
+       "name": "Light Blonde Natural Copper (8.04)",
+       "family": "Natural Copper"
+      },
+      {
+       "code": "8NG",
+       "name": "Light Blonde Natural Gold (8.03)",
+       "family": "Natural Gold"
+      },
+      {
+       "code": "8PV",
+       "name": "Light Blonde Platinum Violet (8.92)",
+       "family": "Platinum Violet"
+      },
+      {
+       "code": "8RR",
+       "name": "Light Blonde Red Red (8.66)",
+       "family": "Red Red"
+      },
+      {
+       "code": "8VG",
+       "name": "Light Blonde Violet Gold (8.23)",
+       "family": "Violet Gold"
+      },
+      {
+       "code": "9AG",
+       "name": "Very Light Blonde Ash Gold (9.83)",
+       "family": "Ash Gold"
+      },
+      {
+       "code": "9BV",
+       "name": "Very Light Blonde Blue Violet (9.82)",
+       "family": "Blue Violet"
+      },
+      {
+       "code": "9G",
+       "name": "Very Light Blonde Gold (9.3)",
+       "family": "Gold"
+      },
+      {
+       "code": "9NA",
+       "name": "Very Light Blonde Natural Ash (9.01)",
+       "family": "Natural Ash"
+      },
+      {
+       "code": "9NB",
+       "name": "Very Light Blonde Natural Beige (9.072)",
+       "family": "Natural Beige"
+      },
+      {
+       "code": "9NV",
+       "name": "Very Light Blonde Natural Violet (9.02)",
+       "family": "Natural Violet"
+      },
+      {
+       "code": "9NWB",
+       "name": "Very Light Blonde Natural Warm Beige (9.07)",
+       "family": "Natural Warm Beige"
+      },
+      {
+       "code": "9PV",
+       "name": "Very Light Blonde Platinum Violet (9.92)",
+       "family": "Platinum Violet"
+      },
+      {
+       "code": "9SB",
+       "name": "Very Light Blonde Silver Blue (9.8)",
+       "family": "Silver Blue"
+      },
+      {
+       "code": "9V",
+       "name": "Very Light Blonde Violet (9.2)",
+       "family": "Violet"
+      },
+      {
+       "code": "9VG",
+       "name": "Very Light Blonde Violet Gold (9.23)",
+       "family": "Violet Gold"
+      },
+      {
+       "code": "10AG",
+       "name": "Lightest Blonde Ash Gold (10.83)",
+       "family": "Ash Gold"
+      },
+      {
+       "code": "10BV",
+       "name": "Lightest Blonde Blue Violet (10.82)",
+       "family": "Blue Violet"
+      },
+      {
+       "code": "10N",
+       "name": "Lightest Blonde Natural (10.0)",
+       "family": "Natural"
+      },
+      {
+       "code": "10NG",
+       "name": "Lightest Blonde Natural Gold (10.03)",
+       "family": "Natural Gold"
+      },
+      {
+       "code": "10NWB",
+       "name": "Lightest Blonde Natural Warm Beige (10.07)",
+       "family": "Natural Warm Beige"
+      },
+      {
+       "code": "10PV",
+       "name": "Lightest Blonde Platinum Violet (10.92)",
+       "family": "Platinum Violet"
+      },
+      {
+       "code": "10SB",
+       "name": "Lightest Blonde Silver Blue (10.8)",
+       "family": "Silver Blue"
+      },
+      {
+       "code": "10V",
+       "name": "Lightest Blonde Violet (10.2)",
+       "family": "Violet"
+      },
+      {
+       "code": "10VG",
+       "name": "Lightest Blonde Violet Gold (10.23)",
+       "family": "Violet Gold"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "brand": "Pulp Riot",
+   "lines": [
+    {
+     "line": "Semi-Permanent",
+     "kind": "semi",
+     "source": "Supplier master list 2026-11-27",
+     "shades": [
+      {
+       "code": "CLEAR",
+       "name": "Clear",
+       "family": "Clear"
+      },
+      {
+       "code": "ABSINTHE",
+       "name": "Emerald Green",
+       "family": "Green"
+      },
+      {
+       "code": "AQUATIC",
+       "name": "Turquoise",
+       "family": "Aqua"
+      },
+      {
+       "code": "BLUSH",
+       "name": "Warm Pastel Pink",
+       "family": "Pastel"
+      },
+      {
+       "code": "CUPID",
+       "name": "Mid-tone Pink",
+       "family": "Pink"
+      },
+      {
+       "code": "FIREBALL",
+       "name": "Bright Red",
+       "family": "Red"
+      },
+      {
+       "code": "JAM",
+       "name": "Pinky Purple",
+       "family": "Purple"
+      },
+      {
+       "code": "LEMON",
+       "name": "Bright Yellow",
+       "family": "Yellow"
+      },
+      {
+       "code": "LILAC",
+       "name": "Cool Pastel Purple",
+       "family": "Pastel"
+      },
+      {
+       "code": "NIGHTFALL",
+       "name": "Saturated Blue",
+       "family": "Blue"
+      },
+      {
+       "code": "NOIR",
+       "name": "Black",
+       "family": "Black"
+      },
+      {
+       "code": "POWDER",
+       "name": "Light Blue",
+       "family": "Pastel"
+      },
+      {
+       "code": "SEA GLASS",
+       "name": "Light Green",
+       "family": "Pastel"
+      },
+      {
+       "code": "SMOKE",
+       "name": "Grey",
+       "family": "Grey"
+      },
+      {
+       "code": "VELVET",
+       "name": "Deep Purple",
+       "family": "Purple"
+      }
+     ]
     }
    ]
   }

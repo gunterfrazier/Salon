@@ -167,7 +167,7 @@ export function productsFromCatalog(
 export const TYPE_LABEL: Record<string, string> = { permanent: "Permanent", demi: "Demi", gloss: "Gloss", bonder_inside: "Bonder Inside" };
 
 /** Brand for the line names used in the catalog (Kenra Professional → Kenra). */
-export const shortBrand = (b: string) => b.replace(/ Professional$/, "");
+export const shortBrand = (b: string) => b.replace(/ Professionals?$/, "");
 
 /** "Redken Shades EQ Gloss", without repeating the brand ("Kenra Color Permanent", not "Kenra Kenra Color…"). */
 export function lineTitle(p: { brand: string; line: string | null }): string {
