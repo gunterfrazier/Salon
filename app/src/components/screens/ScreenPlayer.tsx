@@ -2,11 +2,12 @@
 
 /* eslint-disable @next/next/no-img-element -- salon photos and designs */
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import QRCode from "@/components/QRCode";
 import { accentStyle } from "@/lib/branding";
 import { money } from "@/lib/format";
 import type { ScreenData } from "@/lib/screens/data";
+import { jumpControl, NO_CONTROL, pauseControl, playControl, playPosition, type Control } from "@/lib/screens/playback";
 import { SLIDES, type ScreenSettings, type Slide } from "@/lib/screens/slides";
 import { formatDay, formatTime } from "@/lib/time/zone";
 import ClientCard, { type ClientCardApi } from "./ClientCard";
@@ -15,41 +16,89 @@ import ColorWheel from "./ColorWheel";
 const time = (iso: string, tz: string) => formatTime(new Date(iso), tz).replace(/\s[A-Z]{2,5}$/, "");
 const hm = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ""}` : `${m}m`);
 
-/** Full-screen player: rotates through the playlist, refreshes its data every minute. */
 /** A paired TV: checks in every 2 minutes, and can be unpaired from the corner lock (with the exit PIN). */
 export interface DeviceApi {
   hasPin: boolean;
   unpair: (pin: string) => Promise<{ ok: true } | { ok: false; error: string }>;
 }
 
-export default function ScreenPlayer({ name, slides, settings, data, clientCard, device }: { name: string; slides: Slide[]; settings: ScreenSettings; data: ScreenData; clientCard?: ClientCardApi; device?: DeviceApi }) {
+/** Keeping in step with other TVs and the phone remote. */
+export interface SyncInfo {
+  screenId: string;
+  /** When the playlist last changed (a newer one reloads the screen). */
+  rev: string;
+  control: Control;
+  /** Server clock when the page was made (ms). */
+  serverNow: number;
+}
+
+/**
+ * Full-screen player. Which slide shows comes from the clock, so every TV on
+ * the same screen shows the same slide; the remote's next/back/pause apply to
+ * all of them. Data refreshes every minute.
+ */
+export default function ScreenPlayer({ name, slides, settings, data, clientCard, device, sync }: { name: string; slides: Slide[]; settings: ScreenSettings; data: ScreenData; clientCard?: ClientCardApi; device?: DeviceApi; sync?: SyncInfo }) {
   const router = useRouter();
   const [now, setNow] = useState<Date | null>(null);
-  const [index, setIndex] = useState(0);
-  const [cycle, setCycle] = useState(0);
-  const [paused, setPaused] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [control, setControl] = useState<Control>(sync?.control ?? NO_CONTROL);
+  const [busy, setBusy] = useState(false);
   const tz = data.salon.tz;
+  const seconds = slides.map((s) => s.seconds);
+  const pos = now ? playPosition(seconds, now.getTime() + offset, busy ? { ...control, pausedAt: control.pausedAt ?? now.getTime() + offset } : control) : { index: 0, lap: 0, remaining: 0, elapsed: 0 };
+  const index = pos.index;
+  const cycle = pos.lap * Math.max(1, slides.length) + pos.index;
   const current = slides.length ? slides[index % slides.length] : null;
+  const paused = !!control.pausedAt;
+
+  // New control from the server after a page refresh replaces any local change.
+  const [seenControl, setSeenControl] = useState(sync?.control);
+  if (sync && sync.control !== seenControl) {
+    setSeenControl(sync.control);
+    setControl(sync.control);
+  }
 
   useEffect(() => {
     const tick = () => setNow(new Date());
-    tick();
-    const c = setInterval(tick, 1000);
+    const first = setTimeout(() => {
+      if (sync) setOffset(sync.serverNow - Date.now());
+      tick();
+    }, 0);
+    const c = setInterval(tick, 500);
     const r = setInterval(() => router.refresh(), 60_000);
     return () => {
+      clearTimeout(first);
       clearInterval(c);
       clearInterval(r);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
+  // Follow the remote and playlist edits within a few seconds.
+  const lastServer = useRef(JSON.stringify(sync?.control ?? NO_CONTROL));
   useEffect(() => {
-    if (!current || paused || slides.length < 2) return;
-    const t = setTimeout(() => {
-      setIndex((i) => (i + 1) % slides.length);
-      setCycle((c) => c + 1);
-    }, current.seconds * 1000);
-    return () => clearTimeout(t);
-  }, [current, paused, slides.length, index]);
+    if (!sync) return;
+    lastServer.current = JSON.stringify(sync.control);
+    const t = setInterval(async () => {
+      try {
+        const r = await fetch(`/api/screens/state?id=${sync.screenId}`, { cache: "no-store" });
+        if (!r.ok) return;
+        const j = (await r.json()) as { updated: string; control: Control; now: number };
+        setOffset(j.now - Date.now());
+        if (!sync.rev.startsWith(`${j.updated}|`)) return router.refresh();
+        const k = JSON.stringify(j.control);
+        if (k !== lastServer.current) {
+          const before = JSON.parse(lastServer.current) as Control;
+          lastServer.current = k;
+          setControl(j.control);
+          if (JSON.stringify(before.override) !== JSON.stringify(j.control.override)) router.refresh();
+        }
+      } catch {
+        /* offline for a moment */
+      }
+    }, 5000);
+    return () => clearInterval(t);
+  }, [sync, router]);
 
   // Paired TV: check in every 2 minutes; if it was removed in the app, go back to pairing.
   const playing = current?.type ?? null;
@@ -64,10 +113,9 @@ export default function ScreenPlayer({ name, slides, settings, data, clientCard,
     return () => clearInterval(t);
   }, [device, playing]);
 
-  const go = (i: number) => {
-    setIndex(i);
-    setCycle((c) => c + 1);
-  };
+  // Touch: change just this screen (until the remote changes it again).
+  const go = (i: number) => setControl((c) => jumpControl(seconds, Date.now() + offset, c, i));
+  const setPaused = (p: boolean) => setControl((c) => (p ? pauseControl(Date.now() + offset, c) : playControl(Date.now() + offset, c)));
 
   return (
     <div className="brand-dark flex min-h-dvh flex-col gap-4 p-4 sm:p-6 lg:p-10" style={accentStyle({ accent: data.salon.accent }) as React.CSSProperties | undefined}>
@@ -87,7 +135,7 @@ export default function ScreenPlayer({ name, slides, settings, data, clientCard,
       <main className="flex flex-1 flex-col rounded-3xl border border-line bg-surface p-5 sm:p-8">
         {current ? (
           <div key={`${current.id}-${cycle}`} className="flex flex-1 flex-col justify-center motion-safe:animate-[screenIn_.7s_ease]">
-            <SlideView slide={current} data={data} cycle={cycle} now={now} clientCard={clientCard} onBusy={setPaused} />
+            <SlideView slide={current} data={data} cycle={cycle} now={now} clientCard={clientCard} onBusy={setBusy} />
           </div>
         ) : (
           <p className="m-auto text-center text-xl text-muted">This screen has no slides yet. Add some under Screens in the app.</p>

@@ -43,7 +43,10 @@ export default async function FrontDeskPage() {
                 <li key={s.id} className={card}>
                   <p className="font-semibold">{s.name}</p>
                   <p className="text-xs text-muted">{s.audience === "staff" ? "Staff only" : "Public"}</p>
-                  <Link href={`/app/screens/${s.id}/play`} className={`${btn} mt-3 inline-block`}>Open on this device</Link>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Link href={`/app/screens/${s.id}/play`} className={btn}>Open on this device</Link>
+                    <Link href={`/app/screens/${s.id}/remote`} className={btn}>Remote</Link>
+                  </div>
                 </li>
               ))}
             </ul>

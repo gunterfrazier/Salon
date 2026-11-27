@@ -4,6 +4,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import type { ScheduleRule } from "@/lib/screens/playback";
 import { newSlide, SLIDE_TYPES, SLIDES, type ScreenSettings, type Slide, type SlideType } from "@/lib/screens/slides";
 import { deleteScreen, moveTv, newScreenLink, pairTv, removeTv, saveScreen } from "../actions";
 
@@ -51,7 +52,10 @@ export default function ScreenEditor({ screen, media, stylists, devices = [], ot
     <main className="mx-auto max-w-3xl space-y-4 px-4 py-4 pb-28">
       <header>
         <Link href="/app/screens" className="text-sm text-muted">‹ Screens</Link>
-        <h1 className="font-display text-3xl">{name || "Screen"}</h1>
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <h1 className="font-display text-3xl">{name || "Screen"}</h1>
+          <Link href={`/app/screens/${screen.id}/remote`} className={btn}>Remote</Link>
+        </div>
       </header>
 
       <section className="space-y-3 rounded-2xl border border-line bg-surface p-4">
@@ -133,6 +137,8 @@ export default function ScreenEditor({ screen, media, stylists, devices = [], ot
           <button type="button" className={btn} onClick={() => setAdding(true)}>+ Add a slide</button>
         )}
       </section>
+
+      <ScheduleSection settings={settings} otherScreens={otherScreens} onChange={setSettings} />
 
       <TvSection screenId={screen.id} devices={devices} otherScreens={otherScreens} onMsg={setMsg} />
 
@@ -282,6 +288,60 @@ function TvSection({ screenId, devices, otherScreens, onMsg }: { screenId: strin
             </li>
           ))}
         </ul>
+      )}
+    </section>
+  );
+}
+
+const DAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/** Times of day when another screen's playlist plays here, and what to show when the salon is closed. */
+function ScheduleSection({ settings, otherScreens, onChange }: { settings: ScreenSettings; otherScreens: { id: string; name: string }[]; onChange: (s: ScreenSettings) => void }) {
+  const rules = settings.schedule ?? [];
+  const set = (next: ScheduleRule[]) => onChange({ ...settings, schedule: next });
+  const update = (i: number, p: Partial<ScheduleRule>) => set(rules.map((r, j) => (j === i ? { ...r, ...p } : r)));
+  const sel = "rounded-lg border border-line bg-background px-2 py-1.5 text-sm";
+  return (
+    <section className="space-y-3 rounded-2xl border border-line bg-surface p-4">
+      <div>
+        <h2 className="font-semibold">Schedule</h2>
+        <p className="text-sm text-muted">Play another screen&rsquo;s playlist at certain times. The rest of the time this screen plays its own.</p>
+      </div>
+      {otherScreens.length === 0 ? (
+        <p className="text-sm text-muted">Add another screen first (for example an &ldquo;After hours&rdquo; screen with just the Hours sign), then schedule it here.</p>
+      ) : (
+        <>
+          <label className="flex flex-wrap items-center justify-between gap-2 text-sm">
+            <span><span className="font-medium">When the salon is closed, show</span><span className="block text-muted">Uses your hours and holiday closures.</span></span>
+            <select className={sel} value={settings.whenClosed ?? ""} onChange={(e) => onChange({ ...settings, whenClosed: e.target.value || null })}>
+              <option value="">This screen&rsquo;s own playlist</option>
+              {otherScreens.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </select>
+          </label>
+          <ul className="space-y-2">
+            {rules.map((r, i) => (
+              <li key={r.id} className="space-y-2 rounded-xl border border-line p-3 text-sm">
+                <div className="flex flex-wrap gap-1">
+                  {DAY.map((d, n) => (
+                    <button key={d} type="button" aria-pressed={r.days.includes(n)} onClick={() => update(i, { days: r.days.includes(n) ? r.days.filter((x) => x !== n) : [...r.days, n].sort() })} className={`rounded-full border px-2.5 py-1 ${r.days.includes(n) ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{d}</button>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input type="time" className={sel} value={r.from} onChange={(e) => update(i, { from: e.target.value })} aria-label="From" />
+                  <span>to</span>
+                  <input type="time" className={sel} value={r.to} onChange={(e) => update(i, { to: e.target.value })} aria-label="To" />
+                  <span>play</span>
+                  <select className={sel} value={r.screenId} onChange={(e) => update(i, { screenId: e.target.value })} aria-label="Screen to play">
+                    {otherScreens.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+                  </select>
+                  <button type="button" className="ml-auto px-2" aria-label="Remove time" onClick={() => set(rules.filter((_, j) => j !== i))}>×</button>
+                </div>
+                {r.from > r.to && <p className="text-xs text-muted">Runs overnight into the next morning.</p>}
+              </li>
+            ))}
+          </ul>
+          <button type="button" className={btn} onClick={() => set([...rules, { id: Math.random().toString(36).slice(2, 10), days: [1, 2, 3, 4, 5, 6], from: "09:00", to: "12:00", screenId: otherScreens[0].id }])}>+ Add a time</button>
+        </>
       )}
     </section>
   );

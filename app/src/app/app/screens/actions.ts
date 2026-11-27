@@ -5,8 +5,10 @@ import { getContext } from "@/lib/context";
 import { cleanPlaylist, cleanSettings, fromTemplate, TEMPLATES } from "@/lib/screens/slides";
 import { newKey, normalizeCode, sha256 } from "@/lib/screens/pairing";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { backControl, cleanControl, jumpControl, nextControl, pauseControl, playControl, type Control } from "@/lib/screens/playback";
+import { resolvePlaylist } from "@/lib/screens/resolve";
 import type { CardData } from "@/components/screens/ClientCard";
-import { formatDay, wallParts } from "@/lib/time/zone";
+import { addDays, formatDay, todayIn, wallParts, zonedToUtc } from "@/lib/time/zone";
 
 /** Client lookup for the color-bar screen (needs "See and add color formulas"). */
 export async function screenClientSearch(q: string): Promise<{ id: string; name: string; phone: string | null }[]> {
@@ -205,4 +207,53 @@ export async function moveTv(deviceId: string, screenId: string): Promise<Result
   if (error) return { ok: false, error: "Couldn't move it." };
   revalidatePath("/app/screens", "layout");
   return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Phone remote
+// ---------------------------------------------------------------------------
+
+function canRemote(ctx: Awaited<ReturnType<typeof getContext>>): { ok: false; error: string } | null {
+  return ctx.can("settings.salon") || ctx.can("booking.manage") ? null : { ok: false, error: "Your access doesn't include the screen remote." };
+}
+
+async function writeControl(ctx: Awaited<ReturnType<typeof getContext>>, id: string, control: Control) {
+  const { error } = await ctx.supabase.from("screens").update({ control }).eq("id", id).eq("business_id", ctx.business.id);
+  revalidatePath(`/app/screens/${id}/remote`);
+  return error ? { ok: false as const, error: "Couldn't reach the screen." } : { ok: true as const };
+}
+
+/** Next, back, pause, play, or jump to a slide, on every TV showing this screen. */
+export async function remoteCommand(id: string, cmd: "next" | "back" | "pause" | "play" | "jump", index = 0): Promise<Result> {
+  const ctx = await getContext();
+  const no = canRemote(ctx);
+  if (no) return no;
+  const p = await resolvePlaylist(ctx.supabase, ctx.business.id, id);
+  if (!p) return { ok: false, error: "Screen not found." };
+  const secs = p.slides.map((s) => s.seconds);
+  const now = Date.now();
+  const c = p.control;
+  const next =
+    cmd === "next" ? nextControl(secs, now, c)
+    : cmd === "back" ? backControl(secs, now, c)
+    : cmd === "pause" ? pauseControl(now, c)
+    : cmd === "play" ? playControl(now, c)
+    : jumpControl(secs, now, c, Math.max(0, Math.min(secs.length - 1, Math.round(index))));
+  return writeControl(ctx, id, next);
+}
+
+/** "Play something else" for a while, or back to the schedule (screenId null). */
+export async function remoteOverride(id: string, screenId: string | null, howLong: "hour" | "today" | "until"): Promise<Result> {
+  const ctx = await getContext();
+  const no = canRemote(ctx);
+  if (no) return no;
+  const { data: s } = await ctx.supabase.from("screens").select("control").eq("id", id).eq("business_id", ctx.business.id).maybeSingle();
+  if (!s) return { ok: false, error: "Screen not found." };
+  const c = cleanControl(s.control);
+  if (!screenId) return writeControl(ctx, id, { ...c, override: null, pausedAt: null });
+  const { data: other } = await ctx.supabase.from("screens").select("id").eq("id", screenId).eq("business_id", ctx.business.id).maybeSingle();
+  if (!other) return { ok: false, error: "Pick a screen to play." };
+  const tz = ctx.business.timezone;
+  const until = howLong === "hour" ? Date.now() + 3_600_000 : howLong === "today" ? zonedToUtc(addDays(todayIn(tz), 1), 0, tz).getTime() : Date.now() + 30 * 86_400_000;
+  return writeControl(ctx, id, { ...c, override: { screenId, until }, pausedAt: null });
 }

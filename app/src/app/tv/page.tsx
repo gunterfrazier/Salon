@@ -1,9 +1,8 @@
 import ScreenPlayer from "@/components/screens/ScreenPlayer";
-import { loadScreenData } from "@/lib/screens/data";
 import { pairedDevice } from "@/lib/screens/device";
-import { cleanPlaylist, cleanSettings, liveSlides, playerSettings } from "@/lib/screens/slides";
+import { resolveScreen } from "@/lib/screens/resolve";
+import { playerSettings } from "@/lib/screens/slides";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { todayIn } from "@/lib/time/zone";
 import { tvClientCard, tvClientSearch, unpairThisTv } from "./actions";
 import PairTv from "./PairTv";
 
@@ -18,15 +17,20 @@ export default async function TvPage() {
   const d = await pairedDevice();
   if (!d) return <PairTv />;
   const db = createAdminClient();
-  const [{ data: s }, { data: b }] = await Promise.all([
-    db.from("screens").select("name,audience,playlist,settings").eq("id", d.screenId).maybeSingle(),
-    db.from("businesses").select("status,timezone").eq("id", d.businessId).single(),
-  ]);
-  if (!s || !b || b.status !== "approved") return <PairTv />;
-  const audience = s.audience === "staff" ? "staff" : "public";
-  const settings = cleanSettings(s.settings);
-  const slides = liveSlides(cleanPlaylist(s.playlist, audience), todayIn(b.timezone));
-  const data = await loadScreenData(db, d.businessId, slides, audience);
-  const lookup = audience === "staff" && slides.some((x) => x.type === "clientcard") ? { search: tvClientSearch, card: tvClientCard } : undefined;
-  return <ScreenPlayer name={s.name} slides={slides} settings={playerSettings(settings)} data={data} clientCard={lookup} device={{ hasPin: !!settings.exitPin, unpair: unpairThisTv }} />;
+  const { data: b } = await db.from("businesses").select("status").eq("id", d.businessId).single();
+  if (!b || b.status !== "approved") return <PairTv />;
+  const r = await resolveScreen(db, d.businessId, d.screenId);
+  if (!r) return <PairTv />;
+  const lookup = r.audience === "staff" && r.slides.some((x) => x.type === "clientcard") ? { search: tvClientSearch, card: tvClientCard } : undefined;
+  return (
+    <ScreenPlayer
+      name={r.name}
+      slides={r.slides}
+      settings={playerSettings(r.settings)}
+      data={r.data}
+      clientCard={lookup}
+      device={{ hasPin: !!r.settings.exitPin, unpair: unpairThisTv }}
+      sync={{ screenId: r.screenId, rev: r.rev, control: r.control, serverNow: r.serverNow }}
+    />
+  );
 }

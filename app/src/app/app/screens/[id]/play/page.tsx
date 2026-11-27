@@ -1,9 +1,8 @@
 import { notFound } from "next/navigation";
 import ScreenPlayer from "@/components/screens/ScreenPlayer";
 import { requirePermission } from "@/lib/context";
-import { loadScreenData } from "@/lib/screens/data";
-import { cleanPlaylist, cleanSettings, liveSlides, playerSettings } from "@/lib/screens/slides";
-import { todayIn } from "@/lib/time/zone";
+import { resolveScreen } from "@/lib/screens/resolve";
+import { playerSettings } from "@/lib/screens/slides";
 import { screenClientCard, screenClientSearch } from "../../actions";
 
 export const metadata = { title: "Screen" };
@@ -14,11 +13,8 @@ export default async function PlayScreen({ params }: { params: Promise<{ id: str
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const ctx = await requirePermission(["calendar.all", "booking.manage"]);
-  const { data: s } = await ctx.supabase.from("screens").select("id,name,audience,playlist,settings").eq("id", id).eq("business_id", ctx.business.id).maybeSingle();
-  if (!s) notFound();
-  const audience = s.audience === "staff" ? "staff" : "public";
-  const slides = liveSlides(cleanPlaylist(s.playlist, audience), todayIn(ctx.business.timezone));
-  const data = await loadScreenData(ctx.supabase, ctx.business.id, slides, audience, { onlyStaffId: ctx.can("calendar.all") ? null : ctx.staff.id });
-  const lookup = audience === "staff" && ctx.can("formulas") ? { search: screenClientSearch, card: screenClientCard } : undefined;
-  return <ScreenPlayer name={s.name} slides={slides} settings={playerSettings(cleanSettings(s.settings))} data={data} clientCard={lookup} />;
+  const r = await resolveScreen(ctx.supabase, ctx.business.id, id, { onlyStaffId: ctx.can("calendar.all") ? null : ctx.staff.id });
+  if (!r) notFound();
+  const lookup = r.audience === "staff" && ctx.can("formulas") ? { search: screenClientSearch, card: screenClientCard } : undefined;
+  return <ScreenPlayer name={r.name} slides={r.slides} settings={playerSettings(r.settings)} data={r.data} clientCard={lookup} sync={{ screenId: r.screenId, rev: r.rev, control: r.control, serverNow: r.serverNow }} />;
 }

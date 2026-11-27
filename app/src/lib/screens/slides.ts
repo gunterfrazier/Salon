@@ -1,3 +1,5 @@
+import { cleanSchedule, type ScheduleRule } from "./playback";
+
 /** Screens around the salon: what each slide is, who may see it, and ready-made playlists. */
 
 export type Audience = "public" | "staff";
@@ -61,6 +63,10 @@ export interface ScreenSettings {
   header: boolean;
   /** 4–6 digits needed to unpair a TV from the screen itself. Never sent to the screen. */
   exitPin?: string | null;
+  /** Times of day another screen's playlist plays here. */
+  schedule?: ScheduleRule[];
+  /** When the salon is closed, play this screen's playlist (e.g. a window sign's hours). */
+  whenClosed?: string | null;
 }
 
 export const DEFAULT_SETTINGS: ScreenSettings = { touch: false, header: true };
@@ -131,7 +137,9 @@ export function cleanPlaylist(raw: unknown, audience: Audience): Slide[] {
 export function cleanSettings(raw: unknown): ScreenSettings {
   const r = (raw ?? {}) as Record<string, unknown>;
   const pin = typeof r.exitPin === "string" && /^\d{4,6}$/.test(r.exitPin) ? r.exitPin : null;
-  return { touch: r.touch === true, header: r.header !== false, ...(pin ? { exitPin: pin } : {}) };
+  const schedule = cleanSchedule(r.schedule);
+  const whenClosed = typeof r.whenClosed === "string" && /^[0-9a-f-]{36}$/.test(r.whenClosed) ? r.whenClosed : null;
+  return { touch: r.touch === true, header: r.header !== false, ...(pin ? { exitPin: pin } : {}), ...(schedule.length ? { schedule } : {}), ...(whenClosed ? { whenClosed } : {}) };
 }
 
 /** Settings safe to hand to the screen itself (no PIN). */
