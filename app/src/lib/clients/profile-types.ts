@@ -19,6 +19,7 @@ export interface ClientProfileData {
     priorVisitCount: number;
     /** Agreed to get texts (online bookers agree when booking). */
     smsOptIn: boolean;
+    quiet?: boolean;
     source: string;
     createdAt: string;
     depositOverride: "none" | "amount" | "full";

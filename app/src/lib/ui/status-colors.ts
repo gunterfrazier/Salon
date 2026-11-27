@@ -19,7 +19,8 @@ export type StatusKey =
   | "balance_owed"
   | "card_needed"
   | "deposit_paid"
-  | "new_client";
+  | "new_client"
+  | "quiet";
 
 export interface StatusStyle {
   key: StatusKey;
@@ -104,6 +105,15 @@ export const STATUS_CHART: StatusStyle[] = [
     meaning: "First visit.",
     light: { bg: "#CCFBF1", fg: "#115E59", border: "#0D9488" },
     dark: { bg: "#042F2E", fg: "#99F6E4", border: "#14B8A6" },
+  },
+  {
+    key: "quiet",
+    label: "Quiet visit",
+    icon: "☾",
+    family: "info",
+    meaning: "The client would like a calm, low-conversation appointment.",
+    light: { bg: "#EEF2F7", fg: "#334155", border: "#94A3B8" },
+    dark: { bg: "#1E293B", fg: "#E2E8F0", border: "#64748B" },
   },
 ];
 

@@ -66,6 +66,7 @@ export default function BookingWizard({
   const [f, setF] = useState({ firstName: prefill?.firstName ?? "", lastName: prefill?.lastName ?? "", phone: prefill?.phone ?? "", email: prefill?.email ?? "", notes: "", website: "" });
   const [agreed, setAgreed] = useState(false);
   const [textOk, setTextOk] = useState(false);
+  const [quiet, setQuiet] = useState(false);
   const [promoInput, setPromoInput] = useState("");
   const [promo, setPromo] = useState<{ code: string; label: string; saved: number } | null>(null);
   const [promoMsg, setPromoMsg] = useState<string | null>(null);
@@ -200,7 +201,7 @@ export default function BookingWizard({
     setError(null);
     startSaving(async () => {
       const fav: Favorites | null = remember ? cleanFavorites({ serviceIds: ordered.map((s) => s.id), weekdays: criteria.weekdays, block: criteria.block }) : null;
-      const r = await submitOnlineBooking({ salon, serviceIds: ordered.map((s) => s.id), staffId, date: date!, time: time!, ...f, agreed, textOk, promoCode: promo?.code, ref: referral?.code, favorites: fav ?? undefined });
+      const r = await submitOnlineBooking({ salon, serviceIds: ordered.map((s) => s.id), staffId, date: date!, time: time!, ...f, agreed, textOk, quiet, promoCode: promo?.code, ref: referral?.code, favorites: fav ?? undefined });
       if (r.ok) {
         writeFavorites(fav);
         setDone(r);
@@ -515,6 +516,13 @@ export default function BookingWizard({
                 Confirmations, reminders and changes from {business.name}, sent through Chairvana. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out, HELP for help. Not required to book.{" "}
                 <a href="/texting" target="_blank" className="underline">Texting terms</a> · <a href="/privacy" target="_blank" className="underline">Privacy</a>
               </span>
+            </span>
+          </label>
+          <label className="flex items-start gap-3 rounded-xl border border-line bg-surface p-4">
+            <input type="checkbox" checked={quiet} onChange={(e) => setQuiet(e.target.checked)} className="mt-1 size-5 accent-[var(--accent)]" />
+            <span className="text-sm">
+              <span className="font-semibold">☾ Quiet visit</span>
+              <span className="block text-muted">I&rsquo;d like to relax with less conversation this time. Your stylist will see this privately.</span>
             </span>
           </label>
           <textarea className={input} rows={2} placeholder="Anything we should know? (optional)" aria-label="Notes" value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} />

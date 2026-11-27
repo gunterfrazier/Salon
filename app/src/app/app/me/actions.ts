@@ -125,13 +125,13 @@ export async function portalMove(appointmentId: string, date: string, time: stri
   return { ok: true };
 }
 
-export async function portalUpdateContact(phone: string, smsOptIn: boolean): Promise<Result> {
+export async function portalUpdateContact(phone: string, smsOptIn: boolean, quiet = false): Promise<Result> {
   const who = await whoAmI();
   if (who.kind !== "customer") return { ok: false, error: "Please sign in again." };
   const p = phone.trim().slice(0, 40);
   if (p && phoneKey(p).length < 10) return { ok: false, error: "Enter a 10-digit mobile number." };
   const db = createAdminClient();
-  const patch = { phone: p || null, sms_opt_in: !!p && smsOptIn };
+  const patch = { phone: p || null, sms_opt_in: !!p && smsOptIn, quiet };
   const { error } = await db.from("customers").update(patch).eq("id", who.customerId);
   if (error) return { ok: false, error: "Couldn't save. Try again." };
   // Keep each salon's record in step.

@@ -71,6 +71,7 @@ export function buildAgenda(data: Pick<CalendarData, "appointments" | "clientSta
     const { chips } = clientChips(state, data.policy, now);
     const depositDue = OPEN.has(a.status) ? Math.max(0, a.depositRequired - a.depositPaid) : 0;
     if (a.depositRequired > 0) chips.push(depositDue > 0 ? { status: "card_needed", text: `Deposit $${(depositDue / 100).toFixed(2)} due` } : { status: "deposit_paid" });
+    if (a.quiet) chips.push({ status: "quiet" });
     const s = new Date(a.start).getTime();
     const e = new Date(a.end).getTime();
     const when = !OPEN.has(a.status) || e <= now.getTime() ? "done" : s <= now.getTime() ? "now" : "upcoming";

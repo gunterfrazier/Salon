@@ -9,6 +9,7 @@ export interface CustomerHome {
   lastName: string | null;
   phone: string | null;
   smsOptIn: boolean;
+  quiet?: boolean;
   homeZip: string | null;
   hasHome: boolean;
   searchMiles: number;
@@ -37,6 +38,7 @@ export async function loadCustomerHome(customerId: string, linkedBusinessIds: st
     lastName: c.last_name,
     phone: c.phone,
     smsOptIn: c.sms_opt_in,
+    quiet: !!c.quiet,
     homeZip: c.home_zip,
     hasHome: c.home_lat != null,
     searchMiles: c.search_miles,

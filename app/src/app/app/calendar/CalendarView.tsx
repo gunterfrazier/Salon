@@ -92,6 +92,7 @@ export default function CalendarView({ data, focusDate }: { data: CalendarData; 
     const st = data.clientStates[a.clientId];
     const { chips } = clientChips(st ? reviveClientState(st) : NEW_CLIENT_STATE, data.policy, now ?? new Date(a.start));
     if (a.depositRequired > 0) chips.push(a.depositPaid >= a.depositRequired ? { status: "deposit_paid" } : { status: "card_needed", text: `Deposit ${money(a.depositRequired)} due` });
+    if (a.quiet) chips.push({ status: "quiet" });
     return chips;
   };
 

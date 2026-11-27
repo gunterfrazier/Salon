@@ -32,8 +32,8 @@ export function parseRange(r: string): { start: string; end: string } {
 }
 
 type ApptRow = {
-  id: string; staff_id: string; client_id: string; start_at: string; end_at: string; status: string; notes: string | null; deposit_required_cents: number;
-  clients: { first_name: string; last_name: string | null; phone: string | null } | null;
+  id: string; staff_id: string; client_id: string; start_at: string; end_at: string; status: string; notes: string | null; quiet?: boolean; deposit_required_cents: number;
+  clients: { first_name: string; last_name: string | null; phone: string | null; quiet?: boolean } | null;
   appointment_services: {
     id: string; service_id: string; sort: number; list_price_cents: number; price_quoted_cents: number; discounts: { label: string; amount_cents: number }[];
     services: { name: string; price_type: string } | null; staff_busy_blocks: { phase: string; during: string }[];
@@ -60,7 +60,7 @@ export async function loadCalendar(ctx: Ctx, opts: { from: string; view: "day" |
     supabase
       .from("appointments")
       .select(
-        "id,staff_id,client_id,start_at,end_at,status,notes,deposit_required_cents,clients(first_name,last_name,phone),appointment_services(id,service_id,sort,list_price_cents,price_quoted_cents,discounts,services(name,price_type),staff_busy_blocks(phase,during))",
+        "id,staff_id,client_id,start_at,end_at,status,notes,quiet,deposit_required_cents,clients(first_name,last_name,phone,quiet),appointment_services(id,service_id,sort,list_price_cents,price_quoted_cents,discounts,services(name,price_type),staff_busy_blocks(phase,during))",
       )
       .eq("business_id", business.id)
       .lt("start_at", rangeEnd)
@@ -106,6 +106,7 @@ export async function loadCalendar(ctx: Ctx, opts: { from: string; view: "day" |
       end: new Date(a.end_at).toISOString(),
       status: a.status,
       notes: a.notes,
+      quiet: !!(a.quiet || a.clients?.quiet),
       depositRequired: a.deposit_required_cents,
       depositPaid: paid[a.id] ?? 0,
       services: lines.map((l) => ({

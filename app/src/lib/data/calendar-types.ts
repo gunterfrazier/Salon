@@ -20,6 +20,8 @@ export interface CalAppointment {
   end: string;
   status: string;
   notes: string | null;
+  /** The client asked for a quiet visit (this one, or always). */
+  quiet?: boolean;
   depositRequired: number;
   depositPaid: number;
   services: { id: string; serviceId: string; name: string; priceType: string; listPrice: number; finalPrice: number; discounts: { label: string; amount_cents: number }[] }[];

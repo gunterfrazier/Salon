@@ -57,4 +57,11 @@ describe("buildAgenda", () => {
     expect(buildAgenda(data, "2026-12-01", new Date(), true).closed).toBe(true);
     expect(buildAgenda({ ...data, appointments: [] }, "2026-12-02", new Date()).closed).toBe(true); // Wednesday: no hours
   });
+
+  it("tags quiet visits for the stylist", () => {
+    const data = { appointments: [appt("a", "09:30", "10:30", { quiet: true }), appt("b", "11:00", "12:00")], clientStates: { "c-a": returning, "c-b": returning }, policy, hours, timezone: TZ };
+    const g = buildAgenda(data, "2026-12-01", new Date(at("09:00")));
+    expect(g.items[0].chips.map((c) => c.status)).toContain("quiet");
+    expect(g.items[1].chips.map((c) => c.status)).not.toContain("quiet");
+  });
 });

@@ -16,7 +16,7 @@ export async function loadClientProfile(ctx: Ctx, clientId: string): Promise<Cli
   if (visible && !visible.has(clientId)) return null;
   const { data: c } = await supabase
     .from("clients")
-    .select("id,first_name,last_name,phone,email,notes,prior_visit_count,sms_opt_in,source,created_at,deposit_override,deposit_override_cents,preferences")
+    .select("id,first_name,last_name,phone,email,notes,prior_visit_count,sms_opt_in,quiet,source,created_at,deposit_override,deposit_override_cents,preferences")
     .eq("business_id", business.id)
     .eq("id", clientId)
     .maybeSingle();
@@ -81,6 +81,7 @@ export async function loadClientProfile(ctx: Ctx, clientId: string): Promise<Cli
       notes: c.notes,
       priorVisitCount: c.prior_visit_count,
       smsOptIn: !!c.sms_opt_in,
+      quiet: !!c.quiet,
       source: c.source,
       createdAt: c.created_at,
       depositOverride: c.deposit_override,

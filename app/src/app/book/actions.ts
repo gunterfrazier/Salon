@@ -93,6 +93,8 @@ export interface OnlineBookingRequest {
   agreed: boolean;
   /** Ticked "Text me about my appointments" (unticked by default). */
   textOk?: boolean;
+  /** Asked for a quiet, low-conversation visit. */
+  quiet?: boolean;
   /** Promo code typed by the client. */
   promoCode?: string;
   /** Friend's referral code from the booking link. */
@@ -246,6 +248,7 @@ export async function submitOnlineBooking(req: OnlineBookingRequest): Promise<On
     return { ok: false, error: "Couldn't save your booking. Please try again." };
   }
   if (promo) await admin.from("promo_redemptions").insert({ business_id: b.id, promo_id: promo.id, client_id: clientId, appointment_id: newId as string, discount_cents: promo.total });
+  if (req.quiet === true) await admin.from("appointments").update({ quiet: true }).eq("id", newId as string);
   await notifyAppointment(b.id, newId as string, "booked_online");
 
   const when = `${formatDay(req.date, { weekday: "long", month: "long", day: "numeric" })} at ${formatTime(result.plan.start, b.timezone)}`;

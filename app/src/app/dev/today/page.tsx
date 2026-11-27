@@ -28,7 +28,7 @@ export default async function DevToday() {
         notes: "Wants to go a little lighter.",
         busy: [{ phase: "active", start: at("10:30"), end: at("11:15") }, { phase: "finish", start: at("12:00"), end: at("13:00") }],
       }),
-      appt("c", "Taylor Shaw", "14:00", "16:30", [line("Full Highlights", 15000)], { status: "pending", depositRequired: 5000 }),
+      appt("c", "Taylor Shaw", "14:00", "16:30", [line("Full Highlights", 15000)], { status: "pending", depositRequired: 5000, quiet: true }),
     ],
     clientStates: {
       a: { onTimeVisits: [], priorVisitCount: 5, flags: [], depositOverride: null, outstandingBalance: 0 },

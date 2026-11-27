@@ -123,7 +123,7 @@ export default function MeView({ me, salons, waiting = [], packages = [], perks 
           </section>
         )}
 
-        <Contact phone={me.phone ?? ""} smsOptIn={me.smsOptIn} email={me.email} />
+        <Contact phone={me.phone ?? ""} smsOptIn={me.smsOptIn} quiet={!!me.quiet} email={me.email} />
       </main>
     </>
   );
@@ -436,9 +436,10 @@ function MovePicker({ a, tz, onDone, onCancel }: { a: PortalAppt; tz: string; on
   );
 }
 
-function Contact({ phone, smsOptIn, email }: { phone: string; smsOptIn: boolean; email: string | null }) {
+function Contact({ phone, smsOptIn, quiet, email }: { phone: string; smsOptIn: boolean; quiet: boolean; email: string | null }) {
   const [p, setP] = useState(phone);
   const [texts, setTexts] = useState(smsOptIn);
+  const [calm, setCalm] = useState(quiet);
   const [msg, setMsg] = useState<string | null>(null);
   const [pending, start] = useTransition();
   return (
@@ -451,7 +452,11 @@ function Contact({ phone, smsOptIn, email }: { phone: string; smsOptIn: boolean;
           <input type="checkbox" className="h-4 w-4" checked={texts} onChange={(e) => setTexts(e.target.checked)} />
           Text me reminders
         </label>
-        <button className={btn} disabled={pending} onClick={() => start(async () => { const r = await portalUpdateContact(p, texts); setMsg(r.ok ? "Saved." : r.error); })}>Save</button>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" className="h-4 w-4" checked={calm} onChange={(e) => setCalm(e.target.checked)} />
+          ☾ I prefer quiet visits
+        </label>
+        <button className={btn} disabled={pending} onClick={() => start(async () => { const r = await portalUpdateContact(p, texts, calm); setMsg(r.ok ? "Saved." : r.error); })}>Save</button>
         {msg && <span role="status" className="text-sm">{msg}</span>}
       </div>
     </section>

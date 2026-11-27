@@ -52,6 +52,7 @@ export default function ClientProfile({ data, formsSlot }: { data: ClientProfile
   }, []);
   const state = reviveClientState(data.state);
   const { chips, standing } = clientChips(state, data.policy, now ?? new Date(0));
+  if (data.client.quiet) chips.push({ status: "quiet", text: "Prefers quiet visits" });
   const date: DateFn = (iso, opts) => formatDateTime(new Date(iso), tz, opts);
   const openBalances = data.balances.filter((b) => !b.settled);
 
@@ -125,7 +126,7 @@ function Contact({ data }: { data: ClientProfileData }) {
   const c = data.client;
   const { run, pending, error } = useAction();
   const [editing, setEditing] = useState(false);
-  const [f, setF] = useState({ firstName: c.firstName, lastName: c.lastName ?? "", phone: c.phone ?? "", email: c.email ?? "", notes: c.notes ?? "", priorVisitCount: String(c.priorVisitCount), smsOptIn: c.smsOptIn });
+  const [f, setF] = useState({ firstName: c.firstName, lastName: c.lastName ?? "", phone: c.phone ?? "", email: c.email ?? "", notes: c.notes ?? "", priorVisitCount: String(c.priorVisitCount), smsOptIn: c.smsOptIn, quiet: !!c.quiet });
   if (!editing) {
     return (
       <section className={card}>
@@ -155,6 +156,10 @@ function Contact({ data }: { data: ClientProfileData }) {
       <label className="mt-2 flex items-center gap-2 text-sm">
         <input type="checkbox" className="h-4 w-4" checked={f.smsOptIn} onChange={(e) => setF({ ...f, smsOptIn: e.target.checked })} />
         OK to text (the client agreed to get appointment texts)
+      </label>
+      <label className="mt-2 flex items-center gap-2 text-sm">
+        <input type="checkbox" className="h-4 w-4" checked={f.quiet} onChange={(e) => setF({ ...f, quiet: e.target.checked })} />
+        ☾ Prefers quiet visits (shows on every appointment)
       </label>
       <Err msg={error} />
       <div className="mt-3 flex justify-end gap-2">
