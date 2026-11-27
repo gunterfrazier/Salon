@@ -178,6 +178,11 @@ Use a second email address (a Gmail you control) as a pretend client, and a thir
 - [ ] **Screens** → add a *Front desk* (staff, touch); **Front desk → Open on this device**; tap the view tabs.
 - [ ] **Graphics studio → Send to salon screens**; add it to a playlist with a **Picture** slide.
 - [ ] *Color bar* screen: **Client card** finds a client and shows their formulas.
+- [ ] On a TV's web browser open **chairvana.app/tv**; enter the 6-letter code on the screen's page under **TVs**. Set an **Exit PIN** and try the lock in the corner.
+- [ ] **Remote** on your phone: Next, Back, Pause, and **Play something else** for an hour; then **Back to the schedule**.
+- [ ] Add a **Schedule** rule (e.g. after closing, show the Window sign) and check it switches.
+- [ ] Unplug the TV's internet for a minute: it keeps playing and shows *Offline*; the Screens list shows the TV as off after 5 minutes.
+- [ ] Try **Look** (Dark / Light / Your accent color), **TV mounted on its side**, a **Background picture** on a slide, and **Upload video** with a **Video** slide.
 - [ ] **Marketing → Graphics studio**: save an Openings post and a Chair Wrapped story; post one.
 - [ ] Open **chairvana.app/intensity-salon** (your short link): it opens your salon page.
 - [ ] Book online with **☾ Quiet visit** ticked: the Quiet visit tag shows on Today and the calendar.
