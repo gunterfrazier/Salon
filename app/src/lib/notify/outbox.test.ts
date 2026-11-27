@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { clientRows, dayPreviewText, payLine, stylistRow, type SalonInfo } from "./outbox";
-import { configuredSender, toE164 } from "./provider";
+import { configuredSender, parseAddress, toE164 } from "./provider";
 import { DEFAULT_NOTIFICATIONS as s } from "./settings";
 
 const salon: SalonInfo = { id: "b1", name: "Intensity Salon", timezone: "America/Chicago", siteUrl: "https://chairvana.app", paymentMethods: { methods: [{ key: "venmo_direct", enabled: true, handle: "@Intensity" }] } };
@@ -70,6 +70,37 @@ describe("sender", () => {
 
       const busy = (async () => new Response(JSON.stringify({ code: 20429, message: "Too many" }), { status: 429 })) as unknown as typeof fetch;
       expect(await configuredSender(busy).sms!("2565550101", "Hi")).toMatchObject({ ok: false, retry: true });
+    } finally {
+      process.env = saved;
+    }
+  });
+});
+
+describe("email", () => {
+  it("parses sender addresses", () => {
+    expect(parseAddress("bookings@mail.chairvana.app")).toEqual({ email: "bookings@mail.chairvana.app", name: null });
+    expect(parseAddress("Chairvana <bookings@mail.chairvana.app>")).toEqual({ email: "bookings@mail.chairvana.app", name: "Chairvana" });
+    expect(parseAddress("nope")).toBeNull();
+  });
+
+  it("sends through the Cloudflare binding with the salon's name and branded HTML", async () => {
+    const saved = { ...process.env };
+    try {
+      for (const k of ["BREVO_API_KEY", "RESEND_API_KEY"]) delete process.env[k];
+      process.env.EMAIL_FROM = "bookings@mail.chairvana.app";
+      const sent: Record<string, unknown>[] = [];
+      const binding = { send: async (m: Record<string, unknown>) => (sent.push(m), { messageId: "cf-1" }) };
+      const r = await configuredSender(fetch, binding).email!("jamie@example.com", "Appointment reminder", "Hi <Jamie>! See you https://chairvana.app/app/me.", { fromName: "Intensity Salon" });
+      expect(r).toEqual({ ok: true, id: "cf-1" });
+      expect(sent[0]).toMatchObject({ from: { email: "bookings@mail.chairvana.app", name: "Intensity Salon" }, to: "jamie@example.com", subject: "Appointment reminder", text: "Hi <Jamie>! See you https://chairvana.app/app/me." });
+      const html = String(sent[0].html);
+      expect(html).toContain("Hi &lt;Jamie&gt;!");
+      expect(html).toContain('<a href="https://chairvana.app/app/me"');
+      expect(html).not.toContain("<Jamie>");
+
+      const refused = { send: async () => Promise.reject(Object.assign(new Error("not allowed"), { code: "E_RECIPIENT_PLAN_RESTRICTED" })) };
+      expect(await configuredSender(fetch, refused).email!("x@example.com", "s", "b")).toMatchObject({ ok: false, retry: false });
+      expect(configuredSender(fetch, null).email).toBeNull();
     } finally {
       process.env = saved;
     }

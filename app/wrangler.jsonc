@@ -18,6 +18,8 @@
       "service": "salon"
     }
   ],
+  // Email through Cloudflare Email Service (sending domain mail.chairvana.app).
+  "send_email": [{ "name": "EMAIL" }],
   // Every 5 minutes: reminders, unpaid deposit holds, day preview (worker.ts → /api/cron/messages).
   "triggers": {
     "crons": ["*/5 * * * *"]

@@ -71,3 +71,15 @@ export async function sendTestPush(): Promise<{ ok: true; devices: number } | { 
   const r = await pushToStaff(createAdminClient(), ctx.staff.id, { title: "Chairvana alerts are on", body: "You'll get new bookings, released holds and your day preview here.", url: "/app/today", tag: "test" });
   return r.ok ? { ok: true, devices: r.devices } : { ok: false, error: r.error ?? "Couldn't send" };
 }
+
+/** Send a test email to the signed-in person, through whichever email service is connected. */
+export async function sendTestEmail(): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
+  const ctx = await getContext();
+  const to = ctx.user.email;
+  if (!to) return { ok: false, error: "Your account has no email address." };
+  const { configuredSender } = await import("@/lib/notify/provider");
+  const send = configuredSender().email;
+  if (!send) return { ok: false, error: "Email isn't connected yet." };
+  const r = await send(to, "Chairvana test email", `This is a test from Chairvana for ${ctx.business.name}.\n\nIf you can read this, email is working. Reminders, receipts and other client emails will look like this.\n\nhttps://chairvana.app/app`, { fromName: ctx.business.name });
+  return r.ok ? { ok: true, text: `Sent to ${to}. Check your inbox (and spam, the first time).` } : { ok: false, error: r.error ?? "Couldn't send." };
+}

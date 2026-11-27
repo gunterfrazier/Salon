@@ -362,7 +362,7 @@ export async function deliverQueued(db: SupabaseClient, sender: Sender, now: Dat
       continue;
     }
     const salon = salons.get(m.business_id) ?? "Your salon";
-    const r = m.channel === "sms" ? await sender.sms!(m.to_address, m.body) : await sender.email!(m.to_address, m.audience === "stylist" ? `Chairvana: ${salon}` : `${salon}: ${SUBJECT[m.template] ?? "Message"}`, m.body);
+    const r = m.channel === "sms" ? await sender.sms!(m.to_address, m.body) : await sender.email!(m.to_address, m.audience === "stylist" ? `Chairvana: ${salon}` : `${SUBJECT[m.template] ?? "Message"}`, m.body, { fromName: m.audience === "stylist" ? "Chairvana" : salon });
     if (r.ok) {
       await finish({ status: "sent", sent_at: new Date().toISOString(), provider_id: r.id ?? null, error: null });
       tally.sent++;

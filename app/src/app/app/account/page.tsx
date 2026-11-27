@@ -9,6 +9,7 @@ import { signOutEverywhere } from "./actions";
 import PasswordForm from "./PasswordForm";
 import AlertContact from "@/app/app/settings/notifications/AlertContact";
 import PushSetup from "@/app/app/settings/notifications/PushSetup";
+import EmailTest from "@/app/app/settings/notifications/EmailTest";
 
 export const metadata = { title: "Account" };
 export const dynamic = "force-dynamic";
@@ -55,6 +56,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
           <div className="-mx-4 space-y-4">
             <PushSetup devices={alerts.devices} />
             <AlertContact phone={alerts.phone} email={alerts.email} />
+            <EmailTest />
           </div>
         )}
         <section className="flex flex-wrap gap-2">
