@@ -84,6 +84,7 @@ export const NAV: { href: string; label: string; need?: Permission | Permission[
   { href: "/app/calendar", label: "Calendar" },
   { href: "/app/waitlist", label: "Waitlist", need: "booking.manage" },
   { href: "/app/clients", label: "Clients" },
+  { href: "/app/front-desk", label: "Front desk", need: ["booking.manage", "calendar.all"] },
   { href: "/app/reports", label: "Reports", need: "reports.view" },
   { href: "/app/inventory", label: "Inventory", need: "inventory.view" },
   { href: "/app/sell", label: "Sell", need: "sell" },
