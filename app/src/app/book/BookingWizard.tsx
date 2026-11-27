@@ -11,7 +11,7 @@ import { duration, money } from "@/lib/format";
 import type { PolicySettings } from "@/lib/policy/types";
 import type { BundleRule } from "@/lib/pricing/discounts";
 import { suggestOrder } from "@/lib/schedule/plan";
-import { formatDay, formatSlot, parseHHMM, toHHMM, tzAbbrev, WEEKDAY_KEYS, zonedToUtc, zoneLabel } from "@/lib/time/zone";
+import { formatDay, formatMinutes, formatSlot, parseHHMM, toHHMM, tzAbbrev, WEEKDAY_KEYS, zonedToUtc, zoneLabel } from "@/lib/time/zone";
 import { NEW_CLIENT_STATE } from "@/lib/ui/standing";
 import MonthCalendar from "./MonthCalendar";
 import { dayCounts, findPublicOpenings, getTimes, joinWaitlistOnline, submitOnlineBooking, type OnlineBookingResult } from "./actions";
@@ -222,7 +222,7 @@ export default function BookingWizard({
   const header = (
     <header className="mb-5">
       <p className="text-sm text-muted">Book online</p>
-      <h1 className="text-2xl font-bold">{business.name}</h1>
+      <h1 className="font-display text-3xl">{business.name}</h1>
     </header>
   );
 
@@ -419,7 +419,7 @@ export default function BookingWizard({
                               aria-pressed={time === t}
                               className={`rounded-full border px-4 py-2 font-mono text-sm ${time === t ? "border-foreground bg-foreground text-background" : "border-line bg-surface hover:border-foreground"}`}
                             >
-                              {formatSlot(date, parseHHMM(t), business.timezone)}
+                              {formatMinutes(parseHHMM(t))}
                             </button>
                           ))}
                         </div>
