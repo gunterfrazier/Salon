@@ -9,7 +9,7 @@ import { newSlide, SLIDE_TYPES, SLIDES, type ScreenSettings, type Slide, type Sl
 import { deleteScreen, moveTv, newScreenLink, pairTv, removeTv, saveScreen } from "../actions";
 
 type Media = { id: string; url: string; title: string | null };
-type Device = { id: string; name: string; pairedAt: string; lastSeen: string | null; slide: string | null };
+type Device = { id: string; name: string; pairedAt: string; lastSeen: string | null; slide: string | null; saved?: number | null; total?: number | null };
 const input = "w-full rounded-xl border border-line bg-background px-3 py-2 text-base";
 const btn = "rounded-full border border-line px-3 py-1.5 text-sm hover:bg-background disabled:opacity-50";
 
@@ -274,7 +274,7 @@ function TvSection({ screenId, devices, otherScreens, onMsg }: { screenId: strin
               <span>
                 <span className="font-medium">{d.name}</span>
                 <span className={`ml-2 rounded-full px-2 py-0.5 text-[11px] font-semibold ${online(d) ? "bg-emerald-500/20" : "bg-line"}`}>{online(d) ? "On" : "Off"}</span>
-                <span className="block text-xs text-muted">Last seen {ago(d.lastSeen)}{d.slide ? ` · showing ${d.slide}` : ""}</span>
+                <span className="block text-xs text-muted">Last seen {ago(d.lastSeen)}{d.slide ? ` · showing ${d.slide}` : ""}{d.total ? ` · ${d.saved ?? 0} of ${d.total} pictures saved for offline` : ""}</span>
               </span>
               <span className="flex flex-wrap gap-2">
                 {otherScreens.length > 0 && (

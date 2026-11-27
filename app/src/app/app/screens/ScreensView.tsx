@@ -8,7 +8,7 @@ import { TEMPLATES } from "@/lib/screens/slides";
 import { shrinkImage } from "@/lib/ui/resize";
 import { createScreen, deleteScreenImage, uploadScreenImage } from "./actions";
 
-type ScreenRow = { id: string; name: string; audience: "public" | "staff"; link: string | null; slides: number; touch: boolean };
+type ScreenRow = { id: string; name: string; audience: "public" | "staff"; link: string | null; slides: number; touch: boolean; tvs?: { total: number; on: number } };
 type Media = { id: string; url: string; title: string | null; source: "upload" | "studio" | "brand" };
 
 const card = "rounded-2xl border border-line bg-surface p-4";
@@ -53,7 +53,7 @@ export default function ScreensView({ screens, media }: { screens: ScreenRow[]; 
     <main className="mx-auto max-w-4xl space-y-5 px-4 py-4">
       <header>
         <h1 className="font-display text-3xl">Screens</h1>
-        <p className="text-sm text-muted">TVs, tablets and smart boards around the salon, each with its own playlist. Public screens open from a private link with no sign-in and never show client details. Staff screens need a signed-in device.</p>
+        <p className="text-sm text-muted">TVs, tablets and smart boards around the salon, each with its own playlist. To put one on a TV, open <strong>chairvana.app/tv</strong> on the TV and pair it from the screen&rsquo;s page. Public screens never show client details.</p>
       </header>
       {msg && <p role="status" className="rounded-xl border border-line bg-surface p-3 text-sm">{msg}</p>}
 
@@ -69,12 +69,19 @@ export default function ScreensView({ screens, media }: { screens: ScreenRow[]; 
                   <p className="text-xs text-muted">
                     {s.audience === "public" ? "Public" : "Staff only"} · {s.slides} slide{s.slides === 1 ? "" : "s"}{s.touch ? " · touch" : ""}
                   </p>
+                  {s.tvs && s.tvs.total > 0 && (
+                    <p className={`text-xs ${s.tvs.on < s.tvs.total ? "font-semibold text-amber-700 dark:text-amber-300" : "text-muted"}`}>
+                      {s.tvs.on} of {s.tvs.total} TV{s.tvs.total === 1 ? "" : "s"} on{s.tvs.on < s.tvs.total ? ": check the one that's off" : ""}
+                    </p>
+                  )}
+                  {s.slides === 0 && <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">Empty playlist</p>}
                 </div>
                 <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${s.audience === "public" ? "bg-accent/15" : "bg-amber-400/20"}`}>{s.audience === "public" ? "Anyone can see" : "Staff"}</span>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 <Link href={`/app/screens/${s.id}`} className={btn}>Edit</Link>
                 <Link href={`/app/screens/${s.id}/play`} className={btn} target="_blank">Open here</Link>
+                <Link href={`/app/screens/${s.id}/remote`} className={btn}>Remote</Link>
                 {s.link && <button className={btn} onClick={() => copy(s.link!)}>Copy TV link</button>}
               </div>
             </li>

@@ -30,7 +30,7 @@ export default async function EditScreenPage({ params }: { params: Promise<{ id:
         screen={{ id: s.id, name: s.name, audience, playlist: cleanPlaylist(s.playlist, "staff"), settings: cleanSettings(s.settings), link: audience === "public" ? `${site}/tv/${s.token}` : null }}
         media={(media ?? []).map((m) => ({ id: m.id, url: mediaUrl(m.path)!, title: m.title }))}
         stylists={toStylists((staff ?? []) as StaffRow[]).map((x) => ({ id: x.id, name: x.name }))}
-        devices={(devices ?? []).map((d) => ({ id: d.id, name: d.name, pairedAt: d.paired_at, lastSeen: d.last_seen, slide: (d.health as { slide?: string | null } | null)?.slide ?? null }))}
+        devices={(devices ?? []).map((d) => ({ id: d.id, name: d.name, pairedAt: d.paired_at, lastSeen: d.last_seen, slide: (d.health as { slide?: string | null } | null)?.slide ?? null, saved: (d.health as { saved?: number | null } | null)?.saved ?? null, total: (d.health as { total?: number | null } | null)?.total ?? null }))}
         otherScreens={others ?? []}
       />
     </>

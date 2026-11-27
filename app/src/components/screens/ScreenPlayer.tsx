@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element -- salon photos and designs */
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "@/components/QRCode";
 import { accentStyle } from "@/lib/branding";
 import { money } from "@/lib/format";
@@ -100,18 +100,45 @@ export default function ScreenPlayer({ name, slides, settings, data, clientCard,
     return () => clearInterval(t);
   }, [sync, router]);
 
+  // Keep this screen's pictures on the device so it carries on without internet.
+  const [cache, setCache] = useState<{ saved: number; total: number } | null>(null);
+  const [offline, setOffline] = useState(false);
+  const pictures = useMemo(() => mediaUrls(data), [data]);
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    let live = true;
+    const onMsg = (e: MessageEvent) => {
+      if (live && e.data?.type === "cv-cached") setCache({ saved: e.data.saved, total: e.data.total });
+    };
+    navigator.serviceWorker.addEventListener("message", onMsg);
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then(() => navigator.serviceWorker.ready)
+      .then((reg) => reg.active?.postMessage({ type: "cv-cache", urls: pictures.map((u) => (u.startsWith("/") ? `${location.origin}${u}` : u)) }))
+      .catch(() => {});
+    const on = () => setOffline(!navigator.onLine);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", on);
+    return () => {
+      live = false;
+      navigator.serviceWorker.removeEventListener("message", onMsg);
+      window.removeEventListener("online", on);
+      window.removeEventListener("offline", on);
+    };
+  }, [pictures]);
+
   // Paired TV: check in every 2 minutes; if it was removed in the app, go back to pairing.
   const playing = current?.type ?? null;
   useEffect(() => {
     if (!device) return;
     const ping = () =>
-      fetch("/api/screens/ping", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ slide: playing }) })
+      fetch("/api/screens/ping", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ slide: playing, saved: cache?.saved, total: cache?.total }) })
         .then((r) => r.status === 401 && window.location.reload())
         .catch(() => {});
     ping();
     const t = setInterval(ping, 120_000);
     return () => clearInterval(t);
-  }, [device, playing]);
+  }, [device, playing, cache]);
 
   // Touch: change just this screen (until the remote changes it again).
   const go = (i: number) => setControl((c) => jumpControl(seconds, Date.now() + offset, c, i));
@@ -158,6 +185,7 @@ export default function ScreenPlayer({ name, slides, settings, data, clientCard,
           {slides.map((s, i) => <span key={s.id} className={`h-1.5 rounded-full transition-all ${i === index % slides.length ? "w-6 bg-accent" : "w-1.5 bg-line"}`} />)}
         </div>
       ) : null}
+      {offline && <p className="fixed bottom-2 left-1/2 -translate-x-1/2 rounded-full border border-line bg-surface px-4 py-1.5 text-sm text-muted">No internet: playing saved content</p>}
       {device && <DeviceLock api={device} />}
       <style>{`@keyframes screenIn { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }`}</style>
     </div>
@@ -515,4 +543,14 @@ function DeviceLock({ api }: { api: DeviceApi }) {
       )}
     </>
   );
+}
+
+/** Every picture this screen may show (to keep on the device). */
+function mediaUrls(d: ScreenData): string[] {
+  return [
+    ...(d.salon.logoUrl ? [d.salon.logoUrl] : []),
+    "/brand/mark-ivory.png",
+    ...(d.photos ?? []).map((p) => p.url),
+    ...Object.values(d.media ?? {}).map((m) => m.url),
+  ];
 }
