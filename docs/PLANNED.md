@@ -10,7 +10,8 @@ Suggested build order: 1. Services and groups editor, 2. Account types and joini
 - The salon shows every service it offers. Each stylist only takes the ones they're set up for. This already applies to online booking. **New appointment** in the app should also warn, the same way it warns for a double-booking.
 - Each salon decides whether stylists can have their **own price or time** for a service (for example senior and junior pricing).
 
-## 2. Account types and joining a salon
+## 2. Account types and joining a salon (built, except below)
+Still to do: the per-salon setting for **who keeps the clients** when a stylist joins or leaves, and team discounts. Suspended dates are recorded so billing can skip them once subscriptions exist.
 - **Client, stylist, salon owner.** One login can hold more than one of these, with a switcher. Sign-up asks which one you are.
 - **Salon owner (primary account holder):** registers the salon and has admin control.
 - **Stylist:** gets a solo business right away: clients, booking and payments.

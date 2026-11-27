@@ -186,6 +186,10 @@ Use a second email address (a Gmail you control) as a pretend client, and a thir
 - [ ] **Settings → Services**: edit a price and save it (the *price to review* tag goes away); add a service and a group; move one up; archive one, then restore it.
 - [ ] Open a service and untick a stylist under **Who offers it**: online booking and New appointment no longer offer them for it.
 - [ ] Optional: turn on **Stylists can have their own price and time**, give one stylist a different price; the menu shows a range and booking with them uses their price.
+- [ ] **Team → Join codes**: make a code, tap **QR code** and **Share**. In a private window open the link, sign up as a stylist with a test email, open the emailed link: you land on **Join a salon** and join the team.
+- [ ] As the test stylist, **Switch** (top) moves between their own business and the salon.
+- [ ] A code with *Join right away* unticked: the request shows on Team under **Asking to join**; **Accept** with a role.
+- [ ] **Suspend** the test stylist (gone from booking, can't open the salon), **Reinstate**, then **Remove**. Decline their business in **Platform**.
 - [ ] Optional, on a Google TV / Android TV: install the **Chairvana TV** test app (GitHub → Salon → Actions → *Chairvana TV* → newest run → `chairvana-tv-debug`), open it, and pair it with the code. Steps: `android-tv/README.md`.
 - [ ] **Marketing → Graphics studio**: save an Openings post and a Chair Wrapped story; post one.
 - [ ] Open **chairvana.app/intensity-salon** (your short link): it opens your salon page.
