@@ -183,6 +183,7 @@ Use a second email address (a Gmail you control) as a pretend client, and a thir
 - [ ] Add a **Schedule** rule (e.g. after closing, show the Window sign) and check it switches.
 - [ ] Unplug the TV's internet for a minute: it keeps playing and shows *Offline*; the Screens list shows the TV as off after 5 minutes.
 - [ ] Try **Look** (Dark / Light / Your accent color), **TV mounted on its side**, a **Background picture** on a slide, and **Upload video** with a **Video** slide.
+- [ ] Optional, on a Google TV / Android TV: install the **Chairvana TV** test app (GitHub → Salon → Actions → *Chairvana TV* → newest run → `chairvana-tv-debug`), open it, and pair it with the code. Steps: `android-tv/README.md`.
 - [ ] **Marketing → Graphics studio**: save an Openings post and a Chair Wrapped story; post one.
 - [ ] Open **chairvana.app/intensity-salon** (your short link): it opens your salon page.
 - [ ] Book online with **☾ Quiet visit** ticked: the Quiet visit tag shows on Today and the calendar.
