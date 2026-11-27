@@ -112,6 +112,19 @@ Use a second email address (a Gmail you control) as a pretend client, and a thir
 - [ ] Sign in as the pretend employee: **Pay** shows only their own numbers.
 - [ ] **Download CSV** opens in a spreadsheet.
 
+### Inventory (new screen)
+- [ ] Stock: tap + and − on a product; the number changes right away and stays after refresh.
+- [ ] Tap the number: count a partly used tube with ½.
+- [ ] + Add: type "6N" and add one; use Brand → Line → Kind → Color to add another; Add to inventory.
+- [ ] Scan a box: pick which color it is; next time, scanning opens that product.
+
+### Reviews and marketing
+- [ ] Check out a visit for the pretend client; about 3 hours later a "How was your visit?" link arrives (or see Messages → Recent messages).
+- [ ] Rate it 5 stars: it appears on chairvana.app/s/intensity-salon under Reviews. Reply from **Reviews**.
+- [ ] Rate another 2 stars: it shows only under Reviews → Private feedback.
+- [ ] **Messages**: paste your Google review link so happy clients are offered Google too.
+- [ ] **Marketing**: copy the booking link into Instagram/TikTok bios; download a QR code; print the mirror cling and business cards; add social links.
+
 ### Check-in kiosk (tablet)
 - [ ] On the tablet, sign in, Today → **Check-in kiosk**. Enter the pretend client's phone and tap **I'm here** on a same-day appointment.
 - [ ] You get a check-in alert; the calendar shows "Checked in".
