@@ -25,7 +25,7 @@ export const PERMISSIONS = [
   { key: "settings.salon", group: "Settings", label: "Edit the salon profile (address, about, public listing)" },
   { key: "settings.services", group: "Settings", label: "Edit services and prices" },
   { key: "settings.schedule", group: "Settings", label: "Edit hours, holidays and days off" },
-  { key: "settings.payments", group: "Settings", label: "Edit payment methods and deposit policy" },
+  { key: "settings.payments", group: "Settings", label: "Edit payment methods and policies (deposits, fees, cancellations)" },
   { key: "settings.messages", group: "Settings", label: "Edit client messages and reminders" },
   { key: "team.manage", group: "Settings", label: "Invite team members and change their roles" },
 ] as const;
@@ -129,6 +129,7 @@ export const NAV: { href: string; label: string; need?: Permission | Permission[
   { href: "/app/dashboard", label: "Services", need: "settings.services" },
   { href: "/app/settings/schedule", label: "Schedule", need: "settings.schedule" },
   { href: "/app/settings/payments", label: "Payments", need: "settings.payments" },
+  { href: "/app/settings/policies", label: "Policies", need: "settings.payments" },
   { href: "/app/settings/notifications", label: "Messages", need: "settings.messages" },
   { href: "/app/settings/forms", label: "Forms", need: "settings.messages" },
   { href: "/app/reviews", label: "Reviews", need: "settings.messages" },

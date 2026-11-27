@@ -1,9 +1,8 @@
 import { AppNav } from "@/components/AppNav";
 import { requirePermission } from "@/lib/context";
 import { mergeMethods } from "@/lib/payments/settings";
-import DepositPolicy from "./DepositPolicy";
 import PaymentSettings from "./PaymentSettings";
-import { staffCanChangeDeposit } from "@/lib/policy/engine";
+import Link from "next/link";
 
 export const metadata = { title: "Payments" };
 export const dynamic = "force-dynamic";
@@ -19,9 +18,9 @@ export default async function PaymentsPage() {
         <div className="mt-6">
           <PaymentSettings methods={mergeMethods(ctx.business.payment_methods)} />
         </div>
-        <div className="mt-8">
-          <DepositPolicy staffCanChange={staffCanChangeDeposit(ctx.business.policy_settings)} />
-        </div>
+        <p className="mt-8 text-sm text-muted">
+          Deposits, cancellation fees and no-show rules are under <Link href="/app/settings/policies" className="underline">Policies</Link>.
+        </p>
       </main>
     </>
   );

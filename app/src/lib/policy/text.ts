@@ -12,9 +12,13 @@ export function policyText(p: PolicySettings): string[] {
   const nc = p.deposits.newClient;
 
   if (nc.enabledFor.color || nc.enabledFor.standard) {
-    const which = nc.enabledFor.color && nc.enabledFor.standard ? "any service" : nc.enabledFor.color ? "color services" : "non-color services";
-    const amount = Math.max(nc.enabledFor.color ? nc.defaultAmount.color : 0, nc.enabledFor.standard ? nc.defaultAmount.standard : 0);
-    lines.push(`New clients pay a ${money(amount)} deposit to book ${which} (never more than the service total).`);
+    if (nc.enabledFor.color && nc.enabledFor.standard && nc.defaultAmount.color !== nc.defaultAmount.standard) {
+      lines.push(`New clients pay a deposit to book: ${money(nc.defaultAmount.color)} for color services, ${money(nc.defaultAmount.standard)} for other services (never more than the service total).`);
+    } else {
+      const which = nc.enabledFor.color && nc.enabledFor.standard ? "any service" : nc.enabledFor.color ? "color services" : "non-color services";
+      const amount = nc.enabledFor.color ? nc.defaultAmount.color : nc.defaultAmount.standard;
+      lines.push(`New clients pay a ${money(amount)} deposit to book ${which} (never more than the service total).`);
+    }
   }
   lines.push("Deposits count toward your total on the day of your appointment.");
   if (p.deposits.refundIfCancelledOutsideWindow) lines.push(`Cancel at least ${window} ahead and your deposit is refunded.`);

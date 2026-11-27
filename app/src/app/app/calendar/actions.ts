@@ -598,6 +598,10 @@ export interface MoveRequest {
   time: string;
   notifyClient?: boolean;
   confirmClosed?: boolean;
+  /** Stylist confirmed moving it outside working hours. */
+  confirmOutsideHours?: boolean;
+  /** Stylist confirmed a double-booking. */
+  confirmOverlap?: boolean;
 }
 
 export async function moveAppointment(req: MoveRequest): Promise<BookingResponse> {
@@ -617,9 +621,32 @@ export async function moveAppointment(req: MoveRequest): Promise<BookingResponse
   const mine = notMine(ctx, appt.staffId);
   if (mine) return mine;
   if (!MOVABLE.has(appt.status)) return { ok: false, error: "Only upcoming appointments can be moved." };
-  if (!(await movableTimes(ctx, appt, req.date)).includes(minutes)) return { ok: false, error: "That time isn't open anymore. Pick another." };
-
   const newStart = zonedToUtc(req.date, minutes, tz);
+  // Not one of the open times: allowed outside hours or on top of another booking, once confirmed.
+  const warnings: BookingWarnings = {};
+  if (!(await movableTimes(ctx, appt, req.date)).includes(minutes)) {
+    if (newStart < new Date()) return { ok: false, error: "That time has already passed. Pick another." };
+    const length = Math.round((appt.end.getTime() - appt.start.getTime()) / 60_000);
+    const stylist = (await stylistsOf(ctx)).find((x) => x.id === appt.staffId);
+    const first = stylist?.name.split(" ")[0] ?? "the stylist";
+    const off = outsideHours(req.date, minutes, length, hoursFor(stylist, ctx.business.business_hours));
+    if (off) warnings.outsideHours = off === "not a working day" ? `${first} doesn't usually work ${formatDay(req.date, { weekday: "long" })}s.` : `This ${off === "starts before opening" ? "starts before" : "runs past"} ${first}'s hours.`;
+    const delta = newStart.getTime() - appt.start.getTime();
+    const shifted = (appt.busy.length ? appt.busy : [{ start: appt.start, end: appt.end }]).map((b) => ({ start: new Date(b.start.getTime() + delta), end: new Date(b.end.getTime() + delta) }));
+    const newEnd = new Date(appt.end.getTime() + delta);
+    const sameSpan = (a: { start: Date; end: Date }, b: { start: Date; end: Date }) => a.start.getTime() === b.start.getTime() && a.end.getTime() === b.end.getTime();
+    const others = (await loadBusyRange(ctx.supabase, ctx.business.id, appt.staffId, newStart, newEnd)).filter((b) => !appt.busy.some((m) => sameSpan(m, b)));
+    const hits = collisions(shifted, others);
+    if (hits.length) warnings.overlap = `Overlaps ${first}'s other booked time (${hits.map((h) => formatTimeRange(h.start, h.end, tz)).join(", ")}).`;
+    if (!warnings.outsideHours && !warnings.overlap) return { ok: false, error: "That time isn't open anymore. Pick another." };
+    const unconfirmed: BookingWarnings = {
+      ...(warnings.outsideHours && !req.confirmOutsideHours ? { outsideHours: warnings.outsideHours } : {}),
+      ...(warnings.overlap && !req.confirmOverlap ? { overlap: warnings.overlap } : {}),
+    };
+    if (Object.keys(unconfirmed).length) return { ok: false, error: "Please confirm.", confirm: unconfirmed };
+    if (!ctx.can("booking.override")) return { ok: false, error: "Your access only allows moving to an open time." };
+  }
+
   if (!req.confirmClosed) {
     const newEnd = new Date(newStart.getTime() + (appt.end.getTime() - appt.start.getTime()));
     const daysOff = await loadDaysOff(ctx.supabase, ctx.business.id, newStart, newEnd);
@@ -629,7 +656,7 @@ export async function moveAppointment(req: MoveRequest): Promise<BookingResponse
     if (blocked) return { ok: false, error: `That time is blocked: ${blocked.reason || "Blocked time"}.`, closed: { kind: "blocked_hours", label: blocked.reason || "Blocked time" } };
   }
 
-  const { error } = await ctx.supabase.rpc("move_appointment", { p: { appointment_id: req.appointmentId, new_start: newStart.toISOString() } });
+  const { error } = await ctx.supabase.rpc("move_appointment", { p: { appointment_id: req.appointmentId, new_start: newStart.toISOString(), allow_overlap: !!warnings.overlap, outside_hours: !!warnings.outsideHours } });
   if (error) {
     if (error.code === "23P01") return { ok: false, error: "That time overlaps another appointment. Pick another." };
     if (error.code === "P0002") return { ok: false, error: "Only upcoming appointments can be moved." };
