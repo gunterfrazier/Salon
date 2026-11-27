@@ -72,6 +72,7 @@ export default async function StudioPage() {
       <StudioView
         salon={ctx.business.name}
         bookUrl={`${site}/s/${b?.slug}/book`}
+        shortUrl={`${site}/${b?.slug}`}
         accent={look.accent ?? "#b9dcf2"}
         logoUrl={mediaUrl(look.logoPath)}
         photos={[...(look.coverPath ? [{ url: mediaUrl(look.coverPath)!, caption: "Cover photo" }] : []), ...(photos ?? []).map((p) => ({ url: mediaUrl(p.path)!, caption: p.caption }))]}

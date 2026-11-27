@@ -14,7 +14,7 @@ type PromoRow = Promo & { uses: number; saved: number };
 const btn = "rounded-full border border-line px-3 py-1.5 text-sm hover:bg-background";
 const input = "w-full rounded-xl border border-line bg-background px-3 py-2.5 text-base";
 
-export default function MarketingView({ salon, pageUrl, bookUrl, googleReview, social, promos = [], services = [], loyalty = DEFAULT_LOYALTY }: { salon: string; pageUrl: string; bookUrl: string; googleReview: string | null; social: Record<string, string>; promos?: PromoRow[]; services?: { id: string; name: string }[]; loyalty?: LoyaltySettings }) {
+export default function MarketingView({ salon, pageUrl, shortUrl, bookUrl, googleReview, social, promos = [], services = [], loyalty = DEFAULT_LOYALTY }: { salon: string; pageUrl: string; shortUrl?: string; bookUrl: string; googleReview: string | null; social: Record<string, string>; promos?: PromoRow[]; services?: { id: string; name: string }[]; loyalty?: LoyaltySettings }) {
   const codes = [
     { key: "book", title: "Book online", hint: "Mirror clings, cards, receipts, flyers", url: bookUrl },
     { key: "page", title: "Your salon page", hint: "Instagram and TikTok bio, business cards", url: pageUrl },
@@ -39,6 +39,7 @@ export default function MarketingView({ salon, pageUrl, bookUrl, googleReview, s
         <h2 className="font-semibold">Your links</h2>
         <CopyRow label="Booking link (for your bio)" url={bookUrl} />
         <CopyRow label="Salon page" url={pageUrl} />
+        {shortUrl && <CopyRow label="Short link (easy to say or print)" url={shortUrl} />}
         <p className="text-xs text-muted">Instagram and TikTok: put the booking link in your bio. Facebook: add it as your Book button&rsquo;s website link.</p>
       </section>
 

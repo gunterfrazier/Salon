@@ -1,6 +1,7 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element -- print artwork */
+import Link from "next/link";
 import { useState } from "react";
 import QRCode from "@/components/QRCode";
 
@@ -19,7 +20,7 @@ export default function PrintSheet({ kind, salon, bookUrl, pageUrl, reviewUrl, p
     <div className="min-h-dvh bg-neutral-200 py-6 print:bg-white print:py-0">
       <style>{`@page { size: ${page}; margin: 0 } @media print { .no-print { display: none !important } body { background: #fff } }`}</style>
       <div className="no-print mx-auto mb-4 flex max-w-xl flex-wrap items-center justify-between gap-2 px-4 text-sm text-neutral-900">
-        <a href="/app/marketing" className="underline">‹ Marketing</a>
+        <Link href="/app/marketing" className="underline">‹ Marketing</Link>
         <span className="flex gap-2">
           <button className="rounded-full border border-neutral-500 px-3 py-1.5" onClick={() => setDark(!dark)}>{dark ? "Light version" : "Dark version"}</button>
           <button className="rounded-full bg-neutral-900 px-4 py-1.5 font-semibold text-white" onClick={() => window.print()}>Print</button>

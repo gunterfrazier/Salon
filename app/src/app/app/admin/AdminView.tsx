@@ -24,7 +24,7 @@ export default function AdminView({ applications, salons, mySalon }: { applicati
     <main className="mx-auto max-w-4xl space-y-4 px-4 py-4">
       <div>
         <h1 className="text-2xl font-semibold">Platform</h1>
-        <p className="text-sm text-muted">Salon requests and every salon on Chairvana. Public request form: <a className="underline" href="/join">chairvana.app/join</a></p>
+        <p className="text-sm text-muted">Salon requests and every salon on Chairvana. Public request form: <Link className="underline" href="/join">chairvana.app/join</Link></p>
       </div>
       {msg && (
         <div role={msg.ok ? "status" : "alert"} className="rounded-xl border border-line bg-surface p-3 text-sm">

@@ -24,6 +24,7 @@ export default async function MarketingPage() {
       <MarketingView
         salon={ctx.business.name}
         pageUrl={`${site}/s/${b?.slug}`}
+        shortUrl={`${site}/${b?.slug}`}
         bookUrl={`${site}/s/${b?.slug}/book`}
         googleReview={mergeNotificationSettings(b?.notification_settings).client.reviewRequest.url || null}
         social={(b?.social ?? {}) as Record<string, string>}

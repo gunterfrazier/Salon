@@ -22,7 +22,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <p className="mt-3 mb-8 text-center font-display text-lg italic text-muted">Where your schedule finds its flow.</p>
       <LoginForm error={error ? ERRORS[error] ?? ERRORS.link : undefined} />
       <p className="mt-8 text-center text-sm text-muted">
-        New here? <a href="/signup" className="underline">Create an account</a> or <a href="/find" className="underline">find a salon</a>. Own a salon? <a href="/join" className="underline">List it</a>.
+        New here? <Link href="/signup" className="underline">Create an account</Link> or <Link href="/find" className="underline">find a salon</Link>. Own a salon? <Link href="/join" className="underline">List it</Link>.
       </p>
     </main>
       <SiteFooter />

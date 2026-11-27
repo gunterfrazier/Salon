@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { shortSlug } from "@/lib/short-links";
 import { supabasePublicKeyOrNull, supabaseUrlOrNull } from "@/lib/supabase/env";
 
 /** Pages anyone can open without signing in. */
@@ -15,7 +16,7 @@ const PUBLIC = [/^\/app\/login(\/|$)/, /^\/auth\//, /^\/api\/health$/, /^\/api\/
 export async function middleware(request: NextRequest) {
   const url = supabaseUrlOrNull();
   const key = supabasePublicKeyOrNull();
-  const isPublic = PUBLIC.some((p) => p.test(request.nextUrl.pathname));
+  const isPublic = PUBLIC.some((p) => p.test(request.nextUrl.pathname)) || shortSlug(request.nextUrl.pathname) !== null;
 
   // Before Supabase is configured (local preview), leave pages open.
   if (!url || !key) return NextResponse.next();

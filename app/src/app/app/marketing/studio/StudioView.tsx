@@ -10,6 +10,8 @@ import { draw, type Fonts, type Template } from "./draw";
 type Props = {
   salon: string;
   bookUrl: string;
+  /** chairvana.app/your-salon, printed on the image. */
+  shortUrl?: string;
   accent: string;
   logoUrl: string | null;
   photos: { url: string; caption: string | null }[];
@@ -115,7 +117,7 @@ export default function StudioView(p: Props) {
       w: 1080,
       h: story ? 1920 : 1080,
       salon: p.salon,
-      url: p.bookUrl,
+      url: p.shortUrl ?? p.bookUrl,
       accent: p.accent,
       onAccent: onAccent(p.accent),
       fonts,
@@ -128,7 +130,7 @@ export default function StudioView(p: Props) {
       code,
       wrapped: p.wrapped,
     });
-  }, [fonts, imgs, template, story, text, lines, code, p.salon, p.bookUrl, p.accent, p.wrapped]);
+  }, [fonts, imgs, template, story, text, lines, code, p.salon, p.bookUrl, p.shortUrl, p.accent, p.wrapped]);
 
   function pick(t: Template) {
     setTemplate(t);

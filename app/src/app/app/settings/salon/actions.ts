@@ -1,5 +1,6 @@
 "use server";
 
+import { slugAllowed } from "@/lib/short-links";
 import { revalidatePath } from "next/cache";
 import { denied, getContext } from "@/lib/context";
 import { locateAddress, slugify } from "@/lib/geo";
@@ -16,7 +17,6 @@ export interface SalonFields {
   listed: boolean;
 }
 
-const RESERVED = new Set(["admin", "api", "app", "book", "find", "join", "signup", "login", "me", "s", "settings", "new"]);
 
 export async function saveSalonProfile(f: SalonFields): Promise<{ ok: true; located: boolean; slug: string } | { ok: false; error: string }> {
   const ctx = await getContext();
@@ -25,7 +25,7 @@ export async function saveSalonProfile(f: SalonFields): Promise<{ ok: true; loca
   const name = f.name.trim().slice(0, 80);
   if (!name) return { ok: false, error: "Enter the salon's name." };
   const slug = slugify(f.slug || name);
-  if (slug.length < 3 || RESERVED.has(slug)) return { ok: false, error: "Pick a different web address (3+ letters)." };
+  if (!slugAllowed(slug)) return { ok: false, error: "Pick a different web address (3+ letters)." };
   const state = f.state.trim().toUpperCase().slice(0, 2);
   const zip = f.zip.trim().slice(0, 10);
   if (zip && !/^\d{5}(-\d{4})?$/.test(zip)) return { ok: false, error: "ZIP should look like 36280." };

@@ -1,3 +1,4 @@
+import { slugAllowed } from "@/lib/short-links";
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ownerEmails } from "../auth/owners";
@@ -32,6 +33,7 @@ export async function freeSlug(db: SupabaseClient, name: string, city?: string |
   const base = slugify(name);
   const tries = [base, city ? `${base}-${slugify(city)}` : null, ...Array.from({ length: 20 }, (_, i) => `${base}-${i + 2}`)].filter(Boolean) as string[];
   for (const t of tries) {
+    if (!slugAllowed(t)) continue;
     const { data } = await db.from("businesses").select("id").eq("slug", t).limit(1);
     if (!data?.length) return t;
   }

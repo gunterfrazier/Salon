@@ -28,10 +28,11 @@ export default function SalonProfileForm({ initial, status, located }: { initial
         <label className="block text-sm font-medium">
           Web address
           <div className="mt-1 flex items-center gap-1">
-            <span className="text-sm text-muted">chairvana.app/s/</span>
+            <span className="text-sm text-muted">chairvana.app/</span>
             <input className={input} value={f.slug} onChange={set("slug")} placeholder={slugify(f.name)} aria-label="Web address" />
           </div>
           <a className="text-xs underline" href={`/s/${slug}`} target="_blank" rel="noreferrer">View your page</a>
+          <span className="block text-xs text-muted">Your short link: chairvana.app/{slug}</span>
         </label>
         <label className="block text-sm font-medium">Street address<input className={`${input} mt-1`} value={f.street} onChange={set("street")} autoComplete="street-address" /></label>
         <div className="grid grid-cols-[1fr_5rem_7rem] gap-2">
