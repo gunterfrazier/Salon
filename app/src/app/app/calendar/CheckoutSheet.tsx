@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { checkoutTotals, tipPresets } from "@/lib/checkout/settle";
 import type { CalAppointment, CalendarData } from "@/lib/data/calendar-types";
 import { money } from "@/lib/format";
-import { checkoutAppointment, lookupGiftCard, packagesForCheckout, sellableProducts } from "./actions";
+import { checkoutAppointment, lookupGiftCard, packagesForCheckout, promoForCheckout, sellableProducts } from "./actions";
 import type { ClientPackageInfo } from "@/lib/data/prepaid";
 import { Row, Sheet, toCents } from "./CloseSheet";
 
@@ -27,6 +27,9 @@ export default function CheckoutSheet({ a, data, onClose, onDone }: { a: CalAppo
   const [gift, setGift] = useState<{ id: string; code: string; balanceCents: number } | null>(null);
   const [giftMsg, setGiftMsg] = useState<string | null>(null);
   const [looking, startLooking] = useTransition();
+  const [promoCode, setPromoCode] = useState("");
+  const [promo, setPromo] = useState<{ id: string; code: string; label: string; total: number } | null>(null);
+  const [promoMsg, setPromoMsg] = useState<string | null>(null);
   useEffect(() => {
     sellableProducts().then(setCatalog).catch(() => setCatalog([]));
     packagesForCheckout(a.id).then(setPackages).catch(() => setPackages([]));
@@ -67,6 +70,7 @@ export default function CheckoutSheet({ a, data, onClose, onDone }: { a: CalAppo
         reference,
         gift: gift && giftCents > 0 ? { cardId: gift.id, cents: giftCents } : null,
         packageUses: Object.entries(uses).map(([lineId, packageId]) => ({ lineId, packageId })),
+        promo: promo ? { id: promo.id, cents: promo.total } : null,
       });
       if (res.ok) onDone();
       else setError(res.error);
@@ -129,6 +133,48 @@ export default function CheckoutSheet({ a, data, onClose, onDone }: { a: CalAppo
             </span>
           </label>
         ))}
+      </section>
+
+      <section className="space-y-1">
+        {promo ? (
+          <p className="flex flex-wrap items-center justify-between gap-2 text-sm">
+            <span>Code <strong className="font-mono">{promo.code}</strong> ({promo.label}): −{money(promo.total)} on services</span>
+            <button
+              type="button"
+              className="underline"
+              onClick={() => {
+                // Put the prices back as they were.
+                setPrices(Object.fromEntries(a.services.map((x) => [x.id, (x.finalPrice / 100).toFixed(2)])));
+                setPromo(null);
+                setPaid(null);
+              }}
+            >
+              Remove
+            </button>
+          </p>
+        ) : (
+          <div className="flex gap-2">
+            <input value={promoCode} onChange={(e) => setPromoCode(e.target.value)} className={`${input} font-mono uppercase`} placeholder="Promo code" aria-label="Promo code" autoCapitalize="characters" />
+            <button
+              type="button"
+              disabled={looking || promoCode.trim().length < 3}
+              className="shrink-0 rounded-lg border border-line px-3 py-2 text-sm disabled:opacity-50"
+              onClick={() =>
+                startLooking(async () => {
+                  setPromoMsg(null);
+                  const r = await promoForCheckout(a.id, promoCode, a.services.map((x, i) => ({ id: x.id, serviceId: x.serviceId, cents: uses[x.id] ? 0 : Number.isFinite(priceCents[i]) ? priceCents[i] : 0 })));
+                  if (!r.ok) return setPromoMsg(r.error);
+                  setPrices(Object.fromEntries(a.services.map((x, i) => [x.id, (((Number.isFinite(priceCents[i]) ? priceCents[i] : 0) - (r.off[x.id] ?? 0)) / 100).toFixed(2)])));
+                  setPromo({ id: r.promoId, code: r.code, label: r.label, total: r.total });
+                  setPaid(null);
+                })
+              }
+            >
+              Apply
+            </button>
+          </div>
+        )}
+        {promoMsg && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{promoMsg}</p>}
       </section>
 
       <section className="space-y-2">

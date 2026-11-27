@@ -14,7 +14,7 @@ import { suggestOrder } from "@/lib/schedule/plan";
 import { formatDay, formatMinutes, formatSlot, parseHHMM, toHHMM, tzAbbrev, WEEKDAY_KEYS, zonedToUtc, zoneLabel } from "@/lib/time/zone";
 import { NEW_CLIENT_STATE } from "@/lib/ui/standing";
 import MonthCalendar from "./MonthCalendar";
-import { dayCounts, findPublicOpenings, getTimes, joinWaitlistOnline, submitOnlineBooking, type OnlineBookingResult } from "./actions";
+import { dayCounts, findPublicOpenings, getTimes, joinWaitlistOnline, previewPromo, submitOnlineBooking, type OnlineBookingResult } from "./actions";
 
 const FAV_KEY = "chairvana.favorites.v1";
 function readFavorites(): Favorites | null {
@@ -65,6 +65,10 @@ export default function BookingWizard({
   const [f, setF] = useState({ firstName: prefill?.firstName ?? "", lastName: prefill?.lastName ?? "", phone: prefill?.phone ?? "", email: prefill?.email ?? "", notes: "", website: "" });
   const [agreed, setAgreed] = useState(false);
   const [textOk, setTextOk] = useState(false);
+  const [promoInput, setPromoInput] = useState("");
+  const [promo, setPromo] = useState<{ code: string; label: string; saved: number } | null>(null);
+  const [promoMsg, setPromoMsg] = useState<string | null>(null);
+  const [checkingPromo, startPromo] = useTransition();
   /** Joining the waitlist instead of booking a time. */
   const [waiting, setWaiting] = useState(false);
   const [waitWeeks, setWaitWeeks] = useState(4);
@@ -195,7 +199,7 @@ export default function BookingWizard({
     setError(null);
     startSaving(async () => {
       const fav: Favorites | null = remember ? cleanFavorites({ serviceIds: ordered.map((s) => s.id), weekdays: criteria.weekdays, block: criteria.block }) : null;
-      const r = await submitOnlineBooking({ salon, serviceIds: ordered.map((s) => s.id), staffId, date: date!, time: time!, ...f, agreed, textOk, favorites: fav ?? undefined });
+      const r = await submitOnlineBooking({ salon, serviceIds: ordered.map((s) => s.id), staffId, date: date!, time: time!, ...f, agreed, textOk, promoCode: promo?.code, favorites: fav ?? undefined });
       if (r.ok) {
         writeFavorites(fav);
         setDone(r);
@@ -252,6 +256,7 @@ export default function BookingWizard({
           <h2 className="text-xl font-bold">{done.status === "booked" ? "You’re all set. See you in the chair." : "Almost done: send your deposit"}</h2>
           <p className="mt-2">{done.when}</p>
           <p className="text-muted">{done.services.join(" + ")} · est. {money(done.total)}{done.priceMayVary ? "+" : ""}</p>
+          {(done.promoSaved ?? 0) > 0 && <p className="text-sm">Promo code applied: you saved {money(done.promoSaved!)}.</p>}
           {done.status === "pending" && (
             <div className="mt-4 space-y-3">
               <p>
@@ -512,6 +517,39 @@ export default function BookingWizard({
           {!waiting && (
           <>
           <div className="rounded-xl border border-line bg-surface p-4">
+            {promo ? (
+              <p className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <span>
+                  Code <strong className="font-mono">{promo.code}</strong>: {promo.label}. You save <strong>{money(promo.saved)}</strong>.
+                </span>
+                <button type="button" className="underline" onClick={() => setPromo(null)}>Remove</button>
+              </p>
+            ) : (
+              <details>
+                <summary className="cursor-pointer text-sm font-semibold">Have a promo code?</summary>
+                <div className="mt-2 flex gap-2">
+                  <input className={`${input} font-mono uppercase`} value={promoInput} onChange={(e) => setPromoInput(e.target.value)} placeholder="CODE" aria-label="Promo code" autoCapitalize="characters" />
+                  <button
+                    type="button"
+                    disabled={checkingPromo || promoInput.trim().length < 3}
+                    onClick={() =>
+                      startPromo(async () => {
+                        setPromoMsg(null);
+                        const r = await previewPromo(salon, promoInput, ordered.map((x) => x.id), date).catch(() => ({ ok: false as const, error: "Couldn't check the code." }));
+                        if (r.ok) setPromo({ code: r.code, label: r.label, saved: r.saved });
+                        else setPromoMsg(r.error);
+                      })
+                    }
+                    className="shrink-0 rounded-xl border border-line px-4 font-semibold disabled:opacity-40"
+                  >
+                    Apply
+                  </button>
+                </div>
+                {promoMsg && <p role="alert" className="mt-1 text-sm text-red-700 dark:text-red-300">{promoMsg}</p>}
+              </details>
+            )}
+          </div>
+          <div className="rounded-xl border border-line bg-surface p-4">
             <h2 className="font-semibold">Booking policy</h2>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
               {policyLines.map((l) => <li key={l}>{l}</li>)}
@@ -543,7 +581,7 @@ export default function BookingWizard({
           <div className="min-w-0 text-sm">
             {estimate ? (
               <>
-                <p className="font-semibold">{money(estimate.priced.total)}{estimate.plan.priceMayVary ? "+" : ""} · {duration(estimate.plan.totalMinutes)}</p>
+                <p className="font-semibold">{money(estimate.priced.total - (promo && step === "details" ? promo.saved : 0))}{estimate.plan.priceMayVary ? "+" : ""} · {duration(estimate.plan.totalMinutes)}</p>
                 <p className="truncate text-muted">{ordered.length} service{ordered.length === 1 ? "" : "s"}{estimate.priced.totalDiscount ? ` · ${money(estimate.priced.totalDiscount)} package savings` : ""}</p>
               </>
             ) : (

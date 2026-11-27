@@ -17,6 +17,9 @@ import type { BookableService } from "@/lib/booking/build";
 import type { PublicBusiness, PublicService } from "@/lib/data/public-booking";
 import { salonOpenings } from "@/lib/discovery/openings";
 import { notifyAppointment, notifyStaff } from "@/lib/notify/events";
+import { checkPromo } from "@/lib/promo/server";
+import { promoLabel } from "@/lib/promo/promo";
+import { linePrice } from "@/lib/schedule/plan";
 import { cleanEntry } from "@/lib/data/waitlist";
 import { describeWindow } from "@/lib/waitlist/match";
 import { whoAmI } from "@/lib/auth/whoami";
@@ -89,6 +92,8 @@ export interface OnlineBookingRequest {
   agreed: boolean;
   /** Ticked "Text me about my appointments" (unticked by default). */
   textOk?: boolean;
+  /** Promo code typed by the client. */
+  promoCode?: string;
   /** Honeypot: real people leave this empty. */
   website?: string;
   /** "Remember my favorites": saved on the client record. */
@@ -101,6 +106,8 @@ export type OnlineBookingResult =
       when: string;
       services: string[];
       total: number;
+      /** Taken off by a promo code. */
+      promoSaved?: number;
       priceMayVary: boolean;
       deposit: number;
       status: "booked" | "pending";
@@ -204,6 +211,17 @@ export async function submitOnlineBooking(req: OnlineBookingRequest): Promise<On
     .single();
   if (consentErr) return { ok: false, error: "Couldn't save your booking. Please try again." };
 
+  // Promo code: one more discount on the services it covers.
+  let promo: { id: string; total: number } | null = null;
+  if (req.promoCode && req.promoCode.trim()) {
+    const chk = await checkPromo(admin, b.id, req.promoCode, { clientId, date: req.date, lines: result.payload.services.map((l) => ({ serviceId: l.service_id, cents: l.price_quoted_cents })) });
+    if (!chk.ok) return { ok: false, error: chk.error };
+    result.payload.services = result.payload.services.map((l, i) =>
+      chk.perLine[i] > 0 ? { ...l, discounts: [...l.discounts, { source: "promo", label: `Code ${chk.promo.code}`, amount_cents: chk.perLine[i] }], price_quoted_cents: l.price_quoted_cents - chk.perLine[i] } : l,
+    );
+    promo = { id: chk.promo.id, total: chk.total };
+  }
+
   const deposit = result.depositCents;
   const status = deposit > 0 ? "pending" : "booked";
   const { data: newId, error } = await admin.rpc("book_appointment", {
@@ -222,6 +240,7 @@ export async function submitOnlineBooking(req: OnlineBookingRequest): Promise<On
     if (error.code === "23P01") return { ok: false, error: "That time was just taken. Please pick another." };
     return { ok: false, error: "Couldn't save your booking. Please try again." };
   }
+  if (promo) await admin.from("promo_redemptions").insert({ business_id: b.id, promo_id: promo.id, client_id: clientId, appointment_id: newId as string, discount_cents: promo.total });
   await notifyAppointment(b.id, newId as string, "booked_online");
 
   const when = `${formatDay(req.date, { weekday: "long", month: "long", day: "numeric" })} at ${formatTime(result.plan.start, b.timezone)}`;
@@ -238,7 +257,8 @@ export async function submitOnlineBooking(req: OnlineBookingRequest): Promise<On
     ok: true,
     when,
     services: services.map((s) => s.name),
-    total: result.priced.total,
+    total: result.priced.total - (promo?.total ?? 0),
+    promoSaved: promo?.total ?? 0,
     priceMayVary: result.plan.priceMayVary,
     deposit,
     status,
@@ -325,4 +345,15 @@ export async function joinWaitlistOnline(req: WaitlistJoinRequest): Promise<{ ok
   const who = staffId ? b.stylists.find((s) => s.id === staffId)?.name : null;
   await notifyStaff(b.id, staffId, "stylistWaitlist", `${firstName} ${lastName} joined the waitlist: ${what}${who ? ` with ${who}` : ""} · ${window}.`, `waitlist-joined:${clientId}:${c.v.date_from}:${c.v.service_ids.join(",")}`, (s) => s.stylist.waitlistJoined?.enabled !== false);
   return { ok: true, summary: `${what}${who ? ` with ${who}` : ""} · ${window}` };
+}
+
+/** "Have a promo code?" before booking: checks the code for the chosen services and date. */
+export async function previewPromo(salon: string, code: string, serviceIds: string[], date: string | null): Promise<{ ok: true; code: string; label: string; saved: number } | { ok: false; error: string }> {
+  const b = await loadPublicBusiness({ slug: salon });
+  if (!b) return { ok: false, error: "Online booking isn't open yet." };
+  const services = await servicesFor(b.id, serviceIds);
+  if (!services) return { ok: false, error: "Pick your services first." };
+  const r = await checkPromo(createAdminClient(), b.id, code, { clientId: null, date: date && isDateStr(date) ? date : todayIn(b.timezone), lines: services.map((s) => ({ serviceId: s.id, cents: linePrice(s) })) });
+  if (!r.ok) return r;
+  return { ok: true, code: r.promo.code, label: r.promo.description ?? promoLabel(r.promo), saved: r.total };
 }

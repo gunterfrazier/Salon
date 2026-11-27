@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { buildBooking, toBookable, type ServiceRow } from "@/lib/booking/build";
 import { checkoutTotals, settleCancel, splitGift } from "@/lib/checkout/settle";
 import { findGiftCard, usablePackages, type ClientPackageInfo } from "@/lib/data/prepaid";
+import { checkPromo } from "@/lib/promo/server";
+import { promoLabel } from "@/lib/promo/promo";
 import { cancelDefaults, type ChargeOption } from "@/lib/policy/engine";
 import { denied, getContext } from "@/lib/context";
 import { loadClientStates, reviveClientState, type ClientStateJSON } from "@/lib/data/clients";
@@ -196,6 +198,7 @@ async function loadForClose(ctx: Ctx, appointmentId: string) {
     .map((l) => ({ id: l.id, price_quoted_cents: l.price_quoted_cents, name: l.services?.name ?? "Service" }));
   return {
     staffId: appt.staff_id as string,
+    clientId: appt.client_id as string,
     status: appt.status as string,
     start: new Date(appt.start_at),
     lines,
@@ -311,6 +314,8 @@ export interface CheckoutRequest {
   gift?: { cardId: string; cents: number } | null;
   /** Lines paid with a package visit (priced 0). */
   packageUses?: { lineId: string; packageId: string }[];
+  /** Promo code applied at checkout (prices already reduced). */
+  promo?: { id: string; cents: number } | null;
 }
 
 export async function checkoutAppointment(req: CheckoutRequest): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -372,6 +377,9 @@ export async function checkoutAppointment(req: CheckoutRequest): Promise<{ ok: t
     },
   });
   if (error) return { ok: false, error: error.code === "P0002" ? (/Gift card/.test(error.message) ? "Gift card not found." : "This appointment is already closed.") : error.code === "22023" ? error.message : `Couldn't save: ${error.message}` };
+  if (req.promo && /^[0-9a-f-]{36}$/.test(req.promo.id) && Number.isInteger(req.promo.cents) && req.promo.cents > 0) {
+    await ctx.supabase.from("promo_redemptions").upsert({ business_id: ctx.business.id, promo_id: req.promo.id, client_id: a.clientId ?? null, appointment_id: req.appointmentId, discount_cents: req.promo.cents }, { onConflict: "promo_id,appointment_id", ignoreDuplicates: true });
+  }
   await notifyAppointment(ctx.business.id, req.appointmentId, "checked_out", {
     lines: [...a.lines.map((l, i) => ({ name: free.has(l.id) ? `${l.name} (package visit)` : l.name, cents: prices[i] })), ...retail.names],
     tip: t.tip,
@@ -557,4 +565,17 @@ export async function packagesForCheckout(appointmentId: string): Promise<Client
   const { data: a } = await ctx.supabase.from("appointments").select("client_id").eq("id", appointmentId).eq("business_id", ctx.business.id).maybeSingle();
   if (!a) return [];
   return usablePackages(ctx.supabase, ctx.business.id, a.client_id, todayIn(ctx.business.timezone));
+}
+
+/** Check a promo code at checkout; returns the discount for each service line. */
+export async function promoForCheckout(appointmentId: string, code: string, lines: { id: string; serviceId: string; cents: number }[]): Promise<{ ok: true; promoId: string; code: string; label: string; off: Record<string, number>; total: number } | { ok: false; error: string }> {
+  const ctx = await getContext();
+  const no = denied(ctx, "checkout");
+  if (no) return no;
+  const a = await loadForClose(ctx, appointmentId);
+  if (!a) return { ok: false, error: "Appointment not found." };
+  const mine = lines.filter((l) => a.lines.some((x) => x.id === l.id) && Number.isInteger(l.cents) && l.cents >= 0);
+  const r = await checkPromo(ctx.supabase, ctx.business.id, code, { clientId: a.clientId ?? null, date: todayIn(ctx.business.timezone), lines: mine.map((l) => ({ serviceId: l.serviceId, cents: l.cents })), ignoreAppointment: appointmentId });
+  if (!r.ok) return r;
+  return { ok: true, promoId: r.promo.id, code: r.promo.code, label: r.promo.description ?? promoLabel(r.promo), off: Object.fromEntries(mine.map((l, i) => [l.id, r.perLine[i]])), total: r.total };
 }

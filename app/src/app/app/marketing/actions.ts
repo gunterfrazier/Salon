@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { denied, getContext } from "@/lib/context";
 import { SOCIAL_KEYS, type Social } from "@/lib/social";
+import { cleanPromo } from "@/lib/promo/promo";
 
 
 /** Save social links (shown on the salon page). Handles like @intensitysalon become links. */
@@ -26,6 +27,31 @@ export async function saveSocial(raw: Social): Promise<{ ok: true } | { ok: fals
   }
   const { error } = await ctx.supabase.from("businesses").update({ social: out }).eq("id", ctx.business.id);
   if (error) return { ok: false, error: "Couldn't save." };
+  revalidatePath("/app/marketing");
+  return { ok: true };
+}
+
+/** Create or update a promo code. */
+export async function savePromo(id: string | null, raw: Record<string, unknown>): Promise<{ ok: true } | { ok: false; error: string }> {
+  const ctx = await getContext();
+  const no = denied(ctx, "settings.salon");
+  if (no) return no;
+  const c = cleanPromo(raw);
+  if (!c.ok) return c;
+  const { error } = id
+    ? await ctx.supabase.from("promo_codes").update(c.row).eq("id", id).eq("business_id", ctx.business.id)
+    : await ctx.supabase.from("promo_codes").insert({ ...c.row, business_id: ctx.business.id });
+  if (error) return { ok: false, error: error.code === "23505" ? "You already have a code with that name." : "Couldn't save the code." };
+  revalidatePath("/app/marketing");
+  return { ok: true };
+}
+
+export async function setPromoActive(id: string, active: boolean): Promise<{ ok: true } | { ok: false; error: string }> {
+  const ctx = await getContext();
+  const no = denied(ctx, "settings.salon");
+  if (no) return no;
+  const { error } = await ctx.supabase.from("promo_codes").update({ active }).eq("id", id).eq("business_id", ctx.business.id);
+  if (error) return { ok: false, error: "Couldn't change it." };
   revalidatePath("/app/marketing");
   return { ok: true };
 }
