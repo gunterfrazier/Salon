@@ -27,6 +27,14 @@ export default function MarketingView({ salon, pageUrl, bookUrl, googleReview, s
         <p className="text-sm text-muted">Your links, QR codes and printables. Everything points to your Chairvana page, so clients can book in a tap.</p>
       </header>
 
+      <Link href="/app/marketing/studio" className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface p-4 hover:border-accent">
+        <span>
+          <span className="block font-semibold">Graphics studio</span>
+          <span className="block text-sm text-muted">Instagram and Facebook posts, stories and your Chair Wrapped year recap, made from your photos and colors.</span>
+        </span>
+        <span aria-hidden="true" className="text-2xl text-muted">›</span>
+      </Link>
+
       <section className="space-y-3 rounded-2xl border border-line bg-surface p-4">
         <h2 className="font-semibold">Your links</h2>
         <CopyRow label="Booking link (for your bio)" url={bookUrl} />
