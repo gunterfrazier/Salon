@@ -53,6 +53,8 @@ export interface ScreenData {
   today?: { appts: ScreenAppt[]; next: string | null };
   week?: DaySummary[];
   month?: { first: DateStr; days: DaySummary[] };
+  /** Staff screens with the week or month: each day's appointments, for tapping a day open. */
+  days?: Record<DateStr, ScreenAppt[]>;
   inventory?: { name: string; level: "out" | "low"; onHand: number; vendor: string | null }[];
 }
 
@@ -234,6 +236,9 @@ export async function loadScreenData(db: SupabaseClient, businessId: string, sli
           const bookedMin = mine.reduce((n, a) => n + (Date.parse(a.end) - Date.parse(a.start)) / 60000, 0);
           return { date, label, load: dayLoad(open, bookedMin, !!why), booked: mine.length, freeMinutes: why ? 0 : Math.max(0, Math.round(open - bookedMin)), closedReason: why };
         };
+        const byDay: Record<DateStr, ScreenAppt[]> = {};
+        for (const a of appts) (byDay[dayOf(a.start)] ??= []).push(a);
+        out.days = byDay;
         if (need.has("week")) out.week = Array.from({ length: 7 }, (_, i) => addDays(today, i)).map((d, i) => summarize(d, i === 0 ? "Today" : formatDay(d, { weekday: "short", month: "short", day: "numeric" })));
         if (need.has("month")) {
           const first: DateStr = `${today.slice(0, 8)}01`;

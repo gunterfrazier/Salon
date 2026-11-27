@@ -39,6 +39,10 @@ export default async function DevScreen({ searchParams }: { searchParams: Promis
     month: { first: "2026-12-01", days: days(42, "2026-11-29").map((d) => ({ date: d, label: d, load: load(d), booked: load(d) === "closed" ? 0 : 3, freeMinutes: 60, closedReason: closedOn(d) })) },
     inventory: [{ name: "Shades EQ Gloss 09V", level: "out", onHand: 0, vendor: "saloncentric" }, { name: "Kenra Color 6N", level: "low", onHand: 1, vendor: "saloncentric" }],
   };
+  data.days = {
+    [today]: data.today!.appts,
+    [addDays(today, 3)]: [appt("4", "10:00", "11:30", "Avery Cole", ["Partial Highlights"]), appt("5", "13:00", "13:45", "Morgan Tate", ["Women's Cut"], "booked", "Bring inspiration photos")].map((x) => ({ ...x, start: x.start.replace(today, addDays(today, 3)), end: x.end.replace(today, addDays(today, 3)) })),
+  };
   if (sp.t === "empty") {
     data.board = { columns: [], next: nextAppointmentLine({ start: at("07:15", "2026-12-05"), clientName: "Gunter Frazier", services: ["Women's Cut"] }, "2026-12-04", TZ, { anyToday: false }) };
   }

@@ -9,7 +9,7 @@ import { money } from "@/lib/format";
 import type { ScreenData } from "@/lib/screens/data";
 import { jumpControl, NO_CONTROL, pauseControl, playControl, playPosition, type Control } from "@/lib/screens/playback";
 import { SLIDES, type ScreenSettings, type Slide } from "@/lib/screens/slides";
-import { formatDay, formatTime } from "@/lib/time/zone";
+import { formatDay, formatTime, type DateStr } from "@/lib/time/zone";
 import ClientCard, { type ClientCardApi } from "./ClientCard";
 import ColorWheel from "./ColorWheel";
 
@@ -436,34 +436,9 @@ function SlideView({ slide, data, cycle, now, clientCard, onBusy }: { slide: Sli
       );
     }
     case "week":
-      return (
-        <div>
-          <Title sub="Days with open time stand out.">The week ahead</Title>
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
-            {(data.week ?? []).map((d) => <DayTile key={d.date} d={d} label={d.label} />)}
-          </ul>
-          <Legend />
-        </div>
-      );
-    case "month": {
-      const m = data.month;
-      if (!m) return null;
-      return (
-        <div>
-          <Title>{formatDay(m.first, { month: "long", year: "numeric" })}</Title>
-          <div className="grid grid-cols-7 gap-1.5 text-center text-sm text-muted">{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => <span key={d}>{d}</span>)}</div>
-          <ul className="mt-1 grid grid-cols-7 gap-1.5">
-            {m.days.map((d) => (
-              <li key={d.date} className={`rounded-lg border p-1.5 text-left ${d.date.slice(0, 7) !== m.first.slice(0, 7) ? "opacity-30" : ""} ${LOAD[d.load]} ${d.date === data.salon.today ? "ring-2 ring-accent" : ""}`}>
-                <span className="block text-lg font-semibold">{Number(d.date.slice(8))}</span>
-                <span className="block truncate text-xs">{d.load === "closed" ? (d.closedReason && d.closedReason !== "Closed" ? d.closedReason : "Closed") : `${d.booked} booked`}</span>
-              </li>
-            ))}
-          </ul>
-          <Legend />
-        </div>
-      );
-    }
+      return <WeekSlide data={data} staffId={slide.staffId} onBusy={onBusy} />;
+    case "month":
+      return <MonthSlide data={data} staffId={slide.staffId} onBusy={onBusy} />;
     case "inventory": {
       const list = data.inventory ?? [];
       return (
@@ -498,9 +473,9 @@ const LOAD: Record<string, string> = {
   closed: "border-line text-muted",
 };
 
-function DayTile({ d, label }: { d: { load: string; booked: number; freeMinutes: number; closedReason: string | null }; label: string }) {
-  return (
-    <li className={`rounded-2xl border p-4 ${LOAD[d.load]}`}>
+function DayTile({ d, label, onOpen }: { d: { load: string; booked: number; freeMinutes: number; closedReason: string | null }; label: string; onOpen?: () => void }) {
+  const body = (
+    <>
       <p className="text-lg font-semibold">{label}</p>
       {d.load === "closed" ? (
         <p className="mt-2 text-lg">{d.closedReason && d.closedReason !== "Closed" ? d.closedReason : "Closed"}</p>
@@ -511,7 +486,135 @@ function DayTile({ d, label }: { d: { load: string; booked: number; freeMinutes:
           <p className="mt-1 text-lg">{d.freeMinutes >= 30 ? `${hm(d.freeMinutes)} open` : "Full"}</p>
         </>
       )}
+    </>
+  );
+  return (
+    <li className={`rounded-2xl border ${LOAD[d.load]}`}>
+      {onOpen ? (
+        <button type="button" onClick={onOpen} className="h-full w-full rounded-2xl p-4 text-left hover:brightness-110" aria-label={`${label}: see the appointments`}>
+          {body}
+        </button>
+      ) : (
+        <div className="p-4">{body}</div>
+      )}
     </li>
+  );
+}
+
+/** Which day is open, holding the screen still while it is (and letting go after two idle minutes). */
+function useOpenDay(onBusy: (b: boolean) => void) {
+  const [day, setDay] = useState<DateStr | null>(null);
+  useEffect(() => {
+    if (!day) return;
+    onBusy(true);
+    const t = setTimeout(() => setDay(null), 120_000);
+    return () => {
+      clearTimeout(t);
+      onBusy(false);
+    };
+  }, [day, onBusy]);
+  return [day, setDay] as const;
+}
+
+/** Days with anything to show can be opened; closed days with nothing booked can't. */
+const canOpen = (data: ScreenData, d: { date: DateStr; load: string }) => !!data.days && (d.load !== "closed" || (data.days[d.date]?.length ?? 0) > 0);
+
+function WeekSlide({ data, staffId, onBusy }: { data: ScreenData; staffId?: string; onBusy: (b: boolean) => void }) {
+  const [day, setDay] = useOpenDay(onBusy);
+  const week = data.week ?? [];
+  const open = week.find((d) => d.date === day);
+  return (
+    <div>
+      <Title sub={data.days ? "Days with open time stand out. Tap a day to see it." : "Days with open time stand out."}>The week ahead</Title>
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+        {week.map((d) => <DayTile key={d.date} d={d} label={d.label} onOpen={canOpen(data, d) ? () => setDay(d.date) : undefined} />)}
+      </ul>
+      <Legend />
+      {open && <DayAppointments data={data} date={open.date} summary={open} staffId={staffId} onClose={() => setDay(null)} />}
+    </div>
+  );
+}
+
+function MonthSlide({ data, staffId, onBusy }: { data: ScreenData; staffId?: string; onBusy: (b: boolean) => void }) {
+  const [day, setDay] = useOpenDay(onBusy);
+  const m = data.month;
+  if (!m) return null;
+  const open = m.days.find((d) => d.date === day);
+  return (
+    <div>
+      <Title sub={data.days ? "Tap a day to see it." : undefined}>{formatDay(m.first, { month: "long", year: "numeric" })}</Title>
+      <div className="grid grid-cols-7 gap-1.5 text-center text-sm text-muted">{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => <span key={d}>{d}</span>)}</div>
+      <ul className="mt-1 grid grid-cols-7 gap-1.5">
+        {m.days.map((d) => {
+          const inner = (
+            <>
+              <span className="block text-lg font-semibold">{Number(d.date.slice(8))}</span>
+              <span className="block truncate text-xs">{d.load === "closed" ? (d.closedReason && d.closedReason !== "Closed" ? d.closedReason : "Closed") : `${d.booked} booked`}</span>
+            </>
+          );
+          return (
+            <li key={d.date} className={`rounded-lg border text-left ${d.date.slice(0, 7) !== m.first.slice(0, 7) ? "opacity-30" : ""} ${LOAD[d.load]} ${d.date === data.salon.today ? "ring-2 ring-accent" : ""}`}>
+              {canOpen(data, d) ? (
+                <button type="button" onClick={() => setDay(d.date)} className="w-full rounded-lg p-1.5 text-left hover:brightness-110" aria-label={`${formatDay(d.date, { weekday: "long", month: "long", day: "numeric" })}: see the appointments`}>
+                  {inner}
+                </button>
+              ) : (
+                <div className="p-1.5">{inner}</div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <Legend />
+      {open && <DayAppointments data={data} date={open.date} summary={open} staffId={staffId} onClose={() => setDay(null)} />}
+    </div>
+  );
+}
+
+/** One day's appointments, over the week or month. */
+function DayAppointments({ data, date, summary, staffId, onClose }: { data: ScreenData; date: DateStr; summary: { load: string; freeMinutes: number; closedReason: string | null }; staffId?: string; onClose: () => void }) {
+  const tz = data.salon.tz;
+  const all = data.days?.[date] ?? [];
+  const appts = staffId ? all.filter((a) => a.staffId === staffId) : all;
+  const many = data.stylists.length > 1 && !staffId;
+  const who = (id: string) => data.stylists.find((s) => s.id === id)?.name.split(" ")[0] ?? "";
+  const heading = date === data.salon.today ? "Today" : formatDay(date, { weekday: "long", month: "long", day: "numeric" });
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, [onClose]);
+  return (
+    <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/60 p-3 sm:items-center sm:p-8" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-label={`${heading}: appointments`} className="max-h-[90dvh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-line bg-background p-5 text-foreground shadow-2xl sm:p-8" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="font-display text-3xl sm:text-4xl">{heading}</h2>
+            <p className="mt-1 text-lg text-muted">
+              {summary.load === "closed" ? (summary.closedReason && summary.closedReason !== "Closed" ? `Closed: ${summary.closedReason}` : "Closed") : `${appts.length} booked${summary.freeMinutes >= 30 ? ` · ${hm(summary.freeMinutes)} open` : " · full"}`}
+            </p>
+          </div>
+          <button type="button" autoFocus onClick={onClose} className="rounded-full border border-line px-4 py-2 text-lg" aria-label="Close">Close</button>
+        </div>
+        {appts.length ? (
+          <ul className="mt-4 divide-y divide-line">
+            {appts.map((a) => (
+              <li key={a.id} className="grid grid-cols-[6.5rem_1fr] gap-3 py-3 sm:grid-cols-[8rem_1fr_auto]">
+                <span className="font-mono text-xl">{time(a.start, tz)}</span>
+                <span>
+                  <span className="block text-2xl">{a.name}{a.quiet && <span className="ml-2 align-middle text-base text-muted">☾ quiet</span>}</span>
+                  <span className="block text-lg text-muted">{a.services.join(" + ")}{many ? ` · ${who(a.staffId)}` : ""} · until {time(a.end, tz)}</span>
+                  {a.notes && <span className="block text-base text-muted">Note: {a.notes}</span>}
+                </span>
+                <span className="hidden text-sm font-semibold uppercase tracking-wide sm:block">{a.status === "completed" ? "Done" : a.status === "in_service" ? "In the chair" : a.status === "checked_in" ? "Checked in" : a.status === "pending" ? "Deposit due" : ""}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-6 text-2xl text-muted">Nothing booked{summary.load === "closed" ? "" : " yet"}.</p>
+        )}
+      </div>
+    </div>
   );
 }
 
