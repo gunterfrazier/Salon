@@ -133,6 +133,14 @@ Use a second email address (a Gmail you control) as a pretend client, and a thir
 - [ ] Open their link in a private window and book as another new client: "Jamie sent you" shows; the welcome reward appears at that client's checkout.
 - [ ] After that first visit, the referrer's reward appears at their next checkout.
 
+### Booking and team access
+- [ ] **New appointment**: pick a date; open times show soonest first. Add a long service: the list shrinks to times it fits.
+- [ ] **Other time**: pick one outside your hours or on top of a booking; confirm **Book anyway**; it saves.
+- [ ] New client with a deposit: lower it below the minimum, then try **Don't require one**.
+- [ ] **Settings → Payments → Deposits**: switch the team option off; the deposit choices disappear when booking.
+- [ ] **Team** → the pretend employee → **Access**: turn off *Lower prices*; at their checkout a lower price is refused.
+- [ ] **Team → What each role can do**: turn off *Move and cancel* for Stylist; the buttons disappear for them.
+
 ### Check-in kiosk (tablet)
 - [ ] On the tablet, sign in, **Front desk → Check-in kiosk**. Enter the pretend client's phone and tap **I'm here** on a same-day appointment.
 - [ ] You get a check-in alert; the calendar shows "Checked in".
