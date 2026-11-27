@@ -8,6 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { todayIn } from "@/lib/time/zone";
 import { loadLoyalty } from "@/lib/promo/rewards";
 import { rewardLabel } from "@/lib/promo/loyalty";
+import { accentStyle, branding } from "@/lib/branding";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +44,9 @@ export default async function SalonBookPage({ params, searchParams }: Props) {
       if (r) referral = { code: ref, from: r.first_name, reward: rewardLabel(s.referral.friend) };
     }
   }
+  const { data: look } = await createAdminClient().from("businesses").select("branding").eq("id", b.id).single();
   return (
+    <div style={accentStyle(branding(look?.branding))}>
     <BookingWizard
       referral={referral}
       salon={b.slug}
@@ -57,5 +60,6 @@ export default async function SalonBookPage({ params, searchParams }: Props) {
       initialStaff={b.stylists.some((s) => s.id === sp.staff) ? sp.staff! : null}
       initialSlot={sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) && sp.time && /^\d{2}:\d{2}$/.test(sp.time) ? { date: sp.date, time: sp.time } : null}
     />
+    </div>
   );
 }

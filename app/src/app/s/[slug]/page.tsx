@@ -6,6 +6,7 @@ import { whoAmI } from "@/lib/auth/whoami";
 import { createAdminClient } from "@/lib/supabase/admin";
 import PreferButton from "./PreferButton";
 import ShareButton from "./ShareButton";
+import { accentStyle } from "@/lib/branding";
 import Stars, { RatingSummary } from "@/components/Stars";
 import { loadPublicReviews } from "@/lib/reviews/server";
 import { duration, money } from "@/lib/format";
@@ -50,7 +51,15 @@ export default async function SalonPage({ params, searchParams }: Props) {
   return (
     <>
       {/* Cover: the salon's own photo will go here; until then, the Chairvana obsidian with its monogram. */}
+      <div style={accentStyle(s.branding)}>
       <header className="brand-dark relative overflow-hidden">
+        {s.coverUrl && (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element -- salon's own cover photo */}
+            <img src={s.coverUrl} alt="" className="absolute inset-0 size-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0f0f11] via-[#0f0f11]/70 to-[#0f0f11]/30" aria-hidden="true" />
+          </>
+        )}
         <div className="pointer-events-none absolute -right-10 -top-6 opacity-[0.07]" aria-hidden="true">
           <svg viewBox="0 0 200 200" className="size-72"><circle cx="100" cy="100" r="98" fill="none" stroke="#b9dcf2" strokeWidth="1" /><circle cx="100" cy="100" r="70" fill="none" stroke="#f5efe6" strokeWidth="1" /><circle cx="100" cy="100" r="42" fill="none" stroke="#b9dcf2" strokeWidth="1" /></svg>
         </div>
@@ -62,7 +71,10 @@ export default async function SalonPage({ params, searchParams }: Props) {
             </div>
           </div>
           <div className="mt-6 flex items-end gap-4">
-            <span className="flex size-20 shrink-0 items-center justify-center rounded-2xl border border-line bg-surface font-display text-3xl">{initials}</span>
+            <span className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-line bg-surface font-display text-3xl">
+              {/* eslint-disable-next-line @next/next/no-img-element -- salon's own logo */}
+              {s.logoUrl ? <img src={s.logoUrl} alt={`${s.name} logo`} className="size-full object-cover" /> : initials}
+            </span>
             <div className="min-w-0">
               <h1 className="font-display text-4xl leading-tight">{s.name}</h1>
               {place && <p className="text-sm text-muted">{place}</p>}
@@ -76,7 +88,7 @@ export default async function SalonPage({ params, searchParams }: Props) {
             </div>
           </div>
           <div className="mt-5 flex flex-wrap items-center gap-2">
-            <Link href={book(focus ? `?staff=${focus.id}` : "")} className="rounded-full bg-foreground px-6 py-3 text-sm font-semibold text-background">
+            <Link href={book(focus ? `?staff=${focus.id}` : "")} className={`rounded-full px-6 py-3 text-sm font-semibold ${s.branding.accent ? "bg-accent text-on-accent" : "bg-foreground text-background"}`}>
               {focus ? `Book with ${focus.name.split(" ")[0]}` : "Book now"}
             </Link>
             {pref && <PreferButton businessId={s.id} label="Make this my salon" active={pref.business === s.id} />}
@@ -88,6 +100,7 @@ export default async function SalonPage({ params, searchParams }: Props) {
       <nav aria-label="On this page" className="sticky top-0 z-30 border-b border-line bg-background/95 backdrop-blur">
         <div className="mx-auto flex max-w-2xl gap-6 px-4 text-sm">
           <a href="#services" className="border-b-2 border-foreground py-3 font-semibold">Services</a>
+          {s.photos.length > 0 && <a href="#portfolio" className="py-3 text-muted hover:text-foreground">Portfolio</a>}
           {rated && <a href="#reviews" className="py-3 text-muted hover:text-foreground">Reviews</a>}
           {s.stylists.length > 1 && <a href="#team" className="py-3 text-muted hover:text-foreground">Team</a>}
           <a href="#details" className="py-3 text-muted hover:text-foreground">Details</a>
@@ -111,7 +124,7 @@ export default async function SalonPage({ params, searchParams }: Props) {
                   </span>
                   <span className="flex shrink-0 items-center gap-3">
                     <span className="text-right font-mono text-sm font-semibold">{x.price_type === "free" ? "Free" : `${money(x.price_cents)}${x.price_type === "starting_at" ? "+" : ""}`}</span>
-                    <Link href={book(`?services=${x.id}${focus ? `&staff=${focus.id}` : ""}`)} className="rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background" aria-label={`Book ${x.name}`}>
+                    <Link href={book(`?services=${x.id}${focus ? `&staff=${focus.id}` : ""}`)} className={`rounded-full px-4 py-2 text-sm font-semibold ${s.branding.accent ? "bg-accent text-on-accent" : "bg-foreground text-background"}`} aria-label={`Book ${x.name}`}>
                       Book
                     </Link>
                   </span>
@@ -140,6 +153,23 @@ export default async function SalonPage({ params, searchParams }: Props) {
                     {pref && <PreferButton businessId={s.id} staffId={x.id} label={`Make ${x.name.split(" ")[0]} my stylist`} active={pref.staff === x.id} />}
                   </span>
                 </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {s.photos.length > 0 && (
+        <section id="portfolio" className="scroll-mt-14 space-y-3">
+          <h2 className="font-display text-2xl">Portfolio</h2>
+          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {s.photos.map((p) => (
+              <li key={p.id} className="overflow-hidden rounded-2xl">
+                <a href={p.url} target="_blank" rel="noreferrer" className="relative block">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- salon's own photos */}
+                  <img src={p.url} alt={p.caption ?? `Work by ${s.name}`} className="aspect-square w-full object-cover transition hover:scale-[1.02]" loading="lazy" />
+                  {p.caption && <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-2 pt-6 text-xs text-white">{p.caption}</span>}
+                </a>
               </li>
             ))}
           </ul>
@@ -216,11 +246,12 @@ export default async function SalonPage({ params, searchParams }: Props) {
     </main>
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur sm:hidden">
-        <Link href={book(focus ? `?staff=${focus.id}` : "")} className="block rounded-full bg-foreground py-3 text-center font-semibold text-background">
+        <Link href={book(focus ? `?staff=${focus.id}` : "")} className={`block rounded-full py-3 text-center font-semibold ${s.branding.accent ? "bg-accent text-on-accent" : "bg-foreground text-background"}`}>
           {focus ? `Book with ${focus.name.split(" ")[0]}` : "Book now"}
         </Link>
       </div>
       <SiteFooter />
+      </div>
     </>
   );
 }
