@@ -126,7 +126,7 @@ export const NAV: { href: string; label: string; need?: Permission | Permission[
   { href: "/app/inventory", label: "Inventory", need: "inventory.view" },
   { href: "/app/sell", label: "Sell", need: "sell" },
   { href: "/app/settings/salon", label: "Salon", need: "settings.salon" },
-  { href: "/app/dashboard", label: "Services", need: "settings.services" },
+  { href: "/app/settings/services", label: "Services", need: "settings.services" },
   { href: "/app/settings/schedule", label: "Schedule", need: "settings.schedule" },
   { href: "/app/settings/payments", label: "Payments", need: "settings.payments" },
   { href: "/app/settings/policies", label: "Policies", need: "settings.payments" },

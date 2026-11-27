@@ -126,10 +126,11 @@ export async function createAppointment(req: BookingRequest): Promise<BookingRes
     .from("services")
     .select("id,key,name,price_type,price_cents,estimated_hours,active_min,processing_min,finish_min,deposit_category,stage,includes,is_add_on")
     .eq("business_id", business.id)
+    .eq("archived", false)
     .in("id", req.serviceIds);
   if (svcErr) return { ok: false, error: svcErr.message };
   const byId = new Map((rows as ServiceRow[]).map((r) => [r.id, r]));
-  if (req.serviceIds.some((id) => !byId.has(id))) return { ok: false, error: "One of the services no longer exists. Refresh and try again." };
+  if (req.serviceIds.some((id) => !byId.has(id))) return { ok: false, error: "One of the services is no longer on the menu (archived or removed). Refresh and pick again." };
   const services = req.serviceIds.map((id) => toBookable(byId.get(id)!));
 
   // Client: existing, or create a new one.
@@ -514,6 +515,7 @@ export async function findTimes(serviceIds: string[], criteria: SearchCriteria, 
     .from("services")
     .select("id,key,name,price_type,price_cents,estimated_hours,active_min,processing_min,finish_min,deposit_category,stage,includes,is_add_on")
     .eq("business_id", business.id)
+    .eq("archived", false)
     .in("id", serviceIds);
   if (error) return { ok: false, error: error.message };
   const byId = new Map((rows as ServiceRow[]).map((r) => [r.id, r]));
