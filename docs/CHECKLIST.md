@@ -134,7 +134,7 @@ Use a second email address (a Gmail you control) as a pretend client, and a thir
 - [ ] After that first visit, the referrer's reward appears at their next checkout.
 
 ### Check-in kiosk (tablet)
-- [ ] On the tablet, sign in, Today → **Check-in kiosk**. Enter the pretend client's phone and tap **I'm here** on a same-day appointment.
+- [ ] On the tablet, sign in, **Front desk → Check-in kiosk**. Enter the pretend client's phone and tap **I'm here** on a same-day appointment.
 - [ ] You get a check-in alert; the calendar shows "Checked in".
 
 ### Team and roles (pretend employee)
@@ -163,7 +163,7 @@ Use a second email address (a Gmail you control) as a pretend client, and a thir
 
 ### Look, studio and extras
 - [ ] **Settings → Salon → Look & photos**: add a logo, cover photo, accent color and a few portfolio photos.
-- [ ] **Today → TV display**: open it on the shop TV or a tablet; check the chairs, specials and booking QR.
+- [ ] **Front desk → TV display**: open it on the shop TV or a tablet; check the chairs, specials and booking QR.
 - [ ] **Marketing → Graphics studio**: save an Openings post and a Chair Wrapped story; post one.
 - [ ] Open **chairvana.app/intensity-salon** (your short link): it opens your salon page.
 - [ ] Book online with **☾ Quiet visit** ticked: the Quiet visit tag shows on Today and the calendar.
