@@ -12,7 +12,7 @@ export default async function ClientsPage() {
   return (
     <>
       <AppNav current="/app/clients" businessName={ctx.business.name} />
-      <ClientsList clients={clients} timezone={ctx.business.timezone} />
+      <ClientsList clients={clients} timezone={ctx.business.timezone} canCleanup={ctx.can("team.manage")} />
     </>
   );
 }

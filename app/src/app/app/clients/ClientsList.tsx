@@ -22,7 +22,7 @@ function chips(c: ClientSummary): { status: StatusKey; text?: string }[] {
   return out;
 }
 
-export default function ClientsList({ clients, timezone }: { clients: ClientSummary[]; timezone: string }) {
+export default function ClientsList({ clients, timezone, canCleanup = false }: { clients: ClientSummary[]; timezone: string; canCleanup?: boolean }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<ClientFilter>("all");
@@ -43,6 +43,7 @@ export default function ClientsList({ clients, timezone }: { clients: ClientSumm
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Clients <span className="text-base font-normal text-muted">({clients.length})</span></h1>
         <div className="flex gap-2">
+          {canCleanup && <Link href="/app/settings/cleanup" className="rounded-lg border border-line px-3 py-2 text-sm">Clean up</Link>}
           <Link href="/app/clients/import" className="rounded-lg border border-line px-3 py-2 text-sm">Import</Link>
           <button onClick={() => setAdding(true)} className="rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-on-accent">+ Add client</button>
         </div>
