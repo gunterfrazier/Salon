@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { cleanOverrides, permissionsFor, type Permission, type Role } from "./auth/permissions";
+import { cleanOverrides, cleanPersonal, permissionsFor, type Permission, type Role } from "./auth/permissions";
 import { redirect } from "next/navigation";
 import type { PolicySettings } from "./policy/types";
 import type { StoredMethods } from "./payments/settings";
@@ -46,17 +46,17 @@ export const getContext = cache(async function getContext() {
 
   const [{ data: business, error }, { data: staff }] = await Promise.all([
     supabase.from("businesses").select("id,name,timezone,business_hours,policy_settings,pricing_rules,payment_methods,booking_settings,holidays,notification_settings,role_permissions").eq("id", businessId).single(),
-    supabase.from("staff").select("id,display_name,role").eq("business_id", businessId).eq("auth_user_id", user.id).single(),
+    supabase.from("staff").select("id,display_name,role,permissions").eq("business_id", businessId).eq("auth_user_id", user.id).single(),
   ]);
   if (error || !business || !staff) throw new Error(`Couldn't load salon: ${error?.message ?? "missing staff record"}`);
 
   const b = business as Business;
-  const perms = permissionsFor(staff.role, cleanOverrides(b.role_permissions));
+  const perms = permissionsFor(staff.role, cleanOverrides(b.role_permissions), cleanPersonal(staff.permissions));
   return {
     supabase,
     user,
     business: b,
-    staff: staff as { id: string; display_name: string; role: Role },
+    staff: { id: staff.id, display_name: staff.display_name, role: staff.role } as { id: string; display_name: string; role: Role },
     perms,
     can: (p: Permission) => perms.has(p),
   };

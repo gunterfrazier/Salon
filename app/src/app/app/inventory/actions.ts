@@ -147,7 +147,7 @@ export async function changeStock(productId: string, reason: "count" | "received
   if (reason === "count" && value < 0) return { ok: false, error: "Count can't be negative." };
   if ((reason === "received" || reason === "sold") && value <= 0) return { ok: false, error: "Enter how many." };
   const ctx = await getContext();
-  const no = denied(ctx, "inventory.manage");
+  const no = denied(ctx, "inventory.count");
   if (no) return no;
   const { data, error } = await ctx.supabase.rpc("stock_move", {
     p: { product_id: productId, reason, ...(reason === "count" ? { count: value } : { change: reason === "sold" ? -value : value }), note: clean(note, 200) },

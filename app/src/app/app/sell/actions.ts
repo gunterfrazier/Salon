@@ -29,6 +29,11 @@ export async function quickSale(req: SaleRequest): Promise<{ ok: true; saleId: s
   const ctx = await getContext();
   const no = denied(ctx, "sell");
   if (no) return no;
+  if (!ctx.can("pricing.adjust")) {
+    const { data: prods } = await ctx.supabase.from("products").select("id,price_cents").eq("business_id", ctx.business.id).in("id", items.map((i) => i.productId));
+    const price = new Map((prods ?? []).map((p) => [p.id as string, p.price_cents as number | null]));
+    if (items.some((i) => (price.get(i.productId) ?? 0) > i.priceCents)) return { ok: false, error: "Your role can't sell a product below its price. Ask a manager." };
+  }
   const { data, error } = await ctx.supabase.rpc("quick_sale", {
     p: {
       business_id: ctx.business.id,

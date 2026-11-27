@@ -41,6 +41,15 @@ describe("buildBooking", () => {
     expect(buildBooking({ ...base, depositCents: 2000 }).errors[0]).toMatch(/at least \$50/);
   });
 
+  it("an allowed override can lower or waive the deposit", () => {
+    const base = { services: [svc("balayage")], start, rules, policy, client: newClient, now };
+    expect(buildBooking({ ...base, depositCents: 2000, depositOverride: "amount" })).toMatchObject({ depositCents: 2000, depositOverridden: true, errors: [] });
+    expect(buildBooking({ ...base, depositCents: 6000, depositOverride: "amount" })).toMatchObject({ depositOverridden: false, errors: [] });
+    const waived = buildBooking({ ...base, depositOverride: "waive" });
+    expect(waived).toMatchObject({ depositCents: 0, depositOverridden: true, errors: [] });
+    expect(waived.payload.deposit_required_cents).toBe(0);
+  });
+
   it("$20 men's cut for a new client asks no more than $20", () => {
     expect(buildBooking({ services: [svc("mens_boys_cut")], start, rules, policy, client: newClient, now }).depositCents).toBe(2000);
   });

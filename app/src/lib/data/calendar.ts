@@ -140,7 +140,7 @@ export async function loadCalendar(ctx: Ctx, opts: { from: string; view: "day" |
   }));
 
   return {
-    can: { book: ctx.can("booking.manage"), checkout: ctx.can("checkout"), all },
+    can: { book: ctx.can("booking.manage"), change: ctx.can("booking.change"), override: ctx.can("booking.override"), deposits: ctx.can("deposits.override"), pricing: ctx.can("pricing.adjust"), checkout: ctx.can("checkout"), all },
     stylists,
     staffNames: Object.fromEntries(staffRows.map((r) => [r.id, r.display_name])),
     viewStaff,

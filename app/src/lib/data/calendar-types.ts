@@ -46,7 +46,7 @@ export interface CalClient {
 
 export interface CalendarData {
   /** What the signed-in team member may do on the calendar. */
-  can: { book: boolean; checkout: boolean; all: boolean };
+  can: { book: boolean; change?: boolean; override?: boolean; deposits?: boolean; pricing?: boolean; checkout: boolean; all: boolean };
   /** Stylists who take appointments (calendar filter, booking). */
   stylists: Stylist[];
   /** Names for every team member, including former stylists on old appointments. */

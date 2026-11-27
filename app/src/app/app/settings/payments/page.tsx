@@ -1,7 +1,9 @@
 import { AppNav } from "@/components/AppNav";
 import { requirePermission } from "@/lib/context";
 import { mergeMethods } from "@/lib/payments/settings";
+import DepositPolicy from "./DepositPolicy";
 import PaymentSettings from "./PaymentSettings";
+import { staffCanChangeDeposit } from "@/lib/policy/engine";
 
 export const metadata = { title: "Payments" };
 export const dynamic = "force-dynamic";
@@ -16,6 +18,9 @@ export default async function PaymentsPage() {
         <p className="mt-1 text-muted">Switch on the ways clients can pay you. Change them any time to see what works best.</p>
         <div className="mt-6">
           <PaymentSettings methods={mergeMethods(ctx.business.payment_methods)} />
+        </div>
+        <div className="mt-8">
+          <DepositPolicy staffCanChange={staffCanChangeDeposit(ctx.business.policy_settings)} />
         </div>
       </main>
     </>

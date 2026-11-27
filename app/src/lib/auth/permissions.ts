@@ -6,8 +6,12 @@
 
 export const PERMISSIONS = [
   { key: "calendar.all", group: "Calendar", label: "See and manage everyone's appointments", hint: "Off: only their own appointments" },
-  { key: "booking.manage", group: "Calendar", label: "Book, move and cancel appointments" },
+  { key: "booking.manage", group: "Calendar", label: "Book new appointments" },
+  { key: "booking.change", group: "Calendar", label: "Move and cancel appointments" },
+  { key: "booking.override", group: "Calendar", label: "Book outside working hours or double-book", hint: "Always asks to confirm first" },
+  { key: "deposits.override", group: "Calendar", label: "Change or waive a deposit when booking", hint: "Only if the salon's deposit policy allows it" },
   { key: "checkout", group: "Calendar", label: "Check out, take payments and deposits" },
+  { key: "pricing.adjust", group: "Calendar", label: "Lower prices and give discounts", hint: "Off: can raise a price, never lower it below the quote" },
   { key: "clients.view_all", group: "Clients", label: "See all clients", hint: "Off: only clients they've seen or are booked with" },
   { key: "clients.edit", group: "Clients", label: "Add, edit and import clients" },
   { key: "clients.policy", group: "Clients", label: "Clear flags, deposit rules and balances" },
@@ -15,11 +19,13 @@ export const PERMISSIONS = [
   { key: "reports.view", group: "Business", label: "See reports and money totals" },
   { key: "sell", group: "Business", label: "Sell retail" },
   { key: "inventory.view", group: "Business", label: "See inventory" },
-  { key: "inventory.manage", group: "Business", label: "Add products, count, receive and reorder" },
+  { key: "inventory.manage", group: "Business", label: "Add and edit products" },
+  { key: "inventory.count", group: "Business", label: "Count, receive and adjust stock" },
+  { key: "inventory.order", group: "Business", label: "Reorder lists and supplier orders" },
   { key: "settings.salon", group: "Settings", label: "Edit the salon profile (address, about, public listing)" },
   { key: "settings.services", group: "Settings", label: "Edit services and prices" },
   { key: "settings.schedule", group: "Settings", label: "Edit hours, holidays and days off" },
-  { key: "settings.payments", group: "Settings", label: "Edit payment methods" },
+  { key: "settings.payments", group: "Settings", label: "Edit payment methods and deposit policy" },
   { key: "settings.messages", group: "Settings", label: "Edit client messages and reminders" },
   { key: "team.manage", group: "Settings", label: "Invite team members and change their roles" },
 ] as const;
@@ -37,30 +43,61 @@ export const ROLES: { key: Role; label: string; description: string }[] = [
 
 const ALL = PERMISSIONS.map((p) => p.key) as Permission[];
 
+/**
+ * Newer, finer permissions follow the one they were split from unless they are
+ * set on their own, so splitting them never quietly takes access away.
+ */
+export const FOLLOWS: Partial<Record<Permission, Permission>> = {
+  "booking.change": "booking.manage",
+  "booking.override": "booking.manage",
+  "inventory.count": "inventory.manage",
+  "inventory.order": "inventory.manage",
+};
+
 export const ROLE_DEFAULTS: Record<Role, Permission[]> = {
   owner: ALL,
   manager: ALL.filter((p) => p !== "team.manage" && p !== "settings.payments"),
-  stylist: ["booking.manage", "checkout", "clients.view_all", "clients.edit", "formulas", "sell", "inventory.view"],
+  stylist: ["booking.manage", "deposits.override", "checkout", "pricing.adjust", "clients.view_all", "clients.edit", "formulas", "sell", "inventory.view"],
   front_desk: ["calendar.all", "booking.manage", "checkout", "clients.view_all", "clients.edit", "sell", "inventory.view"],
-  renter: ["booking.manage", "checkout", "clients.edit", "formulas", "sell"],
+  renter: ["booking.manage", "deposits.override", "checkout", "pricing.adjust", "clients.edit", "formulas", "sell"],
 };
 
-export type RoleOverrides = Partial<Record<Role, Partial<Record<Permission, boolean>>>>;
+export type Overrides = Partial<Record<Permission, boolean>>;
+export type RoleOverrides = Partial<Record<Role, Overrides>>;
 
 const isRole = (r: string): r is Role => r in ROLE_DEFAULTS;
 
-export function permissionsFor(role: string, overrides: RoleOverrides | null | undefined): Set<Permission> {
+/**
+ * What someone can do: their role's defaults, the salon's changes for that
+ * role, then changes just for them. Owners always have everything.
+ */
+export function permissionsFor(role: string, overrides: RoleOverrides | null | undefined, personal?: Overrides | null): Set<Permission> {
   if (!isRole(role)) return new Set();
   if (role === "owner") return new Set(ALL);
-  const set = new Set(ROLE_DEFAULTS[role]);
-  for (const [k, on] of Object.entries(overrides?.[role] ?? {})) {
-    if (!ALL.includes(k as Permission)) continue;
-    if (on) set.add(k as Permission);
-    else set.delete(k as Permission);
+  const set = new Set(ROLE_DEFAULTS[role].filter((p) => !FOLLOWS[p]));
+  const explicit = new Set<Permission>();
+  for (const layer of [overrides?.[role] ?? {}, personal ?? {}]) {
+    for (const [k, on] of Object.entries(layer)) {
+      if (!ALL.includes(k as Permission) || typeof on !== "boolean") continue;
+      explicit.add(k as Permission);
+      if (on) set.add(k as Permission);
+      else set.delete(k as Permission);
+    }
   }
-  // Managing stock implies seeing it.
-  if (set.has("inventory.manage")) set.add("inventory.view");
+  for (const [child, parent] of Object.entries(FOLLOWS) as [Permission, Permission][]) {
+    if (!explicit.has(child) && set.has(parent)) set.add(child);
+  }
+  // Managing or counting stock implies seeing it.
+  if (set.has("inventory.manage") || set.has("inventory.count") || set.has("inventory.order")) set.add("inventory.view");
   return set;
+}
+
+/** Only keeps known permissions with true/false values. */
+export function cleanPersonal(raw: unknown): Overrides {
+  const out: Overrides = {};
+  if (!raw || typeof raw !== "object") return out;
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) if (ALL.includes(k as Permission) && typeof v === "boolean") out[k as Permission] = v;
+  return out;
 }
 
 /** Only keeps known roles/permissions, and never stores anything for the owner. */

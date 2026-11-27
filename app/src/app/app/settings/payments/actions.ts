@@ -40,3 +40,17 @@ export async function savePaymentMethod(key: string, patch: { enabled?: boolean;
   revalidatePath("/app/settings/payments");
   return { ok: true, handle };
 }
+
+/** Whether team members (with permission) may lower or waive deposits when booking. */
+export async function saveDepositPolicy(staffCanChange: boolean): Promise<{ ok: true } | { ok: false; error: string }> {
+  const ctx = await getContext();
+  const no = denied(ctx, "settings.payments");
+  if (no) return no;
+  const policy = ctx.business.policy_settings;
+  const next = { ...policy, deposits: { ...policy.deposits, staffCanChange: !!staffCanChange } };
+  const { error } = await ctx.supabase.from("businesses").update({ policy_settings: next }).eq("id", ctx.business.id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/app/settings/payments");
+  revalidatePath("/app/calendar");
+  return { ok: true };
+}

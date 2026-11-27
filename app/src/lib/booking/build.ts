@@ -49,6 +49,11 @@ export interface BookingInput {
   now: Date;
   /** Stylist's chosen deposit; defaults to the policy's default. */
   depositCents?: Cents;
+  /**
+   * Allowed to go past the policy: "amount" lets the deposit go below the
+   * minimum, "waive" books with no deposit at all.
+   */
+  depositOverride?: "amount" | "waive";
 }
 
 export interface BookingRpcPayload {
@@ -70,6 +75,8 @@ export interface BookingResult {
   priced: PricedAppointment;
   deposit: DepositRequirement;
   depositCents: Cents;
+  /** The deposit was lowered below the policy's minimum or waived. */
+  depositOverridden: boolean;
   /** Problems that block saving. */
   errors: string[];
   payload: BookingRpcPayload;
@@ -94,10 +101,15 @@ export function buildBooking(input: BookingInput): BookingResult {
   if (deposit.blockedByBalance) errors.push("This client has an unpaid balance. Collect it before booking.");
 
   let depositCents = 0;
-  if (deposit.required) {
+  let depositOverridden = false;
+  if (deposit.required && input.depositOverride === "waive") {
+    depositOverridden = true;
+  } else if (deposit.required) {
     depositCents = input.depositCents ?? deposit.defaultAmount;
-    const problem = validateDepositAmount(depositCents, deposit);
+    const rules = input.depositOverride === "amount" ? { ...deposit, minimum: 0 } : deposit;
+    const problem = validateDepositAmount(depositCents, rules);
     if (problem) errors.push(problem);
+    depositOverridden = depositCents < deposit.minimum;
   }
 
   const payload: BookingRpcPayload = {
@@ -116,5 +128,5 @@ export function buildBooking(input: BookingInput): BookingResult {
     })),
   };
 
-  return { plan, priced, deposit, depositCents, errors, payload };
+  return { plan, priced, deposit, depositCents, depositOverridden, errors, payload };
 }

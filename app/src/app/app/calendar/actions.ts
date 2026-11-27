@@ -7,10 +7,11 @@ import { findGiftCard, usablePackages, type ClientPackageInfo } from "@/lib/data
 import { checkPromo } from "@/lib/promo/server";
 import { afterCheckout, availableRewards, type Reward } from "@/lib/promo/rewards";
 import { promoLabel } from "@/lib/promo/promo";
-import { cancelDefaults, type ChargeOption } from "@/lib/policy/engine";
+import { cancelDefaults, staffCanChangeDeposit, type ChargeOption } from "@/lib/policy/engine";
+import { collisions, openTimes, outsideHours } from "@/lib/booking/overrides";
 import { denied, getContext } from "@/lib/context";
 import { loadClientStates, reviveClientState, type ClientStateJSON } from "@/lib/data/clients";
-import { addDays, isDateStr, parseHHMM, todayIn, toHHMM, zonedToUtc } from "@/lib/time/zone";
+import { addDays, formatDay, formatTimeRange, isDateStr, parseHHMM, todayIn, toHHMM, zonedToUtc } from "@/lib/time/zone";
 import { NEW_CLIENT_STATE } from "@/lib/ui/standing";
 import { loadBusyRange, loadDaysOff } from "@/lib/data/schedule";
 import { blockedDuring, closureForDate, isClosedDay, mergeHolidays } from "@/lib/schedule/holidays";
@@ -74,14 +75,26 @@ export interface BookingRequest {
   date: string;
   time: string;
   depositCents?: number;
+  /** Book with no deposit, even though the policy asks for one (needs permission). */
+  waiveDeposit?: boolean;
   notes?: string;
   /** Stylist confirmed booking on a day the salon is scheduled to be closed. */
   confirmClosed?: boolean;
+  /** Stylist confirmed booking outside their working hours. */
+  confirmOutsideHours?: boolean;
+  /** Stylist confirmed a double-booking. */
+  confirmOverlap?: boolean;
+}
+
+/** Things the stylist has to confirm before the booking is saved. */
+export interface BookingWarnings {
+  outsideHours?: string;
+  overlap?: string;
 }
 
 export type BookingResponse =
   | { ok: true; appointmentId: string }
-  | { ok: false; error: string; closed?: { label: string; kind: "holiday" | "day_off" | "blocked_hours" } };
+  | { ok: false; error: string; closed?: { label: string; kind: "holiday" | "day_off" | "blocked_hours" }; confirm?: BookingWarnings };
 
 const clean = (s?: string) => (s ?? "").trim() || null;
 
@@ -128,6 +141,9 @@ export async function createAppointment(req: BookingRequest): Promise<BookingRes
     state = reviveClientState(states[clientId]);
   }
 
+  // Lowering or waiving a deposit: the salon's policy must allow it, and so must this person's access.
+  const mayChangeDeposit = ctx.can("deposits.override") && staffCanChangeDeposit(business.policy_settings);
+  if (req.waiveDeposit && !mayChangeDeposit) return { ok: false, error: "You can't waive this deposit. Ask the salon owner." };
   const result = buildBooking({
     services,
     start: zonedToUtc(req.date, minutes, business.timezone),
@@ -136,8 +152,27 @@ export async function createAppointment(req: BookingRequest): Promise<BookingRes
     client: state,
     now: new Date(),
     depositCents: req.depositCents,
+    depositOverride: mayChangeDeposit ? (req.waiveDeposit ? "waive" : "amount") : undefined,
   });
   if (result.errors.length) return { ok: false, error: result.errors[0] };
+
+  // Outside working hours, or on top of another appointment: allowed, but only once confirmed.
+  const tz = business.timezone;
+  const warnings: BookingWarnings = {};
+  const off = outsideHours(req.date, minutes, result.plan.totalMinutes, hoursFor(stylist, business.business_hours));
+  if (off) warnings.outsideHours = off === "not a working day" ? `${stylist.name.split(" ")[0]} doesn't usually work ${formatDay(req.date, { weekday: "long" })}s.` : `This ${off === "starts before opening" ? "starts before" : "runs past"} ${stylist.name.split(" ")[0]}'s hours.`;
+  const mineBusy = result.payload.services.flatMap((l) => l.busy.map((b) => ({ start: new Date(b.start), end: new Date(b.end) })));
+  const busy = mineBusy.length ? await loadBusyRange(supabase, business.id, stylist.id, result.plan.start, result.plan.end) : [];
+  const hits = collisions(mineBusy, busy);
+  if (hits.length) warnings.overlap = `Overlaps ${stylist.name.split(" ")[0]}'s other booked time (${hits.map((h) => formatTimeRange(h.start, h.end, tz)).join(", ")}).`;
+  const unconfirmed: BookingWarnings = {
+    ...(warnings.outsideHours && !req.confirmOutsideHours ? { outsideHours: warnings.outsideHours } : {}),
+    ...(warnings.overlap && !req.confirmOverlap ? { overlap: warnings.overlap } : {}),
+  };
+  if (Object.keys(unconfirmed).length) return { ok: false, error: "Please confirm.", confirm: unconfirmed };
+  if ((warnings.outsideHours || warnings.overlap) && !ctx.can("booking.override")) {
+    return { ok: false, error: warnings.overlap ? "Your access doesn't allow double-booking. Pick an open time." : "Your access doesn't allow booking outside working hours. Pick an open time." };
+  }
 
   // Scheduled closure? Needs the stylist's confirmation (they may override).
   if (!req.confirmClosed) {
@@ -161,7 +196,7 @@ export async function createAppointment(req: BookingRequest): Promise<BookingRes
   }
 
   const { data: id, error } = await supabase.rpc("book_appointment", {
-    p: { ...result.payload, business_id: business.id, client_id: clientId, staff_id: stylist.id, booked_via: "stylist", notes: clean(req.notes) },
+    p: { ...result.payload, business_id: business.id, client_id: clientId, staff_id: stylist.id, booked_via: "stylist", notes: clean(req.notes), allow_overlap: !!warnings.overlap, outside_hours: !!warnings.outsideHours },
   });
   if (error) {
     if (error.code === "23P01") return { ok: false, error: "That time overlaps another appointment's hands-on time. Pick another time." };
@@ -172,6 +207,45 @@ export async function createAppointment(req: BookingRequest): Promise<BookingRes
   revalidatePath("/app/calendar");
   return { ok: true, appointmentId: id as string };
 }
+
+/**
+ * Open start times ("HH:MM", soonest first) for a stylist on a date: inside
+ * their hours, clear of booked hands-on time and time off. With services
+ * chosen, the whole visit has to fit.
+ */
+export async function openTimesFor(req: { date: string; staffId?: string | null; serviceIds: string[] }): Promise<{ ok: true; times: string[]; closed: string | null; hours: [string, string] | null } | { ok: false; error: string }> {
+  if (!isDateStr(req.date)) return { ok: false, error: "Pick a date." };
+  if (!Array.isArray(req.serviceIds) || req.serviceIds.length > 12) return { ok: false, error: "Pick your services again." };
+  const ctx = await getContext();
+  const no = denied(ctx, "booking.manage");
+  if (no) return no;
+  const { supabase, business } = ctx;
+  const stylist = await pickStylist(ctx, req.staffId);
+  if ("error" in stylist) return { ok: false, error: stylist.error };
+  let services: ReturnType<typeof toBookable>[] = [];
+  if (req.serviceIds.length) {
+    const { data: rows, error } = await supabase
+      .from("services")
+      .select("id,key,name,price_type,price_cents,estimated_hours,active_min,processing_min,finish_min,deposit_category,stage,includes,is_add_on")
+      .eq("business_id", business.id)
+      .in("id", req.serviceIds);
+    if (error) return { ok: false, error: error.message };
+    const byId = new Map((rows as ServiceRow[]).map((r) => [r.id, r]));
+    services = req.serviceIds.filter((id) => byId.has(id)).map((id) => toBookable(byId.get(id)!));
+  }
+  const tz = business.timezone;
+  const from = zonedToUtc(req.date, 0, tz);
+  const to = zonedToUtc(addDays(req.date, 1), 0, tz);
+  const [busy, daysOff] = await Promise.all([loadBusyRange(supabase, business.id, stylist.id, from, to), loadDaysOff(supabase, business.id, from, to)]);
+  const day = closureForDate(req.date, tz, mergeHolidays(business.holidays), daysOff);
+  const hours = hoursFor(stylist, business.business_hours);
+  const h = hours[WEEKDAY_KEY[new Date(`${req.date}T12:00:00Z`).getUTCDay()]] ?? null;
+  if (day && day.kind !== "blocked_hours") return { ok: true, times: [], closed: day.label, hours: h };
+  const times = openTimes({ date: req.date, tz, hours, services, busy, now: new Date(), stepMinutes: bookingSettings(business.booking_settings).stepMinutes });
+  return { ok: true, times: times.map(toHHMM), closed: null, hours: h };
+}
+
+const WEEKDAY_KEY = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
 
 // ---------------------------------------------------------------------------
 // Close out: cancel, no-show, checkout
@@ -226,7 +300,7 @@ export interface CloseRequest {
 
 export async function closeAppointment(req: CloseRequest): Promise<{ ok: true } | { ok: false; error: string }> {
   const ctx = await getContext();
-  const no = denied(ctx, "booking.manage");
+  const no = denied(ctx, "booking.change");
   if (no) return no;
   const policy = ctx.business.policy_settings;
   const a = await loadForClose(ctx, req.appointmentId);
@@ -290,10 +364,13 @@ async function retailRows(ctx: Ctx, lines: RetailLine[] | undefined): Promise<{ 
   if (list.length > 30) return { error: "Too many products." };
   if (list.some((l) => !/^[0-9a-f-]{36}$/.test(l.productId) || !Number.isFinite(l.qty) || l.qty > 100 || !Number.isInteger(l.priceCents) || l.priceCents < 0 || l.priceCents > 1_000_000)) return { error: "Check the products: each needs a quantity and price." };
   if (!list.length) return { rows: [], cents: 0, names: [] };
-  const { data, error } = await ctx.supabase.from("products").select("id,brand,line,name").eq("business_id", ctx.business.id).in("id", list.map((l) => l.productId));
+  const { data, error } = await ctx.supabase.from("products").select("id,brand,line,name,price_cents").eq("business_id", ctx.business.id).in("id", list.map((l) => l.productId));
   if (error) return { error: error.message };
   const byId = new Map((data ?? []).map((p) => [p.id as string, p]));
   if (list.some((l) => !byId.has(l.productId))) return { error: "A product is no longer in inventory. Refresh and try again." };
+  if (!ctx.can("pricing.adjust") && list.some((l) => byId.get(l.productId)!.price_cents != null && l.priceCents < (byId.get(l.productId)!.price_cents as number))) {
+    return { error: "Your role can't sell a product below its price. Ask a manager." };
+  }
   const rows = list.map((l) => ({ product_id: l.productId, qty: l.qty, price_cents: l.priceCents }));
   const names = list.map((l) => {
     const p = byId.get(l.productId)!;
@@ -339,6 +416,15 @@ export async function checkoutAppointment(req: CheckoutRequest): Promise<{ ok: t
   if (new Set(uses.map((u) => u.lineId)).size !== uses.length) return { ok: false, error: "Use one package visit per service." };
   const free = new Set(uses.map((u) => u.lineId));
   const prices = a.lines.map((l) => (free.has(l.id) ? 0 : byId.get(l.id)!));
+  // Without "Lower prices and give discounts", prices can go up but not below the quote
+  // (promo codes and rewards the salon set up still apply).
+  if (!ctx.can("pricing.adjust")) {
+    const floor = a.lines.reduce((n, l) => n + (free.has(l.id) ? 0 : l.price_quoted_cents), 0) - (req.promo?.cents ?? 0) - (req.reward?.cents ?? 0);
+    const charged = prices.reduce((n, c) => n + c, 0);
+    if (charged < floor) {
+      return { ok: false, error: "Your role can't lower prices. Ask a manager, or use a promo code." };
+    }
+  }
   if (req.paidCents > 0 && req.method === "gift_card") return { ok: false, error: "Enter the gift card code under Gift card." };
 
   const retail = await retailRows(ctx, req.retail);
@@ -493,7 +579,7 @@ async function movableTimes(ctx: Ctx, appt: NonNullable<Awaited<ReturnType<typeo
 export async function moveTimes(appointmentId: string, date: string): Promise<{ ok: true; times: string[]; closed: string | null } | { ok: false; error: string }> {
   if (!isDateStr(date)) return { ok: false, error: "Pick a date." };
   const ctx = await getContext();
-  const no = denied(ctx, "booking.manage");
+  const no = denied(ctx, "booking.change");
   if (no) return no;
   const appt = await loadForMove(ctx, appointmentId);
   if (!appt) return { ok: false, error: "Appointment not found." };
@@ -523,7 +609,7 @@ export async function moveAppointment(req: MoveRequest): Promise<BookingResponse
     return { ok: false, error: "Pick a start time." };
   }
   const ctx = await getContext();
-  const no = denied(ctx, "booking.manage");
+  const no = denied(ctx, "booking.change");
   if (no) return no;
   const tz = ctx.business.timezone;
   const appt = await loadForMove(ctx, req.appointmentId);

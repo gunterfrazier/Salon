@@ -16,7 +16,7 @@ type CloseKind = "checkout" | "cancel" | "no_show" | "move";
 const OPEN_STATUSES = new Set(["pending", "booked", "confirmed", "checked_in", "in_service"]);
 const STATUS_LABEL: Record<string, string> = { completed: "Completed", no_show: "No-show", cancelled: "Cancelled", pending: "Pending deposit" };
 import { markDepositReceived } from "./actions";
-import BookingSheet from "./BookingSheet";
+import BookingSheet, { sampleTimes } from "./BookingSheet";
 import { closureForDate } from "@/lib/schedule/holidays";
 import { firstName } from "@/lib/staff/stylists";
 import CheckoutSheet from "./CheckoutSheet";
@@ -31,7 +31,7 @@ function openWindow(data: CalendarData, date: string): [number, number] | null {
   return h ? [parseHHMM(h[0]), parseHHMM(h[1])] : null;
 }
 
-export default function CalendarView({ data, focusDate }: { data: CalendarData; focusDate: string }) {
+export default function CalendarView({ data, focusDate, sampleOpenTimes = false }: { data: CalendarData; focusDate: string; /** Dev preview: work out open times in the browser. */ sampleOpenTimes?: boolean }) {
   const router = useRouter();
   const tz = data.timezone;
   const dates = useMemo(() => Array.from({ length: data.days }, (_, i) => addDays(data.from, i)), [data.from, data.days]);
@@ -307,6 +307,7 @@ export default function CalendarView({ data, focusDate }: { data: CalendarData; 
       {closing && (closing.kind === "cancel" || closing.kind === "no_show") && <CloseSheet a={closing.a} data={data} mode={closing.kind} onClose={() => setClosing(null)} onDone={done} />}
       {booking && (
         <BookingSheet
+          loadTimes={sampleOpenTimes ? sampleTimes(data) : undefined}
           data={data}
           initialDate={booking.date}
           initialTime={booking.time}
@@ -494,9 +495,9 @@ function AppointmentDetails({
         {OPEN_STATUSES.has(a.status) ? (
           <div className="mt-5 flex flex-wrap gap-2">
             {data.can.checkout && <button onClick={() => onAction("checkout")} className="flex-1 rounded-lg bg-accent px-4 py-2.5 font-semibold text-on-accent">Check out</button>}
-            {data.can.book && ["pending", "booked", "confirmed"].includes(a.status) && <button onClick={() => onAction("move")} className="rounded-lg border border-line px-4 py-2.5">Move</button>}
-            {data.can.book && <button onClick={() => onAction("cancel")} className="rounded-lg border border-line px-4 py-2.5">Cancel</button>}
-            {data.can.book && <button
+            {data.can.change && ["pending", "booked", "confirmed"].includes(a.status) && <button onClick={() => onAction("move")} className="rounded-lg border border-line px-4 py-2.5">Move</button>}
+            {data.can.change && <button onClick={() => onAction("cancel")} className="rounded-lg border border-line px-4 py-2.5">Cancel</button>}
+            {data.can.change && <button
               onClick={() => onAction("no_show")}
               disabled={!!now && now < new Date(a.start)}
               title={now && now < new Date(a.start) ? "Available once the appointment has started" : undefined}

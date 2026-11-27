@@ -40,7 +40,7 @@ export default async function DevCalendar({ searchParams }: { searchParams: Prom
   const flagDate = "2026-10-20T20:30:00.000Z";
 
   const data: CalendarData = {
-    can: { book: true, checkout: true, all: true },
+    can: { book: true, change: true, override: true, deposits: true, pricing: true, checkout: true, all: true },
     stylists: [
       { id: "s1", name: "Karissa Frazier", role: "owner", color: "#257de0", hours: null, serviceIds: null, bookable: true, title: null },
       { id: "s2", name: "Sam Lee", role: "stylist", color: "#f47230", hours: null, serviceIds: null, bookable: true, title: "Cuts" },
@@ -83,5 +83,5 @@ export default async function DevCalendar({ searchParams }: { searchParams: Prom
       { id: "c3", firstName: "Taylor", lastName: "S.", phone: null, email: "taylor@example.com", favorites: null },
     ],
   };
-  return <CalendarView data={data} focusDate={day} />;
+  return <CalendarView data={data} focusDate={day} sampleOpenTimes />;
 }

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { PERMISSIONS, permissionsFor, ROLE_DEFAULTS, ROLES, roleLabel, type Permission, type Role, type RoleOverrides } from "@/lib/auth/permissions";
-import { addTeamMember, saveRolePermissions, saveStylistSettings, updateTeamMember } from "./actions";
+import { PERMISSIONS, permissionsFor, ROLES, roleLabel, type Overrides, type Permission, type Role, type RoleOverrides } from "@/lib/auth/permissions";
+import { addTeamMember, saveMemberPermissions, saveRolePermissions, saveStylistSettings, updateTeamMember } from "./actions";
 import type { Hours } from "@/lib/context";
 import { STYLIST_COLORS } from "@/lib/staff/stylists";
 
@@ -15,6 +15,8 @@ interface Member {
   active: boolean;
   /** Has signed in at least once. */
   joined: boolean;
+  /** Access changes just for this person. */
+  permissions?: Overrides;
   stylist: { bookable: boolean; title: string; bio?: string; color: string | null; ownColor: string | null; hours: Hours | null; serviceIds: string[] | null };
 }
 
@@ -26,6 +28,7 @@ const EDITABLE: Role[] = ["manager", "stylist", "front_desk", "renter"];
 
 export default function TeamView({ me, isOwner, salon, members, overrides, services = [], salonHours = {} }: { me: string; isOwner: boolean; salon: string; members: Member[]; overrides: RoleOverrides; services?: Svc[]; salonHours?: Hours }) {
   const [editing, setEditing] = useState<Member | null>(null);
+  const [access, setAccess] = useState<Member | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
   const run = (fn: () => Promise<{ ok: true } | { ok: false; error: string }>, okText?: string) =>
@@ -49,7 +52,7 @@ export default function TeamView({ me, isOwner, salon, members, overrides, servi
         <h2 className="border-b border-line px-4 py-2 font-semibold">People ({active.length})</h2>
         <ul className="divide-y divide-line">
           {active.map((m) => (
-            <MemberRow key={m.id} m={m} me={me} roleChoices={roleChoices} isOwner={isOwner} pending={pending} run={run} salon={salon} onSchedule={() => setEditing(m)} />
+            <MemberRow key={m.id} m={m} me={me} roleChoices={roleChoices} isOwner={isOwner} pending={pending} run={run} salon={salon} onSchedule={() => setEditing(m)} onAccess={() => setAccess(m)} />
           ))}
         </ul>
         {off.length > 0 && (
@@ -67,6 +70,7 @@ export default function TeamView({ me, isOwner, salon, members, overrides, servi
         )}
       </section>
 
+      {access && <AccessSheet m={access} roleOverrides={overrides} onClose={() => setAccess(null)} onSaved={(text) => { setAccess(null); setMsg({ ok: true, text }); }} />}
       {editing && <StylistSheet m={editing} services={services} salonHours={salonHours} onClose={() => setEditing(null)} onSaved={(text) => { setEditing(null); setMsg({ ok: true, text }); }} />}
       <AddMember roleChoices={roleChoices} pending={pending} run={run} salon={salon} />
       <RoleMatrix overrides={overrides} isOwner={isOwner} />
@@ -103,7 +107,8 @@ function ShareInvite({ salon, name, email }: { salon: string; name: string; emai
   );
 }
 
-function MemberRow({ m, me, roleChoices, isOwner, pending, run, salon, onSchedule }: { m: Member; me: string; roleChoices: typeof ROLES; isOwner: boolean; pending: boolean; run: (fn: () => Promise<{ ok: true } | { ok: false; error: string }>, ok?: string) => void; salon: string; onSchedule: () => void }) {
+function MemberRow({ m, me, roleChoices, isOwner, pending, run, salon, onSchedule, onAccess }: { m: Member; me: string; roleChoices: typeof ROLES; isOwner: boolean; pending: boolean; run: (fn: () => Promise<{ ok: true } | { ok: false; error: string }>, ok?: string) => void; salon: string; onSchedule: () => void; onAccess: () => void }) {
+  const custom = Object.keys(m.permissions ?? {}).length;
   const lockedOwner = m.role === "owner" && !isOwner;
   return (
     <li className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
@@ -129,6 +134,13 @@ function MemberRow({ m, me, roleChoices, isOwner, pending, run, salon, onSchedul
             <span className="text-muted">Doesn&apos;t take appointments</span>
           )}{" "}
           <button type="button" className="underline" onClick={onSchedule}>Schedule &amp; services</button>
+          {isOwner && m.role !== "owner" && (
+            <>
+              {" · "}
+              <button type="button" className="underline" onClick={onAccess}>Access</button>
+              {custom > 0 && <span className="ml-1 rounded-full bg-accent/15 px-1.5 text-[11px] font-semibold">custom</span>}
+            </>
+          )}
         </p>
         {!m.joined && m.email && <ShareInvite salon={salon} name={m.name} email={m.email} />}
       </div>
@@ -203,8 +215,10 @@ function RoleMatrix({ overrides, isOwner }: { overrides: RoleOverrides; isOwner:
   const [saving, start] = useTransition();
   const has = (role: Role, p: Permission) => permissionsFor(role, o).has(p);
   const flip = (role: Role, p: Permission, on: boolean) => {
-    const base = ROLE_DEFAULTS[role].includes(p);
-    const next = { ...o, [role]: { ...(o[role] ?? {}) } } as RoleOverrides;
+    const without = { ...o, [role]: { ...(o[role] ?? {}) } } as RoleOverrides;
+    delete without[role]![p];
+    const base = permissionsFor(role, without).has(p);
+    const next = without;
     if (on === base) delete next[role]![p];
     else next[role]![p] = on;
     setO(next);
@@ -389,6 +403,73 @@ function StylistSheet({ m, services, salonHours, onClose, onSaved }: { m: Member
         <button className="mt-4 w-full rounded-lg bg-foreground px-4 py-2.5 font-semibold text-background disabled:opacity-50" disabled={saving} onClick={save}>
           {saving ? "Saving…" : "Save"}
         </button>
+      </div>
+    </div>
+  );
+}
+
+/** One person's access: starts from their role; anything changed here applies only to them. */
+function AccessSheet({ m, roleOverrides, onClose, onSaved }: { m: Member; roleOverrides: RoleOverrides; onClose: () => void; onSaved: (text: string) => void }) {
+  const [mine, setMine] = useState<Overrides>(m.permissions ?? {});
+  const [error, setError] = useState<string | null>(null);
+  const [saving, start] = useTransition();
+  const has = (p: Permission) => permissionsFor(m.role, roleOverrides, mine).has(p);
+  const fromRole = (p: Permission) => {
+    const rest = { ...mine };
+    delete rest[p];
+    return permissionsFor(m.role, roleOverrides, rest).has(p);
+  };
+  const flip = (p: Permission, on: boolean) => {
+    const next = { ...mine };
+    if (on === fromRole(p)) delete next[p];
+    else next[p] = on;
+    setMine(next);
+  };
+  const groups = [...new Set(PERMISSIONS.map((p) => p.group))];
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-labelledby="access-title" className="flex max-h-[92dvh] w-full max-w-lg flex-col rounded-t-2xl bg-surface sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-line px-5 py-3">
+          <h2 id="access-title" className="text-lg font-bold">{m.name}&rsquo;s access</h2>
+          <button onClick={onClose} className="rounded-lg px-2 py-1 text-xl" aria-label="Close">×</button>
+        </div>
+        <div className="overflow-y-auto px-5 py-3">
+          <p className="text-sm text-muted">Starts from what a {roleLabel(m.role)} can do. Anything you change here applies only to {m.name.split(" ")[0]}.</p>
+          {groups.map((g) => (
+            <fieldset key={g} className="mt-3">
+              <legend className="text-xs font-semibold uppercase tracking-wide text-muted">{g}</legend>
+              <ul className="mt-1 divide-y divide-line">
+                {PERMISSIONS.filter((p) => p.group === g).map((p) => (
+                  <li key={p.key}>
+                    <label className="flex cursor-pointer items-start justify-between gap-3 py-2 text-sm">
+                      <span>
+                        {p.label}
+                        {p.key in mine && <span className="ml-1 rounded-full bg-accent/15 px-1.5 text-[11px] font-semibold">{mine[p.key] ? "added" : "removed"}</span>}
+                        {"hint" in p && <span className="block text-xs text-muted">{p.hint}</span>}
+                      </span>
+                      <input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0" checked={has(p.key)} onChange={(e) => flip(p.key, e.target.checked)} aria-label={`${m.name}: ${p.label}`} />
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </fieldset>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-5 py-3">
+          <button className={btn} disabled={saving || !Object.keys(mine).length} onClick={() => setMine({})}>Same as role</button>
+          {error && <p role="alert" className="text-sm font-semibold text-red-700 dark:text-red-300">{error}</p>}
+          <button
+            className="rounded-lg bg-foreground px-4 py-2 font-semibold text-background disabled:opacity-50"
+            disabled={saving}
+            onClick={() => start(async () => {
+              const r = await saveMemberPermissions(m.id, mine);
+              if (r.ok) onSaved(`Saved ${m.name}'s access. It applies the next time they open a page.`);
+              else setError(r.error);
+            })}
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
+        </div>
       </div>
     </div>
   );

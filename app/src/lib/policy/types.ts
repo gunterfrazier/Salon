@@ -23,6 +23,8 @@ export interface PolicySettings {
     };
     appliedToFinalBill: boolean;
     refundIfCancelledOutsideWindow: boolean;
+    /** Team members (with permission) may lower or waive a deposit when booking. Missing = yes. */
+    staffCanChange?: boolean;
   };
   flags: {
     createOn: FlagType[];

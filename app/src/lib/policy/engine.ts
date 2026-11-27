@@ -85,6 +85,11 @@ export function depositRequirement(
   };
 }
 
+/** Does the salon let team members lower or waive deposits when booking? */
+export function staffCanChangeDeposit(policy: PolicySettings): boolean {
+  return policy.deposits.staffCanChange !== false;
+}
+
 export function validateDepositAmount(amount: Cents, req: DepositRequirement): string | null {
   if (!Number.isInteger(amount)) return "Amount must be whole cents.";
   if (amount < req.minimum) return `Deposit must be at least $${(req.minimum / 100).toFixed(2)}.`;

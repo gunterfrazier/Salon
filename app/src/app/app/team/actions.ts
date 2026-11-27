@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cleanOverrides, ROLES, type Role } from "@/lib/auth/permissions";
+import { cleanOverrides, ROLES, type Role, cleanPersonal } from "@/lib/auth/permissions";
 import { denied, getContext, type Ctx } from "@/lib/context";
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -95,6 +95,20 @@ export async function saveRolePermissions(raw: unknown): Promise<Result> {
   if (error) return { ok: false, error: error.message };
   done();
   revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/** Access changes for one person, on top of their role. */
+export async function saveMemberPermissions(id: string, raw: unknown): Promise<Result> {
+  const ctx = await getContext();
+  const o = ownerOnly(ctx);
+  if (o) return o;
+  const { data: m } = await ctx.supabase.from("staff").select("role").eq("id", id).eq("business_id", ctx.business.id).maybeSingle();
+  if (!m) return { ok: false, error: "Team member not found." };
+  if (m.role === "owner") return { ok: false, error: "Owners always have full access." };
+  const { error } = await ctx.supabase.from("staff").update({ permissions: cleanPersonal(raw) }).eq("id", id).eq("business_id", ctx.business.id);
+  if (error) return { ok: false, error: error.message };
+  done();
   return { ok: true };
 }
 

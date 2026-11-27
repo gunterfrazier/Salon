@@ -1,7 +1,7 @@
 "use client";
 
 import { lineInfo, linesFor, soldAt, SUPPLY_BRANDS } from "@/lib/inventory/supply";
-import { useMemo, useState, useTransition } from "react";
+import { createContext, useContext, useMemo, useState, useTransition } from "react";
 import { money } from "@/lib/format";
 import {
   catalogItems,
@@ -61,12 +61,21 @@ function ScanIcon() {
   );
 }
 
-export default function InventoryView({ products }: { products: Product[] }) {
-  const [tab, setTab] = useState<Tab>(products.length ? "stock" : "add");
+/** What this person may do here (from their role and personal access). */
+export interface InventoryCan {
+  manage: boolean;
+  count: boolean;
+  order: boolean;
+}
+const Can = createContext<InventoryCan>({ manage: true, count: true, order: true });
+
+export default function InventoryView({ products, can = { manage: true, count: true, order: true } }: { products: Product[]; can?: InventoryCan }) {
+  const [tab, setTab] = useState<Tab>(products.length || !can.manage ? "stock" : "add");
   const reorder = useMemo(() => reorderList(products), [products]);
   const lowCount = reorder.reduce((n, g) => n + g.lines.length, 0);
 
   return (
+    <Can.Provider value={can}>
     <main className="mx-auto max-w-3xl space-y-4 px-4 py-4">
       <header className="flex items-end justify-between gap-3">
         <div>
@@ -78,9 +87,9 @@ export default function InventoryView({ products }: { products: Product[] }) {
         {(
           [
             ["stock", `Stock · ${products.length}`],
-            ["reorder", `Reorder${lowCount ? ` · ${lowCount}` : ""}`],
-            ["add", "+ Add"],
-          ] as const
+            ...(can.order ? [["reorder", `Reorder${lowCount ? ` · ${lowCount}` : ""}`] as const] : []),
+            ...(can.manage ? [["add", "+ Add"] as const] : []),
+          ] as [Tab, string][]
         ).map(([k, label]) => (
           <button key={k} type="button" onClick={() => setTab(k)} aria-pressed={tab === k} className={`flex-1 rounded-full px-3 py-2 ${tab === k ? "bg-foreground font-semibold text-background" : "text-muted"}`}>
             {label}
@@ -89,14 +98,16 @@ export default function InventoryView({ products }: { products: Product[] }) {
       </nav>
       {tab === "stock" && <StockTab products={products} onAdd={() => setTab("add")} />}
       {tab === "reorder" && <ReorderTab groups={reorder} />}
-      {tab === "add" && <AddTab products={products} onDone={() => setTab("stock")} />}
+      {tab === "add" && can.manage && <AddTab products={products} onDone={() => setTab("stock")} />}
     </main>
+    </Can.Provider>
   );
 }
 
 // --- Stock ------------------------------------------------------------------
 
 function StockTab({ products, onAdd }: { products: Product[]; onAdd: () => void }) {
+  const can = useContext(Can);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<string>("all");
   const [sheet, setSheet] = useState<{ p: Product; mode: Mode } | null>(null);
@@ -143,7 +154,7 @@ function StockTab({ products, onAdd }: { products: Product[]; onAdd: () => void 
       <div className="rounded-2xl border border-dashed border-line p-6 text-center">
         <p className="font-semibold">No products yet</p>
         <p className="mt-1 text-sm text-muted">Add your Kenra and Redken shades from the catalog, or scan a box.</p>
-        <button className={`${primary} mt-3`} onClick={onAdd}>Add products</button>
+        {can.manage && <button className={`${primary} mt-3`} onClick={onAdd}>Add products</button>}
       </div>
     );
   }
@@ -189,13 +200,14 @@ function StockTab({ products, onAdd }: { products: Product[]; onAdd: () => void 
                     </span>
                   </button>
                   <Level p={{ ...p, onHand }} />
-                  <div className="flex items-center rounded-full border border-line">
+                  {can.count && <div className="flex items-center rounded-full border border-line">
                     <button className="size-9 rounded-full text-lg disabled:opacity-30" onClick={() => step(p, -1)} disabled={onHand < 1} aria-label={`One less ${p.name}`}>−</button>
                     <button className="min-w-10 px-1 text-center font-mono text-base font-semibold tabular-nums" onClick={() => setSheet({ p, mode: "count" })} aria-label={`${qty(onHand)} on hand. Count ${p.name}`}>
                       {qty(onHand)}
                     </button>
                     <button className="size-9 rounded-full text-lg" onClick={() => step(p, 1)} aria-label={`One more ${p.name}`}>+</button>
-                  </div>
+                  </div>}
+                  {!can.count && <span className="min-w-10 text-center font-mono text-base font-semibold tabular-nums">{qty(onHand)}</span>}
                 </li>
               );
             })}
@@ -261,18 +273,22 @@ const fieldsFrom = (p: Product | null, barcode = ""): ProductFields =>
 
 /** One sheet per product: Count, Received, or Details. */
 function ProductSheet({ product, initialMode, onClose }: { product: Product; initialMode: Mode; onClose: () => void }) {
-  const [mode, setMode] = useState<Mode>(initialMode);
+  const can = useContext(Can);
+  const modes = ([["count", "Count"], ["received", "Received"], ["edit", "Details"]] as [Mode, string][]).filter(([k]) => (k === "edit" ? can.manage : can.count));
+  const [mode, setMode] = useState<Mode>(modes.some(([k]) => k === initialMode) ? initialMode : modes[0]?.[0] ?? "edit");
+  if (!modes.length) {
+    return (
+      <Sheet title={product.name} onClose={onClose}>
+        <p className="text-sm">{lineTitle(product)} · {qty(product.onHand)} on hand</p>
+        <p className="mt-2 text-sm text-muted">Your access lets you see stock but not change it.</p>
+      </Sheet>
+    );
+  }
   return (
     <Sheet title={product.name} onClose={onClose}>
       <p className="-mt-2 mb-3 text-sm text-muted">{lineTitle(product)} · {qty(product.onHand)} on hand</p>
       <div className="mb-4 flex gap-1 rounded-full border border-line p-1 text-sm" role="tablist">
-        {(
-          [
-            ["count", "Count"],
-            ["received", "Received"],
-            ["edit", "Details"],
-          ] as const
-        ).map(([k, l]) => (
+        {modes.map(([k, l]) => (
           <button key={k} role="tab" aria-selected={mode === k} onClick={() => setMode(k)} className={`flex-1 rounded-full py-1.5 ${mode === k ? "bg-foreground font-semibold text-background" : "text-muted"}`}>
             {l}
           </button>

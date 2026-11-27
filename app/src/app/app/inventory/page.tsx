@@ -12,7 +12,7 @@ export default async function InventoryPage() {
   return (
     <>
       <AppNav current="/app/inventory" businessName={ctx.business.name} />
-      <InventoryView products={products} />
+      <InventoryView products={products} can={{ manage: ctx.can("inventory.manage"), count: ctx.can("inventory.count"), order: ctx.can("inventory.order") }} />
     </>
   );
 }

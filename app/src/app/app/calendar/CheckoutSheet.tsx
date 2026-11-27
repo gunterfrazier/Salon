@@ -133,7 +133,7 @@ export default function CheckoutSheet({ a, data, onClose, onDone }: { a: CalAppo
                 <span className="w-28 text-right text-sm font-semibold">Package</span>
               ) : (
                 <>
-                  $<input type="number" inputMode="decimal" step="0.01" min={0} value={prices[s.id]} onChange={(e) => setPrices({ ...prices, [s.id]: e.target.value })} className="w-28 rounded-lg border border-line bg-background px-2 py-1.5 text-right tabular-nums" aria-label={`${s.name} price`} />
+                  $<input type="number" inputMode="decimal" step="0.01" min={data.can.pricing === false ? s.finalPrice / 100 : 0} title={data.can.pricing === false ? "Your access lets you raise a price but not lower it" : undefined} value={prices[s.id]} onChange={(e) => setPrices({ ...prices, [s.id]: e.target.value })} className="w-28 rounded-lg border border-line bg-background px-2 py-1.5 text-right tabular-nums" aria-label={`${s.name} price`} />
                 </>
               )}
             </span>

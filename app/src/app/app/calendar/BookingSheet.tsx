@@ -8,19 +8,23 @@ import type { CalendarData } from "@/lib/data/calendar-types";
 import { reviveClientState, type ClientStateJSON } from "@/lib/data/clients-shared";
 import { duration, fullName, money } from "@/lib/format";
 import { suggestOrder } from "@/lib/schedule/plan";
-import { formatDay, formatSlot, formatTimeRange, isDateStr, parseHHMM, tzAbbrev, weekday, WEEKDAY_KEYS, zonedToUtc } from "@/lib/time/zone";
+import { formatDay, formatSlot, formatTimeRange, isDateStr, parseHHMM, toHHMM, tzAbbrev, weekday, WEEKDAY_KEYS, zonedToUtc } from "@/lib/time/zone";
+import { openTimes } from "@/lib/booking/overrides";
 import { clientChips, NEW_CLIENT_STATE } from "@/lib/ui/standing";
-import { createAppointment, fetchClientState, supplyFor } from "./actions";
+import { createAppointment, fetchClientState, openTimesFor, supplyFor, type BookingWarnings } from "./actions";
+import { staffCanChangeDeposit } from "@/lib/policy/engine";
 import { blockedDuring, closureForDate } from "@/lib/schedule/holidays";
 
 const input = "w-full rounded-lg border border-line bg-background px-3 py-2.5 text-base";
 const label = "block text-sm font-semibold";
 
 export default function BookingSheet({
-  initialStaffId, data, initialDate, initialTime, initialServiceIds, initialClientId, onClose, onSaved,
+  initialStaffId, data, initialDate, initialTime, initialServiceIds, initialClientId, onClose, onSaved, loadTimes = openTimesFor,
 }: {
   data: CalendarData; initialDate: string; initialTime: string; initialServiceIds?: string[]; initialClientId?: string | null; initialStaffId?: string | null;
   onClose: () => void; onSaved: () => void;
+  /** Where open times come from (the dev preview passes sample data). */
+  loadTimes?: typeof openTimesFor;
 }) {
   const tz = data.timezone;
   const [mode, setMode] = useState<"existing" | "new">(data.clients.length ? "existing" : "new");
@@ -34,6 +38,14 @@ export default function BookingSheet({
   const [date, setDate] = useState(initialDate);
   const [time, setTime] = useState(initialTime);
   const [deposit, setDeposit] = useState("");
+  const [waive, setWaive] = useState(false);
+  const mayChangeDeposit = !!data.can.deposits && staffCanChangeDeposit(data.policy);
+  /** Open start times for the chosen day (soonest first), or null while loading. */
+  const [slots, setSlots] = useState<{ times: string[]; closed: string | null; hours: [string, string] | null } | null>(null);
+  const [slotsFor, setSlotsFor] = useState("");
+  const [custom, setCustom] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const [confirm, setConfirm] = useState<BookingWarnings | null>(null);
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, startSaving] = useTransition();
@@ -86,9 +98,30 @@ export default function BookingSheet({
   const state = mode === "existing" && clientState ? reviveClientState(clientState) : NEW_CLIENT_STATE;
   const minutes = /^\d{1,2}:\d{2}$/.test(time) ? parseHHMM(time) : null;
 
+  // Open times for the chosen day, stylist and services.
+  const slotKey = `${date}|${staffId ?? ""}|${serviceIds.join(",")}`;
+  useEffect(() => {
+    if (!isDateStr(date)) return;
+    let live = true;
+    loadTimes({ date, staffId, serviceIds })
+      .then((r) => {
+        if (!live) return;
+        setSlots(r.ok ? { times: r.times, closed: r.closed, hours: r.hours } : { times: [], closed: null, hours: null });
+        setSlotsFor(slotKey);
+      })
+      .catch(() => live && setSlotsFor(slotKey));
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slotKey]);
+  const loadingSlots = slotsFor !== slotKey;
+  const timeIsOpen = !!slots && slots.times.includes(time);
+
   const preview = useMemo(() => {
     if (!serviceIds.length || minutes === null || !isDateStr(date)) return null;
     const depositCents = deposit.trim() === "" ? undefined : Math.round(Number(deposit) * 100);
+    const depositOverride = mayChangeDeposit ? (waive ? ("waive" as const) : ("amount" as const)) : undefined;
     try {
       return buildBooking({
         services: serviceIds.map((id) => toBookable(svcById.get(id)!)),
@@ -98,11 +131,12 @@ export default function BookingSheet({
         client: state,
         now: new Date(),
         depositCents: Number.isFinite(depositCents) ? depositCents : undefined,
+        depositOverride,
       });
     } catch {
       return null;
     }
-  }, [serviceIds, minutes, date, deposit, svcById, tz, data.rules, data.policy, state]);
+  }, [serviceIds, minutes, date, deposit, waive, mayChangeDeposit, svcById, tz, data.rules, data.policy, state]);
 
   // Scheduled closures: holidays, days off, blocked hours.
   const dayClosure = isDateStr(date) ? closureForDate(date, tz, data.holidays, data.daysOff) : null;
@@ -151,8 +185,9 @@ export default function BookingSheet({
     });
   const suggested = () => setServiceIds((ids) => suggestOrder(ids.map((id) => toBookable(svcById.get(id)!)), data.stages).map((s) => s.id));
 
-  function save() {
+  function save(confirmed: { outsideHours?: boolean; overlap?: boolean } = {}) {
     setError(null);
+    setConfirm(null);
     if (closure && !closureOk) return setPrompt(closure);
     startSaving(async () => {
       const res = await createAppointment({
@@ -162,11 +197,15 @@ export default function BookingSheet({
         staffId,
         date,
         time,
-        depositCents: preview?.deposit.required ? preview.depositCents : undefined,
+        depositCents: preview?.deposit.required && !waive ? preview.depositCents : undefined,
+        waiveDeposit: !!preview?.deposit.required && waive,
         notes,
         confirmClosed: !!closure && closureOk,
+        confirmOutsideHours: confirmed.outsideHours,
+        confirmOverlap: confirmed.overlap,
       });
       if (res.ok) onSaved();
+      else if (res.confirm) setConfirm(res.confirm);
       else if (res.closed) setPrompt({ key: closure?.key ?? `day:${date}`, label: res.closed.label, kind: res.closed.kind });
       else setError(res.error);
     });
@@ -306,15 +345,57 @@ export default function BookingSheet({
           </section>
 
           {/* When */}
-          <section className="grid gap-2 sm:grid-cols-2">
-            <label className="space-y-1">
+          <section className="space-y-2">
+            <label className="block max-w-xs space-y-1">
               <span className={label}>Date</span>
-              <input id={dateInputId} type="date" className={input} value={date} onChange={(e) => setDate(e.target.value)} required />
+              <input id={dateInputId} type="date" className={input} value={date} onChange={(e) => { setDate(e.target.value); setShowAll(false); }} required />
             </label>
-            <label className="space-y-1">
-              <span className={label}>Start time ({tzAbbrev(isDateStr(date) ? zonedToUtc(date, 12 * 60, tz) : new Date(), tz)})</span>
-              <input type="time" step={900} className={input} value={time} onChange={(e) => setTime(e.target.value)} required />
-            </label>
+            <div className="space-y-1.5">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <span className={label}>
+                  Open times{serviceIds.length ? ` for ${duration(preview?.plan.totalMinutes ?? 0) || "these services"}` : ""} ({tzAbbrev(isDateStr(date) ? zonedToUtc(date, 12 * 60, tz) : new Date(), tz)})
+                </span>
+                {slots?.hours && <span className="text-xs text-muted">{stylist ? `${stylist.name.split(" ")[0]}'s` : "Your"} hours: {formatSlot(date, parseHHMM(slots.hours[0]), tz).replace(/\s[A-Z]{2,5}$/, "")} – {formatSlot(date, parseHHMM(slots.hours[1]), tz).replace(/\s[A-Z]{2,5}$/, "")}</span>}
+              </div>
+              {loadingSlots && !slots ? (
+                <p className="text-sm text-muted">Finding open times…</p>
+              ) : slots?.closed ? (
+                <p className="text-sm text-muted">Scheduled to be closed: {slots.closed}. Pick another day, or set a time below.</p>
+              ) : slots && slots.times.length ? (
+                <div className={`flex flex-wrap gap-1.5 ${loadingSlots ? "opacity-50" : ""}`} role="listbox" aria-label="Open start times">
+                  {(showAll ? slots.times : slots.times.slice(0, 16)).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      role="option"
+                      aria-selected={time === t && !custom}
+                      onClick={() => { setTime(t); setCustom(false); }}
+                      className={`rounded-full border px-3 py-1.5 text-sm tabular-nums ${time === t && !custom ? "border-accent bg-accent text-on-accent" : "border-line hover:bg-background"}`}
+                    >
+                      {formatSlot(date, parseHHMM(t), tz).replace(/\s[A-Z]{2,5}$/, "")}
+                    </button>
+                  ))}
+                  {!showAll && slots.times.length > 16 && (
+                    <button type="button" className="rounded-full px-3 py-1.5 text-sm underline" onClick={() => setShowAll(true)}>+{slots.times.length - 16} more</button>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted">
+                  {slots?.hours ? "No open times left this day" : `${stylist ? stylist.name.split(" ")[0] : "You"} ${stylist ? "doesn't" : "don't"} usually work this day`}
+                  {serviceIds.length ? " for these services" : ""}. Pick another day, or set a time below.
+                </p>
+              )}
+              <button type="button" className="text-sm underline" onClick={() => setCustom(!custom)} aria-expanded={custom || (!!time && !timeIsOpen)}>
+                {custom || (!!time && !timeIsOpen && !loadingSlots) ? "Hide other time" : "Other time (outside hours or double-book)"}
+              </button>
+              {(custom || (!!time && !timeIsOpen && !loadingSlots)) && (
+                <label className="block max-w-xs space-y-1">
+                  <span className="text-sm text-muted">Start time</span>
+                  <input type="time" step={300} className={input} value={time} onChange={(e) => { setTime(e.target.value); setCustom(true); }} />
+                  {!data.can.override && <span className="block text-xs text-muted">Your access only allows open times.</span>}
+                </label>
+              )}
+            </div>
           </section>
 
           {/* Preview */}
@@ -348,25 +429,37 @@ export default function BookingSheet({
               </ul>
 
               {preview.deposit.required && (
-                <div className="space-y-1 rounded-lg bg-background p-3 text-sm">
+                <div className="space-y-2 rounded-lg bg-background p-3 text-sm">
                   <p className="font-semibold">
                     Deposit required{preview.deposit.reasons.includes("flagged_client") ? " (flagged client: full price)" : preview.deposit.reasons.includes("new_client") ? " (new client)" : ""}
                   </p>
-                  <label className="flex items-center gap-2">
+                  {mayChangeDeposit && (
+                    <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Deposit">
+                      {[[false, "Require a deposit"], [true, "Don't require one"]].map(([v, l]) => (
+                        <button key={String(v)} type="button" role="radio" aria-checked={waive === v} onClick={() => setWaive(v as boolean)} className={`rounded-full border px-3 py-1.5 ${waive === v ? "border-accent bg-accent text-on-accent" : "border-line"}`}>{l as string}</button>
+                      ))}
+                    </div>
+                  )}
+                  {waive ? (
+                    <p className="text-muted">No deposit for this booking. It&rsquo;s noted on the appointment.</p>
+                  ) : (
+                  <label className="flex flex-wrap items-center gap-2">
                     <span>$</span>
                     <input
                       type="number"
                       inputMode="decimal"
                       step="0.01"
-                      min={preview.deposit.minimum / 100}
+                      min={mayChangeDeposit ? 0 : preview.deposit.minimum / 100}
                       max={preview.deposit.maximum / 100}
                       className={`${input} max-w-[10rem]`}
                       value={deposit === "" ? (preview.depositCents / 100).toFixed(2) : deposit}
                       onChange={(e) => setDeposit(e.target.value)}
                       aria-label="Deposit amount"
                     />
-                    <span className="text-muted">{money(preview.deposit.minimum)} – {money(preview.deposit.maximum)}</span>
+                    <span className="text-muted">{mayChangeDeposit ? `Policy: ${money(preview.deposit.minimum)} – ${money(preview.deposit.maximum)}` : `${money(preview.deposit.minimum)} – ${money(preview.deposit.maximum)}`}</span>
                   </label>
+                  )}
+                  {!waive && preview.depositOverridden && <p className="text-xs text-amber-800 dark:text-amber-200">Below the policy minimum of {money(preview.deposit.minimum)}.</p>}
                   <p className="text-xs text-muted">Collecting deposits online comes with payments. For now it&rsquo;s recorded and shown on the calendar.</p>
                 </div>
               )}
@@ -390,12 +483,36 @@ export default function BookingSheet({
           <p className="text-sm text-red-700 dark:text-red-300" role="alert">{error}</p>
           <div className="flex gap-2">
             <button type="button" onClick={onClose} className="rounded-lg px-4 py-2.5">Cancel</button>
-            <button type="button" disabled={!canSave} onClick={save} className="rounded-lg bg-accent px-4 py-2.5 font-semibold text-on-accent disabled:opacity-40">
+            <button type="button" disabled={!canSave} onClick={() => save()} className="rounded-lg bg-accent px-4 py-2.5 font-semibold text-on-accent disabled:opacity-40">
               {saving ? "Saving…" : "Book appointment"}
             </button>
           </div>
         </div>
       </div>
+      {confirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={(e) => e.stopPropagation()}>
+          <div role="alertdialog" aria-modal="true" aria-labelledby="ovr-title" className="w-full max-w-sm rounded-2xl bg-surface p-5 shadow-xl">
+            <h3 id="ovr-title" className="text-lg font-bold">{confirm.overlap && confirm.outsideHours ? "Outside hours and double-booked" : confirm.overlap ? "This double-books" : "Outside working hours"}</h3>
+            <ul className="mt-2 space-y-1 text-sm">
+              {confirm.outsideHours && <li>{confirm.outsideHours}</li>}
+              {confirm.overlap && <li>{confirm.overlap}</li>}
+            </ul>
+            {data.can.override ? (
+              <p className="mt-2 text-sm text-muted">Book it anyway?</p>
+            ) : (
+              <p className="mt-2 text-sm font-semibold">Your access doesn&rsquo;t allow this. Pick an open time, or ask a manager to book it.</p>
+            )}
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row-reverse">
+              {data.can.override && (
+                <button autoFocus className="rounded-lg bg-accent px-4 py-2.5 font-semibold text-on-accent" onClick={() => save({ outsideHours: !!confirm.outsideHours, overlap: !!confirm.overlap })}>
+                  Book anyway
+                </button>
+              )}
+              <button className="rounded-lg border border-line px-4 py-2.5" onClick={() => setConfirm(null)}>Pick another time</button>
+            </div>
+          </div>
+        </div>
+      )}
       {prompt && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={(e) => e.stopPropagation()}>
           <div role="alertdialog" aria-modal="true" aria-labelledby="closed-title" aria-describedby="closed-desc" className="w-full max-w-sm rounded-2xl bg-surface p-5 shadow-xl">
@@ -440,3 +557,18 @@ export default function BookingSheet({
   );
 }
 
+
+/** Open times worked out in the browser from the calendar's own data (dev preview only). */
+export function sampleTimes(data: CalendarData): typeof openTimesFor {
+  return async ({ date, staffId, serviceIds }) => {
+    const stylist = data.stylists.find((s) => s.id === staffId) ?? data.stylists[0] ?? null;
+    const hours = hoursFor(stylist, data.hours);
+    const svc = new Map(data.services.map((s) => [s.id, s]));
+    const busy = data.appointments
+      .filter((a) => a.staffId === (stylist?.id ?? a.staffId))
+      .flatMap((a) => a.busy.map((b) => ({ start: new Date(b.start), end: new Date(b.end) })));
+    const h = hours[WEEKDAY_KEYS[weekday(date)]] ?? null;
+    const times = openTimes({ date, tz: data.timezone, hours, services: serviceIds.filter((id) => svc.has(id)).map((id) => toBookable(svc.get(id)!)), busy, now: new Date(`${data.today}T06:00:00Z`), stepMinutes: 15 });
+    return { ok: true, times: times.map(toHHMM), closed: null, hours: h };
+  };
+}
