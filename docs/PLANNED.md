@@ -4,7 +4,7 @@
 
 Suggested build order: 1. Services and groups editor, 2. Account types and joining a salon, 3. Licenses and ID, 4. Sick days (texts need Twilio), 5. Walk-ins.
 
-## 1. Services and groups editor
+## 1. Services and groups editor (built)
 - Add, edit, reorder and archive services and their groups (Color, Cuts…). Today the menu only comes from the list loaded at setup.
 - Per service: price, time, processing time, deposit, bookable online, and **who offers it**.
 - The salon shows every service it offers. Each stylist only takes the ones they're set up for. This already applies to online booking. **New appointment** in the app should also warn, the same way it warns for a double-booking.

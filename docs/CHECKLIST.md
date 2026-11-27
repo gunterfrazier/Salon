@@ -183,6 +183,9 @@ Use a second email address (a Gmail you control) as a pretend client, and a thir
 - [ ] Add a **Schedule** rule (e.g. after closing, show the Window sign) and check it switches.
 - [ ] Unplug the TV's internet for a minute: it keeps playing and shows *Offline*; the Screens list shows the TV as off after 5 minutes.
 - [ ] Try **Look** (Dark / Light / Your accent color), **TV mounted on its side**, a **Background picture** on a slide, and **Upload video** with a **Video** slide.
+- [ ] **Settings → Services**: edit a price and save it (the *price to review* tag goes away); add a service and a group; move one up; archive one, then restore it.
+- [ ] Open a service and untick a stylist under **Who offers it**: online booking and New appointment no longer offer them for it.
+- [ ] Optional: turn on **Stylists can have their own price and time**, give one stylist a different price; the menu shows a range and booking with them uses their price.
 - [ ] Optional, on a Google TV / Android TV: install the **Chairvana TV** test app (GitHub → Salon → Actions → *Chairvana TV* → newest run → `chairvana-tv-debug`), open it, and pair it with the code. Steps: `android-tv/README.md`.
 - [ ] **Marketing → Graphics studio**: save an Openings post and a Chair Wrapped story; post one.
 - [ ] Open **chairvana.app/intensity-salon** (your short link): it opens your salon page.
