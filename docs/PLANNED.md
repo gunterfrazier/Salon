@@ -25,7 +25,7 @@ Still to do: the per-salon setting for **who keeps the clients** when a stylist 
 - **Remove:** unlinks the stylist from the salon.
 - **Who keeps the clients** when a stylist joins or leaves is set by each salon, and can differ by stylist type (booth renter, commission, hourly).
 
-## 3. Licenses and ID
+## 3. Licenses and ID (licenses, confirmation and reminders built; photo ID waits on Stripe)
 - Upload the license (photo or PDF) with its number, state and expiry date, stored privately.
 - Renewal reminders 90, 60 and 30 days before expiry. The salon can choose to stop expired stylists from being booked.
 - **License check:** there's no national service, so each state board's lookup is used. To start, it's confirmed by hand with a link to the board's lookup page. Automatic checks can be added state by state.

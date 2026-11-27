@@ -190,6 +190,9 @@ Use a second email address (a Gmail you control) as a pretend client, and a thir
 - [ ] As the test stylist, **Switch** (top) moves between their own business and the salon.
 - [ ] A code with *Join right away* unticked: the request shows on Team under **Asking to join**; **Accept** with a role.
 - [ ] **Suspend** the test stylist (gone from booking, can't open the salon), **Reinstate**, then **Remove**. Decline their business in **Platform**.
+- [ ] **Licenses**: add your license with a photo and expiration date (tap **View** to see it), and the salon's establishment license.
+- [ ] **Licenses → Team**: open the board lookup link for a teammate's license, check it, then **Confirm**.
+- [ ] Optional: turn on **Don't book stylists whose license has expired** once everyone's license is on file.
 - [ ] Optional, on a Google TV / Android TV: install the **Chairvana TV** test app (GitHub → Salon → Actions → *Chairvana TV* → newest run → `chairvana-tv-debug`), open it, and pair it with the code. Steps: `android-tv/README.md`.
 - [ ] **Marketing → Graphics studio**: save an Openings post and a Chair Wrapped story; post one.
 - [ ] Open **chairvana.app/intensity-salon** (your short link): it opens your salon page.
