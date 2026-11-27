@@ -9,7 +9,7 @@ _Updated Nov 26, 2026. Check items off as you go. The app is now at **chairvana.
 - [ ] Have Karissa do the same with her email.
 - [ ] Cloudflare: delete the API token you created for me (it starts with `cfut_`, expires Dec 3). Dashboard → My Profile → API Tokens.
 - [ ] Supabase: delete the personal access token you made for me (Account → Access Tokens).
-- [ ] Supabase: set up custom email sending (SMTP) so sign-in links aren't limited. Supabase's built-in email only sends a few messages per hour. Do this with the email service below.
+- [ ] Supabase: set up custom email sending (SMTP) so sign-in links aren't limited (see Texting and email below).
 
 ### Salon profile and menu
 - [ ] **Settings → Salon**: address, salon phone, about, web address. Saving the address puts you in nearby search.
@@ -37,8 +37,9 @@ _Updated Nov 26, 2026. Check items off as you go. The app is now at **chairvana.
   - How clients opt in: "On the online booking page (https://chairvana.app/s/intensity-salon/book) clients tick an unchecked box, 'Text me about my appointments', with message frequency, rates, STOP/HELP and links to terms and privacy. Clients can also agree in person; the stylist records it on the client's record."
   - Sample messages: copy two from **Messages → Recent messages** (a confirmation and a reminder).
 - [ ] Add 3 Twilio keys in Cloudflare (Workers → salon → Settings → Variables and Secrets): `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_MESSAGING_SERVICE_SID` (or `TWILIO_FROM`).
-- [ ] Email: create a Resend account, verify chairvana.app (add the DNS records in Cloudflare), then add `RESEND_API_KEY` and `EMAIL_FROM` in Cloudflare.
-- [ ] Use the same Resend account as Supabase's SMTP (see above).
+- [ ] Email (Cloudflare Email Service, mail.chairvana.app is set up): check your Workers plan. On **Workers Free**, Cloudflare only delivers to addresses verified in your account, so clients won't get emails. **Workers Paid ($5/month per account)** covers all your apps and includes 3,000 emails a month. Free alternative: a Brevo account (300 emails/day), then add `BREVO_API_KEY` and `EMAIL_FROM` in Cloudflare.
+- [ ] **Account → Send me a test email**: it arrives from "Intensity Salon" at bookings@mail.chairvana.app.
+- [ ] Supabase sign-in emails through Cloudflare (Supabase → Authentication → Emails → SMTP Settings): host `smtp.mx.cloudflare.net`, port `465`, username `api_token`, password = a Cloudflare API token with "Email Sending: Edit", sender `bookings@mail.chairvana.app`, name `Chairvana`.
 
 ### Inventory (when you're ready)
 - [ ] **Inventory → Add products**: add the Kenra and Redken shades you stock.
