@@ -24,7 +24,7 @@ Stripe renames menus now and then. If a label below doesn't match exactly, look 
 1. In the dashboard, open **Connect** (left menu, or search "Connect") → **Get started**.
 2. Choose **Platform** (software that lets businesses take payments).
 3. Pick **Standard** accounts (the salon owns the account and the Stripe dashboard is "full"). If Stripe asks who pays fees and who handles disputes, choose **the connected account (the salon)**.
-4. Connect → **Settings** → **Branding**: name **Chairvana**, icon = the Chairvana mark (`app/public/brand/icon-512.png`), brand color **#3f6a84**.
+4. Connect → **Settings** → **Branding**: name **Chairvana**, icon = the Chairvana app icon (`app/public/icon-512.png`, also at chairvana.app/icon-512.png), brand color **#3f6a84**.
 5. Connect → **Settings** → **Onboarding options / OAuth**: add the redirect URL **https://chairvana.app/app/settings/payments/stripe**.
 
 ### 3. Get the test keys
