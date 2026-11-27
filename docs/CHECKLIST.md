@@ -161,10 +161,17 @@ Use a second email address (a Gmail you control) as a pretend client, and a thir
 - [ ] Evening day preview arrives at 7:30 PM (push, or text once Twilio is on).
 - [ ] After Twilio: book a test appointment for your own phone, then check the confirmation, a reminder, and a cancel notice arrive, and nothing arrives during quiet hours.
 
+### Look, studio and extras
+- [ ] **Settings → Salon → Look & photos**: add a logo, cover photo, accent color and a few portfolio photos.
+- [ ] **Today → TV display**: open it on the shop TV or a tablet; check the chairs, specials and booking QR.
+- [ ] **Marketing → Graphics studio**: save an Openings post and a Chair Wrapped story; post one.
+- [ ] Open **chairvana.app/intensity-salon** (your short link): it opens your salon page.
+- [ ] Book online with **☾ Quiet visit** ticked: the Quiet visit tag shows on Today and the calendar.
+- [ ] When testing is done: **Clients → Clean up** removes the practice clients and their bookings.
+
 ## Part 3: Known gaps (not built yet)
 - Texts don't send until Twilio is set up; email needs Cloudflare Workers Paid (or a Brevo key) to reach clients.
 - Clients without an email can't sign in (text-message sign-in can come with Twilio).
 - Card payments / Tap to Pay (Stripe) aren't set up.
-- There's no way to delete test clients or appointments yet; cancel test appointments instead. I can add cleanup tools if you need them.
 - Automatic ordering with SalonCentric needs a SalonInteractive partner agreement.
 - Before the Play Store: Android app packaging, salon subscriptions (check Google Play billing rules), and open self-serve salon sign-up.
