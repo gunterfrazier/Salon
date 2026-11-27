@@ -2,11 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { offeredBy, PRICE_TYPES, STAGES, type PriceType, type ServiceInput, type Stage } from "@/lib/services/edit";
-import { archiveService, confirmPrice, deleteGroup, moveGroup, moveService, saveGroup, saveService } from "./actions";
+import { offeredBy, PRICE_TYPES, STAGES, type OwnInput, type PriceType, type ServiceInput, type Stage } from "@/lib/services/edit";
+import { archiveService, confirmPrice, deleteGroup, moveGroup, moveService, saveGroup, saveService, setStylistPricing } from "./actions";
+import type { OwnPrices } from "@/lib/staff/stylists";
 
 export type EditorGroup = { id: string; name: string };
-export type EditorStylist = { id: string; name: string; serviceIds: string[] | null };
+export type EditorStylist = { id: string; name: string; serviceIds: string[] | null; own?: OwnPrices };
 export type EditorService = {
   id: string;
   categoryId: string;
@@ -39,8 +40,17 @@ function priceLabel(s: Pick<EditorService, "priceType" | "priceCents">) {
   return money(s.priceCents);
 }
 
+/** The menu price, or the range across stylists who offer it when some charge their own. */
+function rangeLabel(s: EditorService, stylists: EditorStylist[]) {
+  const prices = stylists.filter((x) => !x.serviceIds || x.serviceIds.includes(s.id)).map((x) => x.own?.[s.id]?.price ?? s.priceCents);
+  const lo = Math.min(...prices, s.priceCents);
+  const hi = Math.max(...prices, s.priceCents);
+  if (s.priceType === "free" || lo === hi) return priceLabel(s);
+  return `${money(lo)}–${money(hi).replace("$", "")}${s.priceType === "starting_at" ? "+" : s.priceType === "hourly" ? "/hr" : ""}`;
+}
+
 /** Settings → Services: the salon's menu, its groups, and who offers each service. */
-export default function ServicesEditor({ groups, services, stylists }: { groups: EditorGroup[]; services: EditorService[]; stylists: EditorStylist[] }) {
+export default function ServicesEditor({ groups, services, stylists, stylistPricing = false }: { groups: EditorGroup[]; services: EditorService[]; stylists: EditorStylist[]; stylistPricing?: boolean }) {
   const router = useRouter();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
@@ -87,6 +97,16 @@ export default function ServicesEditor({ groups, services, stylists }: { groups:
 
       {msg && <p role="status" className={`rounded-xl border p-3 text-sm ${msg.ok ? "border-line bg-surface" : "border-red-300 bg-red-50 text-red-900 dark:border-red-800 dark:bg-red-950 dark:text-red-100"}`}>{msg.text}</p>}
 
+      {stylists.length > 0 && (
+        <label className="flex items-start justify-between gap-3 rounded-xl border border-line bg-surface p-3 text-sm">
+          <span>
+            <span className="font-medium">Stylists can have their own price and time</span>
+            <span className="block text-muted">For example senior and junior pricing. Set them inside each service, under <em>Who offers it</em>. Turning this off keeps them saved but unused.</span>
+          </span>
+          <input type="checkbox" className="mt-1 h-5 w-5" disabled={pending} checked={stylistPricing} onChange={(e) => run(() => setStylistPricing(e.target.checked), e.target.checked ? "Stylists can now have their own prices and times." : "Everyone uses the menu prices and times again.")} />
+        </label>
+      )}
+
       {review.length > 0 && (
         <p className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
           <strong>{review.length} price{review.length === 1 ? "" : "s"} to review.</strong> These came from the starting menu. Open each one and save it, or tap <em>Price is right</em>.
@@ -132,7 +152,7 @@ export default function ServicesEditor({ groups, services, stylists }: { groups:
                         </span>
                       </button>
                       <span className="shrink-0 text-right text-sm tabular-nums">
-                        {priceLabel(s)}
+                        {stylistPricing ? rangeLabel(s, stylists) : priceLabel(s)}
                         <span className="block text-xs text-muted">{mins(s.active + s.processing + s.finish)}</span>
                       </span>
                       <span className="flex shrink-0 flex-col gap-1 sm:flex-row">
@@ -181,6 +201,7 @@ export default function ServicesEditor({ groups, services, stylists }: { groups:
           groupId={editing === "new" ? (newIn ?? groups[0].id) : editing.categoryId}
           groups={groups}
           stylists={stylists}
+          stylistPricing={stylistPricing}
           onClose={() => setEditing(null)}
           onDone={(text) => {
             setEditing(null);
@@ -208,9 +229,10 @@ function GroupNameForm({ initial, label, pending, onSave, onCancel }: { initial:
 }
 
 const asMinutes = (v: string) => (v.trim() === "" ? 0 : Number(v));
+const digits = (v: string) => [...v].filter((c) => c >= "0" && c <= "9").join("");
 
 /** Add or edit one service. */
-function ServiceSheet({ service, groupId, groups, stylists, onClose, onDone }: { service: EditorService | null; groupId: string; groups: EditorGroup[]; stylists: EditorStylist[]; onClose: () => void; onDone: (text: string) => void }) {
+function ServiceSheet({ service, groupId, groups, stylists, stylistPricing, onClose, onDone }: { service: EditorService | null; groupId: string; groups: EditorGroup[]; stylists: EditorStylist[]; stylistPricing: boolean; onClose: () => void; onDone: (text: string) => void }) {
   const s = service;
   const [name, setName] = useState(s?.name ?? "");
   const [categoryId, setCategoryId] = useState(groupId);
@@ -226,6 +248,14 @@ function ServiceSheet({ service, groupId, groups, stylists, onClose, onDone }: {
   const [online, setOnline] = useState(s?.bookableOnline ?? true);
   const [addOn, setAddOn] = useState(s?.isAddOn ?? false);
   const [who, setWho] = useState<Set<string>>(new Set(s ? offeredBy(stylists, s.id) : stylists.map((x) => x.id)));
+  const [own, setOwn] = useState<Record<string, OwnInput>>(() =>
+    Object.fromEntries(
+      stylists.map((x) => {
+        const o = s ? x.own?.[s.id] : undefined;
+        return [x.id, { price: o?.price !== undefined ? (o.price / 100).toFixed(o.price % 100 ? 2 : 0) : "", active: o?.active !== undefined ? String(o.active) : "" }];
+      }),
+    ),
+  );
   const [error, setError] = useState<string | null>(null);
   const [saving, start] = useTransition();
 
@@ -234,7 +264,7 @@ function ServiceSheet({ service, groupId, groups, stylists, onClose, onDone }: {
   const save = () =>
     start(async () => {
       const body: ServiceInput = { name, categoryId, description, priceType, price, active: asMinutes(active), processing: asMinutes(processing), finish: asMinutes(finish), bookDuringProcessing: bookDuring, depositCategory: deposit, stage, bookableOnline: online, isAddOn: addOn };
-      const r = await saveService({ id: s?.id ?? null, service: body, offeredBy: [...who] });
+      const r = await saveService({ id: s?.id ?? null, service: body, offeredBy: [...who], ...(stylistPricing ? { own } : {}) });
       if (r.ok) onDone(s ? `Saved ${name.trim()}.` : `Added ${name.trim()}.`);
       else setError(r.error);
     });
@@ -340,21 +370,32 @@ function ServiceSheet({ service, groupId, groups, stylists, onClose, onDone }: {
             <fieldset>
               <legend className="text-sm font-semibold">Who offers it</legend>
               <p className="text-xs text-muted">Only these stylists can be booked for it, online or in the salon.</p>
-              <div className="mt-1 grid gap-1 sm:grid-cols-2">
+              {stylistPricing && <p className="text-xs text-muted">Leave a price or time blank to use the menu&rsquo;s{priceType !== "free" && price ? ` ($${price}, ${asMinutes(active)} min working)` : ""}.</p>}
+              <div className={`mt-1 grid gap-1 ${stylistPricing ? "" : "sm:grid-cols-2"}`}>
                 {stylists.map((x) => (
-                  <label key={x.id} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={who.has(x.id)}
-                      onChange={(e) => setWho((prev) => {
-                        const next = new Set(prev);
-                        if (e.target.checked) next.add(x.id);
-                        else next.delete(x.id);
-                        return next;
-                      })}
-                    />
-                    {x.name}
-                  </label>
+                  <div key={x.id} className="flex flex-wrap items-center gap-2 py-0.5">
+                    <label className="flex min-w-36 flex-1 items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={who.has(x.id)}
+                        onChange={(e) => setWho((prev) => {
+                          const next = new Set(prev);
+                          if (e.target.checked) next.add(x.id);
+                          else next.delete(x.id);
+                          return next;
+                        })}
+                      />
+                      {x.name}
+                    </label>
+                    {stylistPricing && who.has(x.id) && (
+                      <span className="flex gap-2">
+                        {priceType !== "free" && (
+                          <input className={`${input} w-24 py-1 text-sm`} inputMode="decimal" placeholder={price ? `$${price}` : "$"} aria-label={`${x.name}'s price`} value={own[x.id]?.price ?? ""} onChange={(e) => setOwn({ ...own, [x.id]: { ...own[x.id], price: e.target.value } })} />
+                        )}
+                        <input className={`${input} w-24 py-1 text-sm`} inputMode="numeric" placeholder={`${asMinutes(active)} min`} aria-label={`${x.name}'s working minutes`} value={own[x.id]?.active ?? ""} onChange={(e) => setOwn({ ...own, [x.id]: { ...own[x.id], active: digits(e.target.value) } })} />
+                      </span>
+                    )}
+                  </div>
                 ))}
               </div>
               {who.size === 0 && <p className="mt-1 text-xs font-semibold text-amber-700 dark:text-amber-300">Nobody will be able to book this service.</p>}

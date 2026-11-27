@@ -161,3 +161,42 @@ export function offerChanges(
 /** Who offers a service now (for ticking the boxes). */
 export const offeredBy = (stylists: { id: string; serviceIds: string[] | null }[], serviceId: string) =>
   stylists.filter((s) => s.serviceIds === null || s.serviceIds.includes(serviceId)).map((s) => s.id);
+
+/** One stylist's own price and working time as typed in the editor (blank = use the menu's). */
+export type OwnInput = { price: string; active: string };
+
+/**
+ * Own prices typed for a service → what to store per stylist ({} means "uses
+ * the menu", so the entry is removed). Only stylists who offer the service
+ * keep an entry.
+ */
+export function cleanOwn(raw: unknown, offeredBy: string[]): { ok: true; value: Record<string, { price?: number; active?: number }> } | { ok: false; error: string } {
+  const out: Record<string, { price?: number; active?: number }> = {};
+  const r = raw && typeof raw === "object" ? (raw as Record<string, Partial<OwnInput>>) : {};
+  for (const id of offeredBy) {
+    const v = r[id] ?? {};
+    const entry: { price?: number; active?: number } = {};
+    const p = String(v.price ?? "").trim();
+    const a = String(v.active ?? "").trim();
+    if (p) {
+      const cents = dollarsToCents(p);
+      if (cents === null) return { ok: false, error: "Stylists' own prices are in dollars, like 45 or 45.50 (or leave blank for the menu price)." };
+      entry.price = cents;
+    }
+    if (a) {
+      const m = Number(a);
+      if (!Number.isInteger(m) || m < 1 || m > MAX_MIN) return { ok: false, error: `Stylists' own times are whole minutes from 1 to ${MAX_MIN} (or leave blank).` };
+      entry.active = m;
+    }
+    out[id] = entry;
+  }
+  return { ok: true, value: out };
+}
+
+/** A stylist's stored own prices with one service set, or removed when empty. */
+export function withOwn(current: unknown, serviceId: string, entry: { price?: number; active?: number } | null): Record<string, { price?: number; active?: number }> {
+  const next = { ...(current && typeof current === "object" && !Array.isArray(current) ? (current as Record<string, { price?: number; active?: number }>) : {}) };
+  if (entry && (entry.price !== undefined || entry.active !== undefined)) next[serviceId] = entry;
+  else delete next[serviceId];
+  return next;
+}

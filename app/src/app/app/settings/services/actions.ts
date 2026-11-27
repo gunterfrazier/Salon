@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { denied, getContext, type Ctx } from "@/lib/context";
-import { cleanGroupName, cleanService, moveItem, offerChanges, uniqueKey } from "@/lib/services/edit";
+import { cleanGroupName, cleanOwn, cleanService, moveItem, offerChanges, uniqueKey, withOwn } from "@/lib/services/edit";
 
 type Result = { ok: true } | { ok: false; error: string };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -37,7 +37,7 @@ async function saveOfferedBy(ctx: Ctx, serviceId: string, offeredBy: string[]): 
 }
 
 /** Add or edit a service. Saving also confirms a price that was marked "to review". */
-export async function saveService(input: { id?: string | null; service: unknown; offeredBy: string[] }): Promise<Result & { id?: string }> {
+export async function saveService(input: { id?: string | null; service: unknown; offeredBy: string[]; own?: unknown }): Promise<Result & { id?: string }> {
   const ctx = await editor();
   if (!isCtx(ctx)) return ctx;
   const clean = cleanService(input.service);
@@ -46,6 +46,10 @@ export async function saveService(input: { id?: string | null; service: unknown;
   const { data: cat } = await ctx.supabase.from("service_categories").select("id").eq("business_id", ctx.business.id).eq("id", v.category_id).maybeSingle();
   if (!cat) return { ok: false, error: "That group no longer exists. Refresh and try again." };
   const offeredBy = Array.isArray(input.offeredBy) ? input.offeredBy.filter((x) => typeof x === "string" && UUID.test(x)) : [];
+  const { data: biz } = await ctx.supabase.from("businesses").select("stylist_pricing").eq("id", ctx.business.id).single();
+  const ownOn = !!biz?.stylist_pricing && input.own !== undefined;
+  const own = ownOn ? cleanOwn(input.own, offeredBy) : null;
+  if (own && !own.ok) return own;
 
   let id = input.id ?? null;
   if (id) {
@@ -67,9 +71,40 @@ export async function saveService(input: { id?: string | null; service: unknown;
     id = data.id as string;
   }
   const who = await saveOfferedBy(ctx, id, offeredBy);
+  if (who.ok && own?.ok) {
+    const saved = await saveOwnPrices(ctx, id, own.value);
+    if (!saved.ok) {
+      done();
+      return { ok: false, error: `Saved the service, but not the stylists' own prices: ${saved.error}` };
+    }
+  }
   done();
   if (!who.ok) return { ok: false, error: `Saved the service, but not who offers it: ${who.error}` };
   return { ok: true, id };
+}
+
+/** Each stylist's own price and time for one service; stylists without an entry go back to the menu's. */
+async function saveOwnPrices(ctx: Ctx, serviceId: string, own: Record<string, { price?: number; active?: number }>): Promise<Result> {
+  const { data: staff } = await ctx.supabase.from("staff").select("id,service_prices").eq("business_id", ctx.business.id).eq("active", true);
+  for (const st of staff ?? []) {
+    const current = (st.service_prices ?? {}) as Record<string, unknown>;
+    const next = withOwn(current, serviceId, own[st.id as string] ?? null);
+    if (JSON.stringify(next) === JSON.stringify(current)) continue;
+    const { error } = await ctx.supabase.from("staff").update({ service_prices: next }).eq("business_id", ctx.business.id).eq("id", st.id);
+    if (error) return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
+/** The salon's choice: can stylists have their own price and time for a service? Off keeps what was set, unused. */
+export async function setStylistPricing(on: boolean): Promise<Result> {
+  const ctx = await editor();
+  if (!isCtx(ctx)) return ctx;
+  const { error } = await ctx.supabase.from("businesses").update({ stylist_pricing: !!on }).eq("id", ctx.business.id);
+  if (error) return { ok: false, error: error.message };
+  done();
+  revalidatePath("/book");
+  return { ok: true };
 }
 
 async function nextSort(ctx: Ctx, categoryId: string) {

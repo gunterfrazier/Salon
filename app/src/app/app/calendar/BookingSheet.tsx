@@ -1,5 +1,5 @@
 "use client";
-import { defaultStylist, hoursFor, offersAll } from "@/lib/staff/stylists";
+import { asDoneBy, defaultStylist, hoursFor, offersAll } from "@/lib/staff/stylists";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { StatusChip } from "@/components/StatusChip";
@@ -124,7 +124,7 @@ export default function BookingSheet({
     const depositOverride = mayChangeDeposit ? (waive ? ("waive" as const) : ("amount" as const)) : undefined;
     try {
       return buildBooking({
-        services: serviceIds.map((id) => toBookable(svcById.get(id)!)),
+        services: asDoneBy(serviceIds.map((id) => toBookable(svcById.get(id)!)), stylist),
         start: zonedToUtc(date, minutes, tz),
         rules: data.rules,
         policy: data.policy,
@@ -136,7 +136,7 @@ export default function BookingSheet({
     } catch {
       return null;
     }
-  }, [serviceIds, minutes, date, deposit, waive, mayChangeDeposit, svcById, tz, data.rules, data.policy, state]);
+  }, [serviceIds, stylist, minutes, date, deposit, waive, mayChangeDeposit, svcById, tz, data.rules, data.policy, state]);
 
   // Scheduled closures: holidays, days off, blocked hours.
   const dayClosure = isDateStr(date) ? closureForDate(date, tz, data.holidays, data.daysOff) : null;
@@ -326,15 +326,20 @@ export default function BookingSheet({
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     {list.map((s) => {
                       const on = serviceIds.includes(s.id);
+                      // The chosen stylist's own price, and whether they offer it at all.
+                      const cents = stylist?.own[s.id]?.price ?? s.price_cents;
+                      const offered = !stylist || offersAll(stylist, [s.id]);
                       return (
                         <button
                           key={s.id}
                           type="button"
                           aria-pressed={on}
                           onClick={() => toggle(s.id)}
-                          className={`rounded-full border px-3 py-1.5 text-sm ${on ? "border-accent bg-accent text-on-accent" : "border-line"}`}
+                          title={offered ? undefined : `${stylist?.name} doesn't offer this`}
+                          className={`rounded-full border px-3 py-1.5 text-sm ${on ? "border-accent bg-accent text-on-accent" : "border-line"} ${offered || on ? "" : "opacity-45"}`}
                         >
-                          {s.name} <span className={on ? "" : "text-muted"}>{money(s.price_cents)}{s.price_type === "starting_at" ? "+" : ""}</span>
+                          {s.name} <span className={on ? "" : "text-muted"}>{money(cents)}{s.price_type === "starting_at" ? "+" : ""}</span>
+                          {!offered && <span className="sr-only"> (not offered by {stylist?.name})</span>}
                         </button>
                       );
                     })}
@@ -568,7 +573,7 @@ export function sampleTimes(data: CalendarData): typeof openTimesFor {
       .filter((a) => a.staffId === (stylist?.id ?? a.staffId))
       .flatMap((a) => a.busy.map((b) => ({ start: new Date(b.start), end: new Date(b.end) })));
     const h = hours[WEEKDAY_KEYS[weekday(date)]] ?? null;
-    const times = openTimes({ date, tz: data.timezone, hours, services: serviceIds.filter((id) => svc.has(id)).map((id) => toBookable(svc.get(id)!)), busy, now: new Date(`${data.today}T06:00:00Z`), stepMinutes: 15 });
+    const times = openTimes({ date, tz: data.timezone, hours, services: asDoneBy(serviceIds.filter((id) => svc.has(id)).map((id) => toBookable(svc.get(id)!)), stylist), busy, now: new Date(`${data.today}T06:00:00Z`), stepMinutes: 15 });
     return { ok: true, times: times.map(toHHMM), closed: null, hours: h };
   };
 }

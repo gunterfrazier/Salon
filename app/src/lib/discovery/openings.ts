@@ -5,7 +5,7 @@ import { loadClosedChecker, loadPublicBusiness, loadPublicServices, type PublicB
 import { loadBusyRange } from "../data/schedule";
 import { milesBetween, type Point } from "../geo";
 import { suggestOrder } from "../schedule/plan";
-import { hoursFor, whoOffers } from "../staff/stylists";
+import { asDoneBy, hoursFor, whoOffers } from "../staff/stylists";
 import { createAdminClient } from "../supabase/admin";
 import { addDays, todayIn, zonedToUtc } from "../time/zone";
 import { matchAll } from "./match";
@@ -33,7 +33,7 @@ export async function salonOpenings(b: PublicBusiness, services: PublicService[]
   const db = createAdminClient();
   for (const st of who) {
     const busy = await loadBusyRange(db, b.id, st.id, from, to);
-    for (const o of findOpenings({ services: ordered, criteria, today, tz, hours: hoursFor(st, b.hours), isClosed, busy, now: new Date(), settings: b.settings, horizonDays, limit: opts.limit ?? 24, perDay: opts.perDay ?? 4 })) {
+    for (const o of findOpenings({ services: asDoneBy(ordered, st), criteria, today, tz, hours: hoursFor(st, b.hours), isClosed, busy, now: new Date(), settings: b.settings, horizonDays, limit: opts.limit ?? 24, perDay: opts.perDay ?? 4 })) {
       seen.set(`${o.date} ${o.minutes}`, o);
     }
   }

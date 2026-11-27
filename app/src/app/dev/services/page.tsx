@@ -22,7 +22,7 @@ export default function DevServices() {
   );
   const stylists = [
     { id: id(900), name: "Karissa Frazier", serviceIds: null },
-    { id: id(901), name: "Jordan Lee", serviceIds: [id(100), id(101), id(102)] },
+    { id: id(901), name: "Jordan Lee", serviceIds: [id(100), id(101), id(102)], own: { [id(100)]: { price: 2500, active: 35 } } },
   ];
-  return <ServicesEditor groups={groups} services={services} stylists={stylists} />;
+  return <ServicesEditor groups={groups} services={services} stylists={stylists} stylistPricing />;
 }

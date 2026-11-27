@@ -56,7 +56,7 @@ export default async function SalonBookPage({ params, searchParams }: Props) {
       policyLines={policyText(b.policy)}
       initialPicked={(sp.services ?? "").split(",").filter((x) => /^[0-9a-f-]{36}$/.test(x)).slice(0, 8)}
       prefill={prefill}
-      stylists={b.stylists.map((s) => ({ id: s.id, name: s.name, title: s.title, serviceIds: s.serviceIds }))}
+      stylists={b.stylists.map((s) => ({ id: s.id, name: s.name, title: s.title, serviceIds: s.serviceIds, own: s.own }))}
       initialStaff={b.stylists.some((s) => s.id === sp.staff) ? sp.staff! : null}
       initialSlot={sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) && sp.time && /^\d{2}:\d{2}$/.test(sp.time) ? { date: sp.date, time: sp.time } : null}
     />

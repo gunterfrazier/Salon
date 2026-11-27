@@ -42,8 +42,8 @@ export default async function DevCalendar({ searchParams }: { searchParams: Prom
   const data: CalendarData = {
     can: { book: true, change: true, override: true, deposits: true, pricing: true, checkout: true, all: true },
     stylists: [
-      { id: "s1", name: "Karissa Frazier", role: "owner", color: "#257de0", hours: null, serviceIds: null, bookable: true, title: null },
-      { id: "s2", name: "Sam Lee", role: "stylist", color: "#f47230", hours: null, serviceIds: null, bookable: true, title: "Cuts" },
+      { id: "s1", name: "Karissa Frazier", role: "owner", color: "#257de0", hours: null, serviceIds: null, bookable: true, title: null, own: {} },
+      { id: "s2", name: "Sam Lee", role: "stylist", color: "#f47230", hours: null, serviceIds: null, bookable: true, title: "Cuts", own: {} },
     ],
     staffNames: { s1: "Karissa Frazier", s2: "Sam Lee" },
     viewStaff: null,

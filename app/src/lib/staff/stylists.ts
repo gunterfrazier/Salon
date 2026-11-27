@@ -13,7 +13,11 @@ export interface Stylist {
   serviceIds: string[] | null;
   bookable: boolean;
   title: string | null;
+  /** Their own price (cents) and working time (minutes) per service id, when the salon allows it. */
+  own: OwnPrices;
 }
+
+export type OwnPrices = Record<string, { price?: number; active?: number }>;
 
 /** Categorical palette, assigned in order (light-mode steps; validated for adjacent CVD separation). */
 export const STYLIST_COLORS = ["#257de0", "#f47230", "#00b894", "#f2a600", "#ee7fac", "#008a17", "#6a4ce2", "#ec4647"];
@@ -29,9 +33,26 @@ export interface StaffRow {
   title: string | null;
   sort: number;
   active: boolean;
+  service_prices?: unknown;
+  /** The salon's "stylists can have their own price and time" switch (joined in STAFF_COLS). */
+  businesses?: { stylist_pricing?: boolean } | null;
 }
 
-export const STAFF_COLS = "id,display_name,role,color,hours,service_ids,bookable,title,sort,active";
+export const STAFF_COLS = "id,display_name,role,color,hours,service_ids,bookable,title,sort,active,service_prices,businesses(stylist_pricing)";
+
+/** Stored own prices, cleaned: whole cents up to $100,000 and 1–720 minutes; anything else is dropped. */
+export function cleanOwnPrices(raw: unknown): OwnPrices {
+  const out: OwnPrices = {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+  for (const [id, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (!/^[0-9a-f-]{36}$/i.test(id) || !v || typeof v !== "object") continue;
+    const { price, active } = v as Record<string, unknown>;
+    const p = Number.isInteger(price) && (price as number) >= 0 && (price as number) <= 10_000_000 ? (price as number) : undefined;
+    const a = Number.isInteger(active) && (active as number) >= 1 && (active as number) <= 720 ? (active as number) : undefined;
+    if (p !== undefined || a !== undefined) out[id] = { ...(p !== undefined ? { price: p } : {}), ...(a !== undefined ? { active: a } : {}) };
+  }
+  return out;
+}
 
 /** Rows → stylists, in display order, with colors filled in by position. */
 export function toStylists(rows: StaffRow[], opts: { includeUnbookable?: boolean } = {}): Stylist[] {
@@ -47,6 +68,7 @@ export function toStylists(rows: StaffRow[], opts: { includeUnbookable?: boolean
       serviceIds: r.service_ids && r.service_ids.length ? r.service_ids : null,
       bookable: r.bookable,
       title: r.title,
+      own: r.businesses?.stylist_pricing ? cleanOwnPrices(r.service_prices) : {},
     }));
 }
 
@@ -63,6 +85,20 @@ export function defaultStylist(list: Stylist[], viewStaff: string | null, me: st
   if (viewStaff && list.some((s) => s.id === viewStaff)) return viewStaff;
   if (list.some((s) => s.id === me)) return me;
   return list[0]?.id ?? null;
+}
+
+/**
+ * Services as this stylist does them: their own price and working time where
+ * they have one, the menu's otherwise. Works on booking services (price in
+ * dollars) and keeps everything else as it was.
+ */
+export function asDoneBy<T extends { id: string; price: number; active: number }>(services: T[], s: Pick<Stylist, "own"> | null | undefined): T[] {
+  if (!s || !Object.keys(s.own).length) return services;
+  return services.map((x) => {
+    const o = s.own[x.id];
+    if (!o) return x;
+    return { ...x, ...(o.price !== undefined ? { price: o.price / 100 } : {}), ...(o.active !== undefined ? { active: o.active } : {}) };
+  });
 }
 
 /** First name only, for compact calendar labels. */

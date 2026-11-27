@@ -13,6 +13,7 @@ import type { BundleRule } from "@/lib/pricing/discounts";
 import { suggestOrder } from "@/lib/schedule/plan";
 import { formatDay, formatMinutes, formatSlot, parseHHMM, toHHMM, tzAbbrev, WEEKDAY_KEYS, zonedToUtc, zoneLabel } from "@/lib/time/zone";
 import { NEW_CLIENT_STATE } from "@/lib/ui/standing";
+import { asDoneBy, type OwnPrices } from "@/lib/staff/stylists";
 import MonthCalendar from "./MonthCalendar";
 import { dayCounts, findPublicOpenings, getTimes, joinWaitlistOnline, previewPromo, submitOnlineBooking, type OnlineBookingResult } from "./actions";
 
@@ -37,6 +38,15 @@ type Step = "services" | "when" | "details";
 const input = "w-full rounded-xl border border-line bg-surface px-4 py-3 text-base";
 const STAGES = { consult: 0, chemical: 1, treatment: 2, cut: 3, style: 4, wax: 5, fee: 9 };
 
+/** A service's price on the menu: one price, or "$35–45" when stylists charge differently. */
+function priceRange(s: PublicService, stylists: { serviceIds: string[] | null; own?: OwnPrices }[]): string {
+  const prices = stylists.filter((x) => !x.serviceIds || x.serviceIds.includes(s.id)).map((x) => x.own?.[s.id]?.price ?? s.price_cents);
+  if (!prices.length) return money(s.price_cents);
+  const lo = Math.min(...prices);
+  const hi = Math.max(...prices);
+  return lo === hi ? money(lo) : `${money(lo)}–${money(hi).replace("$", "")}`;
+}
+
 export default function BookingWizard({
   salon, business, services, dates, policyLines, initialPicked = [], prefill, stylists = [], initialStaff = null, initialSlot = null, referral = null}: {
   /** The salon's web address (slug). */
@@ -50,7 +60,7 @@ export default function BookingWizard({
   /** Signed-in client's details. */
   prefill?: { firstName: string; lastName: string; phone: string; email: string };
   /** Stylists to choose from (shown when there's more than one). */
-  stylists?: { id: string; name: string; title: string | null; serviceIds: string[] | null }[];
+  stylists?: { id: string; name: string; title: string | null; serviceIds: string[] | null; own?: OwnPrices }[];
   initialStaff?: string | null;
   /** An opening chosen elsewhere (Find): go straight to details. */
   initialSlot?: { date: string; time: string } | null;
@@ -97,14 +107,19 @@ export default function BookingWizard({
 
   // Services in the order they'll be done (color first, then cut, style…).
   const ordered = useMemo(() => suggestOrder(picked.map((id) => toBookable(byId.get(id)!)), STAGES), [picked, byId]);
+  // The chosen stylist's own prices and times, when the salon allows them.
+  const chosen = useMemo(() => {
+    const st = stylists.find((x) => x.id === staffId);
+    return st ? { own: st.own ?? {} } : null;
+  }, [stylists, staffId]);
   const estimate = useMemo(() => {
     if (!ordered.length) return null;
     try {
-      return buildBooking({ services: ordered, start: new Date(), rules: business.rules, policy: business.policy, client: NEW_CLIENT_STATE, now: new Date() });
+      return buildBooking({ services: asDoneBy(ordered, chosen), start: new Date(), rules: business.rules, policy: business.policy, client: NEW_CLIENT_STATE, now: new Date() });
     } catch {
       return null;
     }
-  }, [ordered, business.rules, business.policy]);
+  }, [ordered, chosen, business.rules, business.policy]);
   const addOnOnly = ordered.length > 0 && ordered.every((s) => s.isAddOn);
   const openDays = WEEKDAY_KEYS.map((k, i) => (business.hours[k] ? i : -1)).filter((i) => i >= 0);
 
@@ -343,7 +358,7 @@ export default function BookingWizard({
                           {s.description && <span className="mt-0.5 block text-sm text-muted">{s.description}</span>}
                         </span>
                         <span className="shrink-0 text-right text-sm">
-                          <span className="block font-semibold">{money(s.price_cents)}{s.price_type === "starting_at" ? "+" : ""}</span>
+                          <span className="block font-semibold">{priceRange(s, stylists)}{s.price_type === "starting_at" ? "+" : ""}</span>
                           <span className="text-muted">{duration(mins)}</span>
                         </span>
                       </button>

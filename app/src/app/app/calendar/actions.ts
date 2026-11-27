@@ -21,7 +21,7 @@ import { menu } from "@/lib/menu";
 import { suggestOrder } from "@/lib/schedule/plan";
 import { notifyAppointment } from "@/lib/notify/events";
 import { moveStarts } from "@/lib/booking/move";
-import { hoursFor, offersAll, STAFF_COLS, toStylists, type StaffRow, type Stylist } from "@/lib/staff/stylists";
+import { asDoneBy, hoursFor, offersAll, STAFF_COLS, toStylists, type StaffRow, type Stylist } from "@/lib/staff/stylists";
 import { parseRange } from "@/lib/data/calendar";
 import { loadProducts, supplyWarnings } from "@/lib/data/inventory";
 import { lineTitle } from "@/lib/inventory/stock";
@@ -131,7 +131,8 @@ export async function createAppointment(req: BookingRequest): Promise<BookingRes
   if (svcErr) return { ok: false, error: svcErr.message };
   const byId = new Map((rows as ServiceRow[]).map((r) => [r.id, r]));
   if (req.serviceIds.some((id) => !byId.has(id))) return { ok: false, error: "One of the services is no longer on the menu (archived or removed). Refresh and pick again." };
-  const services = req.serviceIds.map((id) => toBookable(byId.get(id)!));
+  // As this stylist does them: their own price and time, if the salon allows it.
+  const services = asDoneBy(req.serviceIds.map((id) => toBookable(byId.get(id)!)), stylist);
 
   // Client: existing, or create a new one.
   let clientId = req.clientId ?? null;
@@ -232,7 +233,7 @@ export async function openTimesFor(req: { date: string; staffId?: string | null;
       .in("id", req.serviceIds);
     if (error) return { ok: false, error: error.message };
     const byId = new Map((rows as ServiceRow[]).map((r) => [r.id, r]));
-    services = req.serviceIds.filter((id) => byId.has(id)).map((id) => toBookable(byId.get(id)!));
+    services = asDoneBy(req.serviceIds.filter((id) => byId.has(id)).map((id) => toBookable(byId.get(id)!)), stylist);
   }
   const tz = business.timezone;
   const from = zonedToUtc(req.date, 0, tz);
@@ -534,7 +535,7 @@ export async function findTimes(serviceIds: string[], criteria: SearchCriteria, 
   const rules = mergeHolidays(business.holidays);
   const settings = { ...bookingSettings(business.booking_settings), minNoticeHours: 0 };
   const openings = findOpenings({
-    services,
+    services: asDoneBy(services, stylist),
     criteria,
     today,
     tz,

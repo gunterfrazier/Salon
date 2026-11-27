@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanGroupName, cleanService, dollarsToCents, moveItem, offerChanges, offeredBy, uniqueKey } from "./edit";
+import { cleanGroupName, cleanOwn, cleanService, dollarsToCents, moveItem, offerChanges, offeredBy, uniqueKey, withOwn } from "./edit";
 
 const CAT = "00000000-0000-4000-8000-000000000001";
 const base = { name: "Women's Cut", categoryId: CAT, description: "", priceType: "fixed", price: "35", active: 45, processing: 0, finish: 0, bookDuringProcessing: true, depositCategory: "standard", stage: "cut", bookableOnline: true, isAddOn: false };
@@ -62,5 +62,21 @@ describe("service editing", () => {
       { id: "some", serviceIds: ["s1", "s2"] },
       { id: "has", serviceIds: ["s1"] },
     ]);
+  });
+});
+
+describe("stylists' own prices", () => {
+  it("reads what was typed, only for stylists who offer it", () => {
+    const r = cleanOwn({ a: { price: "45", active: "" }, b: { price: "", active: "60" }, c: { price: "99" } }, ["a", "b"]);
+    expect(r).toEqual({ ok: true, value: { a: { price: 4500 }, b: { active: 60 } } });
+    expect(cleanOwn({ a: { price: "lots" } }, ["a"])).toMatchObject({ ok: false });
+    expect(cleanOwn({ a: { active: "0" } }, ["a"])).toMatchObject({ ok: false });
+    expect(cleanOwn(null, ["a"])).toEqual({ ok: true, value: { a: {} } });
+  });
+
+  it("sets or clears one service in a stylist's list", () => {
+    expect(withOwn({ x: { price: 1 } }, "y", { active: 30 })).toEqual({ x: { price: 1 }, y: { active: 30 } });
+    expect(withOwn({ x: { price: 1 }, y: { active: 30 } }, "y", {})).toEqual({ x: { price: 1 } });
+    expect(withOwn(null, "y", null)).toEqual({});
   });
 });

@@ -12,7 +12,7 @@ import { policyText, policyVersion } from "@/lib/policy/text";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { addDays, formatDay, formatTime, isDateStr, parseHHMM, todayIn, toHHMM, zonedToUtc } from "@/lib/time/zone";
 import { blockRange, cleanFavorites, type Opening, type SearchCriteria } from "@/lib/booking/search";
-import { hoursFor, whoOffers, type Stylist } from "@/lib/staff/stylists";
+import { asDoneBy, hoursFor, whoOffers, type Stylist } from "@/lib/staff/stylists";
 import type { BookableService } from "@/lib/booking/build";
 import type { PublicBusiness, PublicService } from "@/lib/data/public-booking";
 import { salonOpenings } from "@/lib/discovery/openings";
@@ -47,7 +47,7 @@ function eligible(b: PublicBusiness, serviceIds: string[], staffId: string | nul
 /** Open start minutes for one stylist on a date. */
 async function stylistStarts(b: PublicBusiness, s: Stylist, date: string, services: BookableService[]): Promise<number[]> {
   const busy = await loadBusy(b, date, s.id);
-  return availableStarts({ date, tz: b.timezone, hours: hoursFor(s, b.hours), services, busy, now: new Date(), settings: b.settings });
+  return availableStarts({ date, tz: b.timezone, hours: hoursFor(s, b.hours), services: asDoneBy(services, s), busy, now: new Date(), settings: b.settings });
 }
 
 /** Open start times ("HH:MM", salon time) for the chosen services on a date, with one stylist or anyone. */
@@ -169,7 +169,7 @@ export async function submitOnlineBooking(req: OnlineBookingRequest): Promise<On
     if (state.outstandingBalance > 0) return { ok: false, error: "There's an unpaid balance on your account. Please contact the salon to book." };
   }
 
-  const result = buildBooking({ services, start: zonedToUtc(req.date, minutes, b.timezone), rules: b.rules, policy: b.policy, client: state, now: new Date() });
+  const result = buildBooking({ services: asDoneBy(services, stylist), start: zonedToUtc(req.date, minutes, b.timezone), rules: b.rules, policy: b.policy, client: state, now: new Date() });
   if (result.errors.length) return { ok: false, error: result.errors[0] };
 
   // Signed in with a customer account? This salon's record joins it.
