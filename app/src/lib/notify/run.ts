@@ -1,3 +1,5 @@
+import { OPTED_OUT_ERROR } from "./inbound";
+import { setTextingFor } from "./optout";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { clientStanding } from "../policy/flags";
 import type { PolicySettings } from "../policy/types";
@@ -372,6 +374,8 @@ export async function deliverQueued(db: SupabaseClient, sender: Sender, now: Dat
     } else {
       await finish({ status: "failed", error: r.error });
       tally.failed++;
+      // The number replied STOP at some point: stop offering texts to it here too.
+      if (m.channel === "sms" && r.error && OPTED_OUT_ERROR.test(r.error)) await setTextingFor(db, m.to_address, false).catch(() => null);
     }
   }
   return tally;

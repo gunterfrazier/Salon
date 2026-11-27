@@ -83,3 +83,16 @@ export async function sendTestEmail(): Promise<{ ok: true; text: string } | { ok
   const r = await send(to, "Chairvana test email", `This is a test from Chairvana for ${ctx.business.name}.\n\nIf you can read this, email is working. Reminders, receipts and other client emails will look like this.\n\nhttps://chairvana.app/app`, { fromName: ctx.business.name });
   return r.ok ? { ok: true, text: `Sent to ${to}. Check your inbox (and spam, the first time).` } : { ok: false, error: r.error ?? "Couldn't send." };
 }
+
+/** A test text to your own mobile (the phone on your team record), to check Twilio. */
+export async function sendTestText(): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
+  const ctx = await getContext();
+  const { data } = await ctx.supabase.from("staff").select("phone").eq("id", ctx.staff.id).single();
+  const to = (data?.phone as string | null) ?? null;
+  if (!to) return { ok: false, error: "Add your mobile number first (Team → your name, or Account)." };
+  const { configuredSender } = await import("@/lib/notify/provider");
+  const send = configuredSender().sms;
+  if (!send) return { ok: false, error: "Texting isn't connected yet: add the Twilio keys in Cloudflare." };
+  const r = await send(to, `Chairvana test text for ${ctx.business.name}. If you got this, texting works. Reply STOP to opt out.`);
+  return r.ok ? { ok: true, text: `Sent to ${to}. It can take a minute to arrive.` } : { ok: false, error: `Not sent. ${r.error ?? ""}`.trim() };
+}
