@@ -173,7 +173,11 @@ Use a second email address (a Gmail you control) as a pretend client, and a thir
 
 ### Look, studio and extras
 - [ ] **Settings → Salon → Look & photos**: add a logo, cover photo, accent color and a few portfolio photos.
-- [ ] **Front desk → TV display**: open it on the shop TV or a tablet; check the chairs, specials and booking QR.
+- [ ] **Screens** → add a *Front window sign*; **Copy TV link**; open it on a TV or phone: OPEN/CLOSED and the week's hours.
+- [ ] **Screens** → add a *Waiting area*; add a **Message** slide (e.g. holiday hours) with a *Show until* date.
+- [ ] **Screens** → add a *Front desk* (staff, touch); **Front desk → Open on this device**; tap the view tabs.
+- [ ] **Graphics studio → Send to salon screens**; add it to a playlist with a **Picture** slide.
+- [ ] *Color bar* screen: **Client card** finds a client and shows their formulas.
 - [ ] **Marketing → Graphics studio**: save an Openings post and a Chair Wrapped story; post one.
 - [ ] Open **chairvana.app/intensity-salon** (your short link): it opens your salon page.
 - [ ] Book online with **☾ Quiet visit** ticked: the Quiet visit tag shows on Today and the calendar.
