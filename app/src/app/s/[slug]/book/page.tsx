@@ -1,4 +1,6 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { cleanWalkinSettings } from "@/lib/walkins/engine";
+import { lineBusinessBySlug } from "@/lib/walkins/server";
 import BookingWizard from "@/app/book/BookingWizard";
 import { whoAmI } from "@/lib/auth/whoami";
 import { bookableDates } from "@/lib/booking/availability";
@@ -24,6 +26,9 @@ export default async function SalonBookPage({ params, searchParams }: Props) {
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const b = await loadPublicBusiness({ slug });
   if (!b) notFound();
+  // Walk-ins-only salons don't take appointments online: send people to the line.
+  const lb = await lineBusinessBySlug(createAdminClient(), slug);
+  if (lb && cleanWalkinSettings(lb.walkin_settings).mode === "only") redirect(`/s/${b.slug}/line`);
   const services = await loadPublicServices(b.id);
   // Signed-in client of this salon? Fill in their details.
   let prefill: { firstName: string; lastName: string; phone: string; email: string } | undefined;

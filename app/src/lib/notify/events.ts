@@ -188,3 +188,26 @@ export async function notifySickOffer(businessId: string, appointmentId: string,
     return { sent: false, why: "Couldn't send" };
   }
 }
+
+/** "You're almost up" to someone in the walk-in line (text, else email). Never throws. */
+export async function notifyWalkinNext(businessId: string, clientId: string, walkinId: string, link: string): Promise<{ sent: boolean; why?: string }> {
+  try {
+    const db = createAdminClient();
+    const [b] = await loadBusinesses(db, siteUrl(), businessId);
+    if (!b) return { sent: false, why: "Salon not found" };
+    const { data: c } = await db.from("clients").select("first_name,phone,email,sms_opt_in").eq("id", clientId).eq("business_id", businessId).single();
+    if (!c) return { sent: false, why: "Client not found" };
+    const now = new Date();
+    // Texts only go to people who agreed; otherwise email if we have it.
+    const channels: ("sms" | "email")[] = c.phone && c.sms_opt_in ? ["sms"] : ["email"];
+    const rows = clientRows({ salon: b.salon, settings: b.settings, to: { clientId, firstName: c.first_name, phone: c.phone, email: c.email, smsOptIn: c.sms_opt_in }, appt: null, template: "walkinNext", channels, key: `walkin:${walkinId}`, sendAfter: now, extra: { walkin_link: link } });
+    const { data: inserted, error } = await db.from("messages").upsert(rows, { onConflict: "business_id,dedupe_key,channel", ignoreDuplicates: true }).select("id");
+    if (error) throw new Error(error.message);
+    const ids = (inserted ?? []).map((r) => r.id as string);
+    if (ids.length) await deliverQueued(db, configuredSender(), now, new Map([[b.salon.id, b.salon.name]]), ids);
+    return rows.some((r) => r.status === "queued") ? { sent: true } : { sent: false, why: rows.map((r) => r.error).filter(Boolean).join("; ") };
+  } catch (e) {
+    console.error(`[messages] walkinNext: ${(e as Error).message}`);
+    return { sent: false, why: "Couldn't send" };
+  }
+}

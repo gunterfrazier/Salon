@@ -38,6 +38,7 @@
     "rebookNudge": "Hi {first_name}, it's been {weeks} weeks since your last visit at {salon}. Ready for your next one? {book_link}",
     "waitlistOffer": "Hi {first_name}! A time opened up at {salon} for {services}: {openings}. First to book gets it: {waitlist_link}",
     "formRequest": "Hi {first_name}, before your {date} visit at {salon}, please fill out: {forms}. It takes a few minutes: {form_link}",
+    "walkinNext": "Hi {first_name}, you're almost up at {salon}! Please head in now. Your place in line: {walkin_link}",
     "sickReschedule": "Hi {first_name}, {stylist} is out sick and can't make your {date} {time} appointment at {salon}. We're sorry! Pick a new time here: {sick_link}"
   },
   "footer": "Reply STOP to opt out."

@@ -77,3 +77,21 @@ export async function kioskCheckIn(appointmentId: string, phone: string): Promis
   const forms = a ? (await pendingForms(ctx.supabase, ctx.business.id, a.client_id)).map((f) => ({ token: f.token, title: f.title })) : [];
   return { ok: true, forms };
 }
+
+/** A walk-in at the tablet: join the line, then their place and wait. */
+export async function kioskJoin(name: string, phone: string): Promise<{ ok: true; place: number; wait: string } | { ok: false; error: string }> {
+  const ctx = await getContext();
+  const no = denied(ctx, "booking.manage");
+  if (no) return no;
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const { joinLine, loadLine } = await import("@/lib/walkins/server");
+  const { lineBusiness } = await import("../walkins/business");
+  const db = createAdminClient();
+  const b = await lineBusiness(ctx);
+  const r = await joinLine(db, b, { name, phone, serviceIds: [], requested: null, source: "kiosk" });
+  if (!r.ok) return r;
+  const line = await loadLine(db, b);
+  const i = line.waiting.findIndex((w) => w.id === r.id);
+  revalidatePath("/app/walkins");
+  return { ok: true, place: i + 1, wait: i >= 0 ? line.waiting[i].wait : "" };
+}

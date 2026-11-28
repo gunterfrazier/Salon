@@ -1,5 +1,7 @@
 import SiteFooter from "@/components/SiteFooter";
 import { SalonLogo } from "@/components/SalonLogo";
+import { cleanWalkinSettings } from "@/lib/walkins/engine";
+import { lineBusinessBySlug, loadLine } from "@/lib/walkins/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadSalonProfile } from "@/lib/data/salon-profile";
@@ -42,7 +44,12 @@ export default async function SalonPage({ params, searchParams }: Props) {
   const tz = tzAbbrev(new Date(), s.timezone);
   const services = focus?.serviceIds ? s.services.filter((x) => focus.serviceIds!.includes(x.id)) : s.services;
   const cats = [...new Set(services.map((x) => x.category))];
-  const book = (q = "") => `/s/${s.slug}/book${q}`;
+  // Walk-ins: the current wait, and (walk-ins only) the line instead of booking.
+  const lb = await lineBusinessBySlug(createAdminClient(), s.slug);
+  const walk = lb ? cleanWalkinSettings(lb.walkin_settings) : null;
+  const line = lb && walk && walk.mode !== "off" ? await loadLine(createAdminClient(), lb).catch(() => null) : null;
+  const only = walk?.mode === "only";
+  const book = (q = "") => (only ? `/s/${s.slug}/line${q}` : `/s/${s.slug}/book${q}`);
 
   const reviews = await loadPublicReviews(createAdminClient(), s.id).catch(() => null);
   const rated = reviews && reviews.summary.count > 0 ? reviews : null;
@@ -84,10 +91,17 @@ export default async function SalonPage({ params, searchParams }: Props) {
               )}
             </div>
           </div>
+          {line && (
+            <p className="mt-4 text-sm text-muted">
+              {only ? "Walk-ins only, no appointment needed." : "Walk-ins welcome."} Current wait: <strong className="text-foreground">{line.anyone.wait}</strong>
+              {line.waiting.length ? ` · ${line.waiting.length} in line` : ""}
+            </p>
+          )}
           <div className="mt-5 flex flex-wrap items-center gap-2">
             <Link href={book(focus ? `?staff=${focus.id}` : "")} className={`rounded-full px-6 py-3 text-sm font-semibold ${s.branding.accent ? "bg-accent text-on-accent" : "bg-foreground text-background"}`}>
-              {focus ? `Book with ${focus.name.split(" ")[0]}` : "Book now"}
+              {only ? "Join the line" : focus ? `Book with ${focus.name.split(" ")[0]}` : "Book now"}
             </Link>
+            {line && !only && walk?.joinOnline && <Link href={`/s/${s.slug}/line`} className="rounded-full border border-line px-5 py-3 text-sm">Walk in: {line.anyone.wait}</Link>}
             {pref && <PreferButton businessId={s.id} label="Make this my salon" active={pref.business === s.id} />}
             {!pref && <Link href="/signup" className="text-sm text-muted underline">Save this salon</Link>}
           </div>
@@ -244,7 +258,7 @@ export default async function SalonPage({ params, searchParams }: Props) {
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur sm:hidden">
         <Link href={book(focus ? `?staff=${focus.id}` : "")} className={`block rounded-full py-3 text-center font-semibold ${s.branding.accent ? "bg-accent text-on-accent" : "bg-foreground text-background"}`}>
-          {focus ? `Book with ${focus.name.split(" ")[0]}` : "Book now"}
+          {only ? "Join the line" : focus ? `Book with ${focus.name.split(" ")[0]}` : "Book now"}
         </Link>
       </div>
       <SiteFooter />

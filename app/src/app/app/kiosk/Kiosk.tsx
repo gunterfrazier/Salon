@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { kioskCheckIn, kioskLookup, type KioskMatch } from "./actions";
+import { kioskCheckIn, kioskJoin, kioskLookup, type KioskMatch } from "./actions";
 
-type Step = { kind: "phone" } | { kind: "pick"; matches: KioskMatch[] } | { kind: "none" } | { kind: "done"; name: string; time: string; forms?: { token: string; title: string }[] } | { kind: "error"; text: string };
+type Step = { kind: "phone" } | { kind: "pick"; matches: KioskMatch[] } | { kind: "none" } | { kind: "done"; name: string; time: string; forms?: { token: string; title: string }[] } | { kind: "error"; text: string } | { kind: "walkin" } | { kind: "inline"; place: number; wait: string; name: string };
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"];
 
@@ -14,8 +14,9 @@ function pretty(d: string) {
 }
 
 /** Big-button check-in for the waiting area. Resets itself after a short while. */
-export default function Kiosk({ salon }: { salon: string }) {
+export default function Kiosk({ salon, walkins = false }: { salon: string; walkins?: boolean }) {
   const [digits, setDigits] = useState("");
+  const [name, setName] = useState("");
   const [step, setStep] = useState<Step>({ kind: "phone" });
   const [busy, start] = useTransition();
 
@@ -25,7 +26,7 @@ export default function Kiosk({ salon }: { salon: string }) {
     const t = setTimeout(() => {
       setStep({ kind: "phone" });
       setDigits("");
-    }, step.kind === "done" && step.forms?.length ? 60_000 : 20_000);
+    }, (step.kind === "done" && step.forms?.length) || step.kind === "walkin" ? 60_000 : 20_000);
     return () => clearTimeout(t);
   }, [step]);
 
@@ -45,6 +46,12 @@ export default function Kiosk({ salon }: { salon: string }) {
     start(async () => {
       const r = await kioskCheckIn(m.appointmentId, digits);
       setStep(r.ok ? { kind: "done", name: m.name, time: m.time, forms: r.forms } : { kind: "error", text: r.error });
+    });
+  const join = () =>
+    start(async () => {
+      const r = await kioskJoin(name, digits);
+      setStep(r.ok ? { kind: "inline", place: r.place, wait: r.wait, name } : { kind: "error", text: r.error });
+      setName("");
     });
   const reset = () => {
     setDigits("");
@@ -74,7 +81,32 @@ export default function Kiosk({ salon }: { salon: string }) {
           <button type="button" disabled={digits.length !== 10 || busy} onClick={find} className={`${big} w-full max-w-xs bg-accent px-6 py-4 text-on-accent disabled:opacity-40`}>
             {busy ? "Looking…" : "Find my appointment"}
           </button>
+          {walkins && (
+            <button type="button" disabled={busy} onClick={() => setStep({ kind: "walkin" })} className={`${big} w-full max-w-xs border border-line bg-surface px-6 py-4`}>
+              Walking in? Join the line
+            </button>
+          )}
         </>
+      )}
+
+      {step.kind === "walkin" && (
+        <form className="flex w-full max-w-sm flex-col gap-4" onSubmit={(e) => { e.preventDefault(); if (name.trim()) join(); }}>
+          <p className="text-xl">Your first name</p>
+          <input autoFocus className="rounded-2xl border border-line bg-surface px-4 py-4 text-center text-3xl" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} aria-label="Your first name" />
+          <p className="text-sm text-muted">{digits.length === 10 ? `We'll use ${pretty(digits)} if we need to reach you.` : "Add your mobile number on the first screen if you'd like a text."}</p>
+          <button disabled={busy || !name.trim()} className={`${big} bg-accent px-6 py-4 text-on-accent disabled:opacity-40`}>{busy ? "Adding…" : "Join the line"}</button>
+          <button type="button" onClick={reset} className="text-lg text-muted underline">Back</button>
+        </form>
+      )}
+
+      {step.kind === "inline" && (
+        <div className="space-y-3">
+          <p className="text-3xl font-semibold">Thanks, {step.name.split(" ")[0]}!</p>
+          <p className="text-2xl">{step.place === 1 ? "You're next." : `You're #${step.place} in line.`}</p>
+          {step.wait && <p className="text-xl text-muted">Wait: {step.wait}</p>}
+          <p className="text-lg">Have a seat. We&rsquo;ll call your name.</p>
+          <button type="button" onClick={reset} className={`${big} mt-4 border border-line px-8 py-3`}>Done</button>
+        </div>
       )}
 
       {step.kind === "pick" && (
@@ -110,7 +142,11 @@ export default function Kiosk({ salon }: { salon: string }) {
       {step.kind === "none" && (
         <>
           <p className="text-2xl font-semibold">We don&apos;t see an appointment for today with that number.</p>
-          <p className="text-xl text-muted">Please have a seat and let your stylist know you&apos;re here.</p>
+          {walkins ? (
+            <button type="button" onClick={() => setStep({ kind: "walkin" })} className={`${big} bg-accent px-8 py-4 text-on-accent`}>Join the walk-in line</button>
+          ) : (
+            <p className="text-xl text-muted">Please have a seat and let your stylist know you&apos;re here.</p>
+          )}
           <button type="button" onClick={reset} className={`${big} border border-line px-6 py-3`}>Try again</button>
         </>
       )}

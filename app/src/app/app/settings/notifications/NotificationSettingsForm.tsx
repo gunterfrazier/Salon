@@ -22,6 +22,7 @@ const TEMPLATE_LABEL: Record<TemplateKey, string> = {
   waitlistOffer: "Waitlist: a time opened",
   formRequest: "Forms to fill in",
   sickReschedule: "Stylist out sick: pick a new time",
+  walkinNext: "Walk-in: you're almost up",
 };
 
 function Switch({ label, on, onChange }: { label: string; on: boolean; onChange: (v: boolean) => void }) {
@@ -126,6 +127,7 @@ export default function NotificationSettingsForm({ initial, salon, timezone, con
     form_link: "chairvana.app/f/…",
     stylist: "Karissa",
     sick_link: "chairvana.app/o/…",
+    walkin_link: "chairvana.app/w/…",
   };
 
   const reminders = [...s.client.reminders].sort((a, b) => reminderMinutes(b) - reminderMinutes(a));

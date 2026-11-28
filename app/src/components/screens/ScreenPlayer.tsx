@@ -451,6 +451,36 @@ function SlideView({ slide, data, cycle, now, clientCard, onBusy }: { slide: Sli
       return <WeekSlide data={data} staffId={slide.staffId} onBusy={onBusy} />;
     case "month":
       return <MonthSlide data={data} staffId={slide.staffId} onBusy={onBusy} />;
+    case "walkins": {
+      const w = data.walkins;
+      if (!w) return null;
+      if (!w.on) return <Empty text="Walk-ins are off. Turn them on in Walk-ins." />;
+      return (
+        <div className="grid items-center gap-8 lg:grid-cols-[1fr_auto]">
+          <div>
+            <Title sub={w.inLine ? `${w.inLine} ${w.inLine === 1 ? "person" : "people"} in line` : "No one in line"}>Walk-in wait</Title>
+            <p className="font-display text-6xl leading-tight sm:text-7xl">{w.anyone}</p>
+            <p className="mt-1 text-2xl text-muted">with the next stylist free</p>
+            {w.stylists.length > 1 && (
+              <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {w.stylists.map((s) => (
+                  <li key={s.name} className="rounded-2xl border border-line p-4">
+                    <p className="text-xl font-semibold">{s.name}</p>
+                    <p className="text-2xl">{s.wait}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          {w.joinUrl && (
+            <div className="text-center">
+              <div className="rounded-3xl bg-white p-4"><QRCode text={w.joinUrl} className="size-48 sm:size-56" label="Join the line" /></div>
+              <p className="mt-2 text-xl">Scan to join the line</p>
+            </div>
+          )}
+        </div>
+      );
+    }
     case "inventory": {
       const list = data.inventory ?? [];
       return (

@@ -3,7 +3,7 @@
  * Words used by the site itself (or likely to be) can't be a salon's address.
  */
 export const RESERVED_SLUGS = new Set([
-  "admin", "api", "app", "apps", "auth", "book", "booking", "brand", "dev", "f", "o", "r", "s", "tv",
+  "admin", "api", "app", "apps", "auth", "book", "booking", "brand", "dev", "f", "o", "r", "s", "tv", "w",
   "find", "join", "signup", "signin", "login", "logout", "me", "settings", "new",
   "privacy", "terms", "texting", "help", "support", "about", "pricing", "blog", "contact",
   "favicon", "manifest", "robots", "sitemap", "sw", "static", "assets", "public", "www", "mail",

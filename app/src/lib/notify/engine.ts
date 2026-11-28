@@ -149,6 +149,7 @@ export const PLACEHOLDERS: Record<string, string> = {
   form_link: "Link to fill in the forms",
   stylist: "Stylist's first name",
   sick_link: "Sick day: link to pick a new time",
+  walkin_link: "Walk-in: link to their place in line",
 };
 
 /** SMS segments (160 GSM-7 chars, or 70 if it has emoji/special characters), to keep texts short and cheap. */

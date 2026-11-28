@@ -4,6 +4,7 @@ import { configuredSender } from "@/lib/notify/provider";
 import { runMessages } from "@/lib/notify/run";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runLicenseReminders } from "@/lib/licenses/server";
+import { runWalkinNotices } from "@/lib/walkins/server";
 
 /** Run by the 5-minute timer: send due reminders, release unpaid holds, send day previews, license renewal reminders. */
 export const dynamic = "force-dynamic";
@@ -22,7 +23,11 @@ export async function POST(request: NextRequest) {
       console.error(`[licenses] ${(e as Error).message}`);
       return { sent: 0 };
     });
-    return NextResponse.json({ ok: true, ...summary, licenseReminders: licenses.sent });
+    const walkins = await runWalkinNotices(db, now).catch((e) => {
+      console.error(`[walkins] ${(e as Error).message}`);
+      return { sent: 0 };
+    });
+    return NextResponse.json({ ok: true, ...summary, licenseReminders: licenses.sent, walkinNotices: walkins.sent });
   } catch (e) {
     console.error(`[messages] run failed: ${(e as Error).message}`);
     return NextResponse.json({ ok: false, error: "Run failed" }, { status: 500 });

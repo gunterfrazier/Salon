@@ -1,4 +1,6 @@
 import "server-only";
+import { cleanWalkinSettings } from "../walkins/engine";
+import { loadLine } from "../walkins/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { branding } from "../branding";
 import { buildBoard, reviewSnippet, type BoardColumn } from "../display/board";
@@ -56,6 +58,8 @@ export interface ScreenData {
   /** Staff screens with the week or month: each day's appointments, for tapping a day open. */
   days?: Record<DateStr, ScreenAppt[]>;
   inventory?: { name: string; level: "out" | "low"; onHand: number; vendor: string | null }[];
+  /** Walk-in wait: anyone and each stylist, how many in line, where to join. */
+  walkins?: { on: boolean; anyone: string; stylists: { name: string; wait: string }[]; inLine: number; joinUrl: string | null };
 }
 
 const STAFF_ONLY: SlideType[] = ["today", "week", "month", "inventory", "colorwheel", "clientcard"];
@@ -83,6 +87,16 @@ export async function loadScreenData(db: SupabaseClient, businessId: string, sli
     salon: { name: b.name, logoUrl: mediaUrl(look.logoPath), logoLook: { logoStyle: look.logoStyle, logoTint: look.logoTint }, accent: look.accent ?? null, bookUrl: `${site}/s/${b.slug}/book`, shortUrl: `${site.replace(/^https?:\/\//, "")}/${b.slug}`, tz, today },
     stylists: stylists.map((s) => ({ id: s.id, name: s.name, title: s.title })),
   };
+
+  if (need.has("walkins")) {
+    const { data: w } = await db.from("businesses").select("walkin_settings").eq("id", businessId).single();
+    const settings = cleanWalkinSettings(w?.walkin_settings);
+    if (settings.mode === "off") out.walkins = { on: false, anyone: "", stylists: [], inLine: 0, joinUrl: null };
+    else {
+      const line = await loadLine(db, { id: businessId, name: b.name, timezone: tz, business_hours: salonHours, holidays: b.holidays, walkin_settings: w?.walkin_settings }, now);
+      out.walkins = { on: true, anyone: line.anyone.wait, stylists: line.stylists.map((x) => ({ name: x.name.split(" ")[0], wait: x.wait })), inLine: line.waiting.length, joinUrl: settings.joinOnline ? `${site}/s/${b.slug}/line` : null };
+    }
+  }
 
   // Closures over the next ~6 weeks (hours sign, week and month views).
   const horizon = need.has("month") ? 42 : 21;

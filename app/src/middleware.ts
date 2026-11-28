@@ -4,7 +4,7 @@ import { shortSlug } from "@/lib/short-links";
 import { supabasePublicKeyOrNull, supabaseUrlOrNull } from "@/lib/supabase/env";
 
 /** Pages anyone can open without signing in. */
-const PUBLIC = [/^\/app\/login(\/|$)/, /^\/auth\//, /^\/api\/health$/, /^\/api\/cron\//, /^\/book(\/|$)/, /^\/s\//, /^\/find(\/|$)/, /^\/join(\/|$)/, /^\/signup(\/|$)/, /^\/$/, /^\/(privacy|terms|texting)$/, /^\/f\//, /^\/o\//, /^\/r\//, /^\/tv(\/|$)/, /^\/api\/screens\//, /^\/api\/twilio\//];
+const PUBLIC = [/^\/app\/login(\/|$)/, /^\/auth\//, /^\/api\/health$/, /^\/api\/cron\//, /^\/book(\/|$)/, /^\/s\//, /^\/find(\/|$)/, /^\/join(\/|$)/, /^\/signup(\/|$)/, /^\/$/, /^\/(privacy|terms|texting)$/, /^\/f\//, /^\/o\//, /^\/w\//, /^\/r\//, /^\/tv(\/|$)/, /^\/api\/screens\//, /^\/api\/twilio\//];
 
 /**
  * Edge middleware (not proxy.ts): the Cloudflare/OpenNext build supports Edge

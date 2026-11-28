@@ -5,7 +5,7 @@ import { cleanSchedule, type ScheduleRule } from "./playback";
 export type Audience = "public" | "staff";
 
 export const SLIDE_TYPES = [
-  "hours", "book", "specials", "reviews", "portfolio", "products", "image", "video", "message", "openings", "team", "board",
+  "hours", "book", "specials", "reviews", "portfolio", "products", "image", "video", "message", "openings", "walkins", "team", "board",
   "today", "week", "month", "inventory", "colorwheel", "clientcard",
 ] as const;
 export type SlideType = (typeof SLIDE_TYPES)[number];
@@ -31,6 +31,7 @@ export const SLIDES: Record<SlideType, SlideInfo> = {
   video: { label: "Video", hint: "A short silent video loop (MP4 or WebM), like a brand clip.", audience: "public", seconds: 20 },
   message: { label: "Message", hint: "Your own headline and text: holiday hours, news, a welcome.", audience: "public", seconds: 12 },
   openings: { label: "Open times today", hint: "Times still open today (no client names).", audience: "public", seconds: 12 },
+  walkins: { label: "Walk-in wait", hint: "The current walk-in wait for anyone and each stylist, and how many are in line.", audience: "public", seconds: 15 },
   team: { label: "Meet the team", hint: "Your stylists and their specialties.", audience: "public", seconds: 12 },
   board: { label: "Who's in the chair", hint: "Today's appointments, first name and last initial only.", audience: "public", seconds: 20 },
   today: { label: "Today's schedule", hint: "Every appointment today with client names, services and notes.", audience: "staff", seconds: 30 },
