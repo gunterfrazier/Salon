@@ -31,7 +31,7 @@ Still to do: the per-salon setting for **who keeps the clients** when a stylist 
 - **License check:** there's no national service, so each state board's lookup is used. To start, it's confirmed by hand with a link to the board's lookup page. Automatic checks can be added state by state.
 - **Photo ID:** Stripe Identity (ID plus selfie, about $1.50 per check). Stripe keeps the ID images; Chairvana doesn't. This waits on the Stripe account.
 
-## 4. Sick days and substitutes
+## 4. Sick days and substitutes (built; texts to clients start once Twilio is approved, email works now)
 - "Out sick" for a day or a range of days lists the affected appointments. The salon's settings decide what happens next.
 - **Notify and reschedule:** each client gets a link to rebook.
 - **Substitutes, if the salon allows them:** the link also shows other stylists at the salon who do that service and have real openings.
