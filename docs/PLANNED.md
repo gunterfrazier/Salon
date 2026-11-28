@@ -51,7 +51,7 @@ Still to do: the per-salon setting for **who keeps the clients** when a stylist 
   - the credit lands on the client's account and applies automatically at checkout;
   - deposits move to the new appointment.
 
-## 5. Walk-ins
+## 5. Walk-ins (built; "almost up" texts start once Twilio is approved, email works now)
 - Off, or on. The salon runs one of three ways: **appointments only**, **both**, or **walk-ins only** (barbershops).
 - **Joining the queue:** at the check-in tablet, at the front desk, or online if the salon allows it. The client picks a stylist or **next available**. A walk-in only fits into a gap before that stylist's next appointment.
 - **Assignment, a stack of rules the salon sets:**

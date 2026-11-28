@@ -198,6 +198,8 @@ Use a second email address (a Gmail you control) as a pretend client, and a thir
 - [ ] Optional: turn on **Don't book stylists whose license has expired** once everyone's license is on file.
 - [ ] **Policies → Sick days**: choose whether to offer other stylists, and (optional) discounts with who pays.
 - [ ] Book a test appointment for a pretend client with a test stylist, then **Out sick**: mark that stylist out and send the link. Open it as the client and pick a new time with someone else: the calendar shows the move and discount; Out sick shows *Rescheduled*. **Back early** puts the stylist back.
+- [ ] **Walk-ins → Walk-in settings**: turn walk-ins on, choose who takes them and who's next. Add a pretend walk-in, check the likely stylist and wait, tap **Start** (it shows on Today for checkout).
+- [ ] Check-in tablet: **Walking in? Join the line**. Optional: join online from your salon page; add a **Walk-in wait** slide to the waiting-area screen.
 - [ ] Optional, on a Google TV / Android TV: install the **Chairvana TV** test app (GitHub → Salon → Actions → *Chairvana TV* → newest run → `chairvana-tv-debug`), open it, and pair it with the code. Steps: `android-tv/README.md`.
 - [ ] **Marketing → Graphics studio**: save an Openings post and a Chair Wrapped story; post one.
 - [ ] Open **chairvana.app/intensity-salon** (your short link): it opens your salon page.
