@@ -145,3 +145,46 @@ export async function notifyClient(businessId: string, clientId: string, templat
     return { sent: false, why: "Couldn't send" };
   }
 }
+
+/**
+ * "Your stylist is out sick: pick a new time" for one appointment, by text
+ * and/or email (the salon's change-notice channels; quiet hours respected).
+ * Never throws.
+ */
+export async function notifySickOffer(businessId: string, appointmentId: string, link: string, stylist: string, attempt = 0): Promise<{ sent: boolean; why?: string }> {
+  try {
+    const db = createAdminClient();
+    const [b] = await loadBusinesses(db, siteUrl(), businessId);
+    if (!b) return { sent: false, why: "Salon not found" };
+    const { data: a } = await db
+      .from("appointments")
+      .select("id,client_id,start_at,clients(first_name,phone,email,sms_opt_in),appointment_services(sort,services(name))")
+      .eq("business_id", businessId)
+      .eq("id", appointmentId)
+      .single();
+    if (!a) return { sent: false, why: "Appointment not found" };
+    const c = a.clients as unknown as { first_name: string; phone: string | null; email: string | null; sms_opt_in: boolean } | null;
+    const lines = (a.appointment_services as unknown as { sort: number; services: { name: string } | null }[]) ?? [];
+    const now = new Date();
+    const rows = clientRows({
+      salon: b.salon,
+      settings: b.settings,
+      to: { clientId: a.client_id, firstName: c?.first_name ?? "", phone: c?.phone ?? null, email: c?.email ?? null, smsOptIn: !!c?.sms_opt_in },
+      appt: { id: a.id, start: new Date(a.start_at), services: [...lines].sort((x, y) => x.sort - y.sort).map((l) => l.services?.name ?? "Service"), depositDue: 0 },
+      template: "sickReschedule",
+      channels: b.settings.client.change.channels?.length ? b.settings.client.change.channels : ["sms", "email"],
+      key: `sick:${appointmentId}:${link.slice(-12)}${attempt ? `:${attempt}` : ""}`,
+      sendAfter: afterQuiet(now, b.salon.timezone, b.settings.quietHours),
+      extra: { stylist, sick_link: link },
+    });
+    const { data: inserted, error } = await db.from("messages").upsert(rows, { onConflict: "business_id,dedupe_key,channel", ignoreDuplicates: true }).select("id");
+    if (error) throw new Error(error.message);
+    const ids = (inserted ?? []).map((r) => r.id as string);
+    if (ids.length) await deliverQueued(db, configuredSender(), now, new Map([[b.salon.id, b.salon.name]]), ids);
+    const queued = rows.filter((r) => r.status === "queued");
+    return queued.length ? { sent: true } : { sent: false, why: rows.map((r) => r.error).filter(Boolean).join("; ") || "No way to reach them" };
+  } catch (e) {
+    console.error(`[messages] sickReschedule: ${(e as Error).message}`);
+    return { sent: false, why: "Couldn't send" };
+  }
+}

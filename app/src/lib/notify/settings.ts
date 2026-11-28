@@ -26,7 +26,8 @@ export type TemplateKey =
   | "reviewRequest"
   | "rebookNudge"
   | "waitlistOffer"
-  | "formRequest";
+  | "formRequest"
+  | "sickReschedule";
 
 export interface NotificationSettings {
   /** Client texts/emails that would land inside this window ("HH:MM" salon time; may wrap midnight) are moved out of it. */

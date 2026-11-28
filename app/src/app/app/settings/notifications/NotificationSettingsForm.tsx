@@ -21,6 +21,7 @@ const TEMPLATE_LABEL: Record<TemplateKey, string> = {
   rebookNudge: "Time to rebook",
   waitlistOffer: "Waitlist: a time opened",
   formRequest: "Forms to fill in",
+  sickReschedule: "Stylist out sick: pick a new time",
 };
 
 function Switch({ label, on, onChange }: { label: string; on: boolean; onChange: (v: boolean) => void }) {
@@ -123,6 +124,8 @@ export default function NotificationSettingsForm({ initial, salon, timezone, con
     waitlist_link: "chairvana.app/s/your-salon/book",
     forms: "New client form, Patch test & color consent",
     form_link: "chairvana.app/f/…",
+    stylist: "Karissa",
+    sick_link: "chairvana.app/o/…",
   };
 
   const reminders = [...s.client.reminders].sort((a, b) => reminderMinutes(b) - reminderMinutes(a));

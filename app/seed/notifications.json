@@ -37,7 +37,8 @@
     "reviewRequest": "Thanks for coming in, {first_name}! How was your visit at {salon}? Tap to rate it: {review_link}",
     "rebookNudge": "Hi {first_name}, it's been {weeks} weeks since your last visit at {salon}. Ready for your next one? {book_link}",
     "waitlistOffer": "Hi {first_name}! A time opened up at {salon} for {services}: {openings}. First to book gets it: {waitlist_link}",
-    "formRequest": "Hi {first_name}, before your {date} visit at {salon}, please fill out: {forms}. It takes a few minutes: {form_link}"
+    "formRequest": "Hi {first_name}, before your {date} visit at {salon}, please fill out: {forms}. It takes a few minutes: {form_link}",
+    "sickReschedule": "Hi {first_name}, {stylist} is out sick and can't make your {date} {time} appointment at {salon}. We're sorry! Pick a new time here: {sick_link}"
   },
   "footer": "Reply STOP to opt out."
 }

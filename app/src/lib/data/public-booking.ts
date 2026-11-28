@@ -35,12 +35,13 @@ export type PublicService = ServiceRow & { category: string; categorySort: numbe
  * A salon that takes online bookings, by its web address (slug) or id. Only
  * approved salons. With neither, the only approved salon (single-salon setups).
  */
-export async function loadPublicBusiness(sel: { slug?: string | null; id?: string | null } = {}): Promise<PublicBusiness | null> {
+export async function loadPublicBusiness(sel: { slug?: string | null; id?: string | null; anyStatus?: boolean } = {}): Promise<PublicBusiness | null> {
   const admin = createAdminClient();
   let q = admin
     .from("businesses")
-    .select("id,slug,name,timezone,business_hours,policy_settings,pricing_rules,booking_settings,payment_methods,holidays")
-    .eq("status", "approved");
+    .select("id,slug,name,timezone,business_hours,policy_settings,pricing_rules,booking_settings,payment_methods,holidays");
+  // Public pages only show approved salons; a client's own link (e.g. a sick-day reschedule) works for any.
+  if (!sel.anyStatus) q = q.eq("status", "approved");
   if (sel.id) q = q.eq("id", sel.id);
   else if (sel.slug) q = q.eq("slug", sel.slug.toLowerCase());
   const { data: rows } = await q.order("created_at").limit(2);
