@@ -6,6 +6,8 @@ import { denied, getContext, type Ctx } from "@/lib/context";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { cleanJoinRole, newJoinCode } from "@/lib/team/codes";
 import { addToTeam } from "@/lib/team/join";
+import { cleanTeamSettings } from "@/lib/team/clients";
+import { copyClientsToOwnBusiness, ownBusinessOf } from "@/lib/team/copy";
 
 type Result = { ok: true } | { ok: false; error: string };
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -273,4 +275,34 @@ export async function reinstateMember(id: string): Promise<Result> {
   done();
   revalidatePath("/app/calendar");
   return { ok: true };
+}
+
+// --- Who keeps the clients when someone leaves ---------------------------------
+
+export async function saveTeamSettings(raw: unknown): Promise<Result> {
+  const ctx = await getContext();
+  const no = denied(ctx, "team.manage");
+  if (no) return no;
+  const o = ownerOnly(ctx);
+  if (o) return o;
+  const { error } = await ctx.supabase.from("businesses").update({ team_settings: cleanTeamSettings(raw) }).eq("id", ctx.business.id);
+  if (error) return { ok: false, error: error.message };
+  done();
+  return { ok: true };
+}
+
+/** Copy a (removed) team member's clients into their own Chairvana business, if they have one. */
+export async function copyClientsToMember(id: string): Promise<Result & { text?: string }> {
+  const ctx = await getContext();
+  const no = denied(ctx, "team.manage");
+  if (no) return no;
+  const db = createAdminClient();
+  const { data: m } = await db.from("staff").select("id,display_name,auth_user_id,active").eq("business_id", ctx.business.id).eq("id", id).maybeSingle();
+  if (!m) return { ok: false, error: "Team member not found." };
+  if (m.active) return { ok: false, error: "Remove them from the team first." };
+  const own = await ownBusinessOf(db, (m.auth_user_id as string | null) ?? null);
+  if (!own) return { ok: false, error: `${m.display_name} doesn't have their own business on Chairvana yet. Once they sign up as a stylist (chairvana.app/signup), come back here and copy their clients.` };
+  const r = await copyClientsToOwnBusiness(db, ctx.business.id, m.id as string, own.id);
+  done();
+  return { ok: true, text: `Copied ${m.display_name}'s clients to ${own.name}: ${r.added} added${r.matched ? `, ${r.matched} already there` : ""}, ${r.formulas} color formula${r.formulas === 1 ? "" : "s"}. ${ctx.business.name} keeps its records too.` };
 }

@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { PERMISSIONS, permissionsFor, ROLES, roleLabel, type Overrides, type Permission, type Role, type RoleOverrides } from "@/lib/auth/permissions";
-import { acceptJoinRequest, addTeamMember, createJoinCode, declineJoinRequest, reinstateMember, revokeJoinCode, saveMemberPermissions, saveRolePermissions, saveStylistSettings, suspendMember, updateTeamMember } from "./actions";
+import { acceptJoinRequest, addTeamMember, copyClientsToMember, createJoinCode, declineJoinRequest, reinstateMember, revokeJoinCode, saveMemberPermissions, saveRolePermissions, saveStylistSettings, saveTeamSettings, suspendMember, updateTeamMember } from "./actions";
+import { KEEP_ROLES, keepRuleFor, type KeepRule, type TeamSettings } from "@/lib/team/clients";
 import QRCode from "@/components/QRCode";
 import { joinLink, JOIN_ROLES } from "@/lib/team/codes";
 import type { Hours } from "@/lib/context";
@@ -17,6 +18,8 @@ interface Member {
   active: boolean;
   /** Suspended (e.g. leave): can't sign in to the salon or be booked. */
   suspended?: { at: string; note: string | null } | null;
+  /** When their clients were copied to their own business (after leaving). */
+  copiedAt?: string | null;
   /** Has signed in at least once. */
   joined: boolean;
   /** Access changes just for this person. */
@@ -30,7 +33,7 @@ const input = "rounded-lg border border-line bg-background px-3 py-2 text-base";
 const btn = "rounded-lg border border-line px-3 py-2 text-sm disabled:opacity-50";
 const EDITABLE: Role[] = ["manager", "stylist", "front_desk", "renter"];
 
-export default function TeamView({ me, isOwner, salon, members, overrides, services = [], salonHours = {}, site = "https://chairvana.app", requests = [], codes = [] }: { me: string; isOwner: boolean; salon: string; members: Member[]; overrides: RoleOverrides; services?: Svc[]; salonHours?: Hours; site?: string; requests?: JoinRequest[]; codes?: JoinCode[] }) {
+export default function TeamView({ me, isOwner, salon, members, overrides, services = [], salonHours = {}, site = "https://chairvana.app", requests = [], codes = [], teamSettings }: { me: string; isOwner: boolean; salon: string; members: Member[]; overrides: RoleOverrides; services?: Svc[]; salonHours?: Hours; site?: string; requests?: JoinRequest[]; codes?: JoinCode[]; teamSettings: TeamSettings }) {
   const [editing, setEditing] = useState<Member | null>(null);
   const [access, setAccess] = useState<Member | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -59,7 +62,7 @@ export default function TeamView({ me, isOwner, salon, members, overrides, servi
         <h2 className="border-b border-line px-4 py-2 font-semibold">People ({active.length})</h2>
         <ul className="divide-y divide-line">
           {active.map((m) => (
-            <MemberRow key={m.id} m={m} me={me} roleChoices={roleChoices} isOwner={isOwner} pending={pending} run={run} salon={salon} onSchedule={() => setEditing(m)} onAccess={() => setAccess(m)} />
+            <MemberRow key={m.id} m={m} me={me} roleChoices={roleChoices} isOwner={isOwner} pending={pending} run={run} salon={salon} onSchedule={() => setEditing(m)} onAccess={() => setAccess(m)} copyOnLeave={keepRuleFor(teamSettings, m.role) === "copy"} onCopied={(text) => setMsg({ ok: true, text })} />
           ))}
         </ul>
         {suspended.length > 0 && (
@@ -83,9 +86,16 @@ export default function TeamView({ me, isOwner, salon, members, overrides, servi
             <summary className="cursor-pointer">Removed ({off.length})</summary>
             <ul className="mt-2 space-y-1">
               {off.map((m) => (
-                <li key={m.id} className="flex items-center justify-between gap-2">
-                  <span>{m.name} · {roleLabel(m.role)}</span>
-                  <button className={btn} disabled={pending} onClick={() => run(() => updateTeamMember(m.id, { active: true }), `${m.name} can sign in again.`)}>Turn back on</button>
+                <li key={m.id} className="flex flex-wrap items-center justify-between gap-2">
+                  <span>{m.name} · {roleLabel(m.role)}{m.copiedAt && <span className="block text-xs text-muted">Clients copied to their own business {new Date(m.copiedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>}</span>
+                  <span className="flex gap-1">
+                    {!m.copiedAt && m.joined && (
+                      <button className={btn} disabled={pending} onClick={() => confirm(`Copy ${m.name}'s clients (and their color formulas) into ${m.name.split(" ")[0]}'s own Chairvana business? ${salon} keeps its records too.`) && start(async () => { const r = await copyClientsToMember(m.id); setMsg(r.ok ? { ok: true, text: r.text ?? "Copied." } : { ok: false, text: r.error }); })}>
+                        Copy their clients
+                      </button>
+                    )}
+                    <button className={btn} disabled={pending} onClick={() => run(() => updateTeamMember(m.id, { active: true }), `${m.name} can sign in again.`)}>Turn back on</button>
+                  </span>
                 </li>
               ))}
             </ul>
@@ -97,8 +107,43 @@ export default function TeamView({ me, isOwner, salon, members, overrides, servi
       {editing && <StylistSheet m={editing} services={services} salonHours={salonHours} onClose={() => setEditing(null)} onSaved={(text) => { setEditing(null); setMsg({ ok: true, text }); }} />}
       <AddMember roleChoices={roleChoices} pending={pending} run={run} salon={salon} />
       <JoinCodes codes={codes} site={site} salon={salon} pending={pending} run={run} />
+      <ClientsOnLeave initial={teamSettings} isOwner={isOwner} salon={salon} />
       <RoleMatrix overrides={overrides} isOwner={isOwner} />
     </main>
+  );
+}
+
+/** Each salon's choice: when someone leaves, who keeps their clients (by role). */
+function ClientsOnLeave({ initial, isOwner, salon }: { initial: TeamSettings; isOwner: boolean; salon: string }) {
+  const [s, setS] = useState(initial);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [pending, start] = useTransition();
+  const LABEL: Record<string, string> = { renter: "Booth renters", stylist: "Stylists", manager: "Managers" };
+  return (
+    <section className="space-y-3 rounded-xl border border-line bg-surface p-4">
+      <div>
+        <h2 className="font-semibold">When someone leaves</h2>
+        <p className="text-sm text-muted">Who keeps the clients they served at {salon}. Either way, {salon} keeps its own records; nothing is deleted. A copy goes into their own Chairvana business, with color formulas from their appointments (not text consent).</p>
+      </div>
+      <ul className="space-y-2">
+        {KEEP_ROLES.map((k) => (
+          <li key={k} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+            <span className="font-medium">{LABEL[k]}</span>
+            <select className={input} disabled={!isOwner} value={s.clientsOnLeave[k]} onChange={(e) => setS({ clientsOnLeave: { ...s.clientsOnLeave, [k]: e.target.value as KeepRule } })} aria-label={`${LABEL[k]}: who keeps their clients`}>
+              <option value="salon">The salon keeps them</option>
+              <option value="copy">They get a copy too</option>
+            </select>
+          </li>
+        ))}
+      </ul>
+      {!isOwner && <p className="text-xs text-muted">Only an owner can change this.</p>}
+      {msg && <p role={msg.ok ? "status" : "alert"} className={`text-sm ${msg.ok ? "" : "font-semibold text-red-700 dark:text-red-300"}`}>{msg.text}</p>}
+      {isOwner && (
+        <button className="rounded-lg bg-foreground px-4 py-2 font-semibold text-background disabled:opacity-50" disabled={pending} onClick={() => start(async () => { const r = await saveTeamSettings(s); setMsg(r.ok ? { ok: true, text: "Saved." } : { ok: false, text: r.error }); })}>
+          Save
+        </button>
+      )}
+    </section>
   );
 }
 
@@ -266,7 +311,7 @@ function ShareInvite({ salon, name, email }: { salon: string; name: string; emai
   );
 }
 
-function MemberRow({ m, me, roleChoices, isOwner, pending, run, salon, onSchedule, onAccess }: { m: Member; me: string; roleChoices: typeof ROLES; isOwner: boolean; pending: boolean; run: (fn: () => Promise<{ ok: true } | { ok: false; error: string }>, ok?: string) => void; salon: string; onSchedule: () => void; onAccess: () => void }) {
+function MemberRow({ m, me, roleChoices, isOwner, pending, run, salon, onSchedule, onAccess, copyOnLeave, onCopied }: { m: Member; me: string; roleChoices: typeof ROLES; isOwner: boolean; pending: boolean; run: (fn: () => Promise<{ ok: true } | { ok: false; error: string }>, ok?: string) => void; salon: string; onSchedule: () => void; onAccess: () => void; copyOnLeave: boolean; onCopied: (text: string) => void }) {
   const custom = Object.keys(m.permissions ?? {}).length;
   const lockedOwner = m.role === "owner" && !isOwner;
   return (
@@ -330,7 +375,20 @@ function MemberRow({ m, me, roleChoices, isOwner, pending, run, salon, onSchedul
           >
             Suspend
           </button>
-          <button className={btn} disabled={pending} onClick={() => confirm(`Remove ${m.name} from the team? They won't be able to sign in to ${salon}. Their history stays, and you can turn them back on later.`) && run(() => updateTeamMember(m.id, { active: false }), `${m.name} was removed from the team.`)}>
+          <button
+            className={btn}
+            disabled={pending}
+            onClick={() =>
+              confirm(`Remove ${m.name} from the team? They won't be able to sign in to ${salon}. Their history stays, and you can turn them back on later.${copyOnLeave ? ` Per your setting, they get a copy of their clients in their own Chairvana business.` : ""}`) &&
+              run(async () => {
+                const r = await updateTeamMember(m.id, { active: false });
+                if (!r.ok || !copyOnLeave) return r;
+                const c = await copyClientsToMember(m.id);
+                onCopied(c.ok ? `${m.name} was removed. ${c.text ?? ""}` : `${m.name} was removed. Their clients weren't copied: ${c.error}`);
+                return { ok: true as const };
+              }, copyOnLeave ? undefined : `${m.name} was removed from the team.`)
+            }
+          >
             Remove
           </button>
         </>

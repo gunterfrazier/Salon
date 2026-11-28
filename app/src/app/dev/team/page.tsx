@@ -1,3 +1,4 @@
+import { DEFAULT_TEAM } from "@/lib/team/clients";
 import { notFound } from "next/navigation";
 import TeamView from "@/app/app/team/TeamView";
 
@@ -8,6 +9,7 @@ export default function DevTeam() {
   if (process.env.NODE_ENV === "production") notFound();
   return (
     <TeamView
+      teamSettings={DEFAULT_TEAM}
       me="1"
       isOwner
       salon="Intensity Salon"
