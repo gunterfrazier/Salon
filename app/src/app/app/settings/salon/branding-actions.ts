@@ -38,7 +38,9 @@ export async function uploadSalonImage(form: FormData): Promise<Result> {
   } else {
     const cur = branding(b?.branding);
     const old = kind === "logo" ? cur.logoPath : cur.coverPath;
-    const next = { ...cur, [kind === "logo" ? "logoPath" : "coverPath"]: path };
+    // A new logo: a transparent one shows on its own over the cover; others in a tile.
+    const look = kind === "logo" ? { logoStyle: form.get("transparent") === "1" ? ("free" as const) : ("badge" as const), logoTint: "original" as const } : {};
+    const next = { ...cur, ...look, [kind === "logo" ? "logoPath" : "coverPath"]: path };
     const { error: e3 } = await ctx.supabase.from("businesses").update({ branding: next }).eq("id", ctx.business.id);
     if (e3) return { ok: false, error: "Couldn't save." };
     if (old) await ctx.supabase.storage.from("salon-media").remove([old]);
@@ -68,6 +70,19 @@ export async function setAccent(hex: string | null): Promise<Result> {
   const next = branding({ ...branding(b?.branding), accent: hex });
   if (hex && !next.accent) return { ok: false, error: "Pick a color." };
   await ctx.supabase.from("businesses").update({ branding: next }).eq("id", ctx.business.id);
+  refresh(b?.slug);
+  return { ok: true };
+}
+
+/** How the logo shows over the cover: in a tile, or on its own (transparent logos), as uploaded or white. */
+export async function setLogoLook(style: "badge" | "free", tint: "original" | "white"): Promise<Result> {
+  const ctx = await getContext();
+  const no = denied(ctx, "settings.salon");
+  if (no) return no;
+  const { data: b } = await ctx.supabase.from("businesses").select("slug,branding").eq("id", ctx.business.id).single();
+  const next = branding({ ...branding(b?.branding), logoStyle: style, logoTint: tint });
+  const { error } = await ctx.supabase.from("businesses").update({ branding: next }).eq("id", ctx.business.id);
+  if (error) return { ok: false, error: "Couldn't save." };
   refresh(b?.slug);
   return { ok: true };
 }

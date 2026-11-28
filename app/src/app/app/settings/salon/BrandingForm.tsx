@@ -2,29 +2,44 @@
 
 /* eslint-disable @next/next/no-img-element -- user photos from storage */
 import { useRef, useState, useTransition } from "react";
+import { SalonLogo } from "@/components/SalonLogo";
 import { ACCENT_PRESETS, onAccent } from "@/lib/branding";
-import { shrinkImage } from "@/lib/ui/resize";
-import { deletePhoto, removeBrandImage, setAccent, uploadSalonImage } from "./branding-actions";
+import { shrinkImage, shrinkLogo } from "@/lib/ui/resize";
+import { deletePhoto, removeBrandImage, setAccent, setLogoLook, uploadSalonImage } from "./branding-actions";
 
 type Photo = { id: string; url: string; caption: string | null; staff: string | null };
 const btn = "rounded-full border border-line px-3 py-1.5 text-sm hover:bg-background disabled:opacity-50";
 
-export default function BrandingForm({ name, accent, logoUrl, coverUrl, photos, stylists }: { name: string; accent: string | null; logoUrl: string | null; coverUrl: string | null; photos: Photo[]; stylists: { id: string; name: string }[] }) {
+export default function BrandingForm({ name, accent, logoUrl, coverUrl, photos, stylists, logoStyle = "badge", logoTint = "original" }: { name: string; accent: string | null; logoUrl: string | null; coverUrl: string | null; photos: Photo[]; stylists: { id: string; name: string }[]; logoStyle?: "badge" | "free"; logoTint?: "original" | "white" }) {
   const [color, setColor] = useState(accent ?? "#3f6a84");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
+  const look = { logoStyle, logoTint };
+  const setLook = (style: "badge" | "free", tint: "original" | "white") =>
+    start(async () => {
+      const r = await setLogoLook(style, tint);
+      setMsg(r.ok ? { ok: true, text: "Logo look saved." } : { ok: false, text: r.error });
+    });
 
   const upload = (kind: "logo" | "cover" | "photo", file: File, extra: Record<string, string> = {}) =>
     start(async () => {
       setMsg(null);
       try {
-        const small = await shrinkImage(file, kind === "logo" ? 800 : 1800);
         const f = new FormData();
         f.set("kind", kind);
-        f.set("file", small);
+        let transparent = false;
+        if (kind === "logo") {
+          // Keep a transparent background (PNG); it then shows on its own over the cover.
+          const logo = await shrinkLogo(file);
+          transparent = logo.transparent;
+          f.set("file", logo.file);
+          f.set("transparent", logo.transparent ? "1" : "0");
+        } else {
+          f.set("file", await shrinkImage(file, 1800));
+        }
         for (const [k, v] of Object.entries(extra)) f.set(k, v);
         const r = await uploadSalonImage(f);
-        setMsg(r.ok ? { ok: true, text: "Saved." } : { ok: false, text: r.error });
+        setMsg(r.ok ? { ok: true, text: kind === "logo" ? (transparent ? "Logo saved. It has a transparent background, so it shows on its own over your cover." : "Logo saved. It shows in a tile; upload a PNG with a transparent background to show it on its own.") : "Saved." } : { ok: false, text: r.error });
       } catch {
         setMsg({ ok: false, text: "Couldn't read that picture." });
       }
@@ -43,9 +58,7 @@ export default function BrandingForm({ name, accent, logoUrl, coverUrl, photos, 
           {coverUrl && <img src={coverUrl} alt="" className="absolute inset-0 size-full object-cover" />}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-black/10" />
           <div className="absolute bottom-3 left-4 flex items-end gap-3">
-            <span className="flex size-14 items-center justify-center overflow-hidden rounded-xl border border-white/20 bg-[#17171b] font-display text-xl text-[#f5efe6]">
-              {logoUrl ? <img src={logoUrl} alt="" className="size-full object-cover" /> : name.split(/\s+/).slice(0, 2).map((w) => w[0]).join("")}
-            </span>
+            <SalonLogo url={logoUrl} name={name} look={look} tileClass="size-14 rounded-xl border border-white/20 bg-[#17171b] font-display text-xl text-[#f5efe6]" freeClass="h-14 w-auto max-w-[40%]" />
             <span className="font-display text-2xl text-[#f5efe6]">{name}</span>
           </div>
         </div>
@@ -56,9 +69,30 @@ export default function BrandingForm({ name, accent, logoUrl, coverUrl, photos, 
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <Picker label="Logo" hint="Square works best." has={!!logoUrl} pending={pending} onPick={(f) => upload("logo", f)} onRemove={() => start(async () => void (await removeBrandImage("logo")))} />
+        <Picker label="Logo" hint="A PNG with a transparent background shows on its own over your cover. Square works best for a tile." has={!!logoUrl} pending={pending} onPick={(f) => upload("logo", f)} onRemove={() => start(async () => void (await removeBrandImage("logo")))} />
         <Picker label="Cover photo" hint="Wide photo of your space or your work." has={!!coverUrl} pending={pending} onPick={(f) => upload("cover", f)} onRemove={() => start(async () => void (await removeBrandImage("cover")))} />
       </div>
+
+      {logoUrl && (
+        <fieldset className="space-y-2 rounded-2xl border border-line bg-surface p-4">
+          <legend className="sr-only">How the logo shows</legend>
+          <p className="font-semibold">How the logo shows</p>
+          <div className="flex flex-wrap gap-2">
+            {([["badge", "In a tile"], ["free", "On its own (transparent logos)"]] as const).map(([k, label]) => (
+              <button key={k} type="button" aria-pressed={logoStyle === k} disabled={pending} onClick={() => setLook(k, logoTint)} className={`rounded-full border px-3 py-1.5 text-sm disabled:opacity-50 ${logoStyle === k ? "border-foreground bg-foreground text-background" : "border-line"}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+          {logoStyle === "free" && (
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={logoTint === "white"} disabled={pending} onChange={(e) => setLook("free", e.target.checked ? "white" : "original")} />
+              Make it white (for dark lettering that&rsquo;s hard to see on the cover)
+            </label>
+          )}
+          <p className="text-xs text-muted">&ldquo;On its own&rdquo; only looks right when the logo&rsquo;s background is transparent; otherwise its box shows over the photo.</p>
+        </fieldset>
+      )}
 
       <div className="space-y-2 rounded-2xl border border-line bg-surface p-4">
         <p className="font-semibold">Accent color</p>

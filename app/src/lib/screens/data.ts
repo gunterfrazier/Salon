@@ -40,7 +40,7 @@ export interface DaySummary {
 
 /** Everything a screen's slides need, loaded once per refresh. Staff-only parts are only filled on staff screens. */
 export interface ScreenData {
-  salon: { name: string; logoUrl: string | null; accent: string | null; bookUrl: string; shortUrl: string; tz: string; today: DateStr };
+  salon: { name: string; logoUrl: string | null; logoLook?: { logoStyle: "badge" | "free"; logoTint: "original" | "white" }; accent: string | null; bookUrl: string; shortUrl: string; tz: string; today: DateStr };
   stylists: { id: string; name: string; title: string | null }[];
   hours?: { status: OpenStatus; week: DayHours[] };
   specials?: { code: string; text: string; until: string | null }[];
@@ -80,7 +80,7 @@ export async function loadScreenData(db: SupabaseClient, businessId: string, sli
   const stylists = toStylists((staffRows ?? []) as StaffRow[]);
 
   const out: ScreenData = {
-    salon: { name: b.name, logoUrl: mediaUrl(look.logoPath), accent: look.accent ?? null, bookUrl: `${site}/s/${b.slug}/book`, shortUrl: `${site.replace(/^https?:\/\//, "")}/${b.slug}`, tz, today },
+    salon: { name: b.name, logoUrl: mediaUrl(look.logoPath), logoLook: { logoStyle: look.logoStyle, logoTint: look.logoTint }, accent: look.accent ?? null, bookUrl: `${site}/s/${b.slug}/book`, shortUrl: `${site.replace(/^https?:\/\//, "")}/${b.slug}`, tz, today },
     stylists: stylists.map((s) => ({ id: s.id, name: s.name, title: s.title })),
   };
 

@@ -6,16 +6,29 @@ export interface Branding {
   /** Storage paths in the salon-media bucket. */
   logoPath: string | null;
   coverPath: string | null;
+  /** "badge": the logo in a tile. "free": a transparent logo shown on its own, over the cover. */
+  logoStyle: "badge" | "free";
+  /** Show the logo as uploaded, or all white (for dark lettering over the dark cover). */
+  logoTint: "original" | "white";
 }
 
-export const EMPTY_BRANDING: Branding = { accent: null, logoPath: null, coverPath: null };
+export const EMPTY_BRANDING: Branding = { accent: null, logoPath: null, coverPath: null, logoStyle: "badge", logoTint: "original" };
+
+/** CSS filter that turns a transparent logo white (keeps its shape, drops its colors). */
+export const WHITE_LOGO = "brightness(0) invert(1)";
 
 const HEX = /^#[0-9a-f]{6}$/i;
 
 export function branding(stored: unknown): Branding {
   const b = (stored ?? {}) as Partial<Branding>;
   const path = (p: unknown) => (typeof p === "string" && /^[0-9a-f-]{36}\/[\w./-]{1,120}$/.test(p) ? p : null);
-  return { accent: typeof b.accent === "string" && HEX.test(b.accent) ? b.accent.toLowerCase() : null, logoPath: path(b.logoPath), coverPath: path(b.coverPath) };
+  return {
+    accent: typeof b.accent === "string" && HEX.test(b.accent) ? b.accent.toLowerCase() : null,
+    logoPath: path(b.logoPath),
+    coverPath: path(b.coverPath),
+    logoStyle: b.logoStyle === "free" ? "free" : "badge",
+    logoTint: b.logoTint === "white" ? "white" : "original",
+  };
 }
 
 function luminance(hex: string): number {

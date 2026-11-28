@@ -12,6 +12,7 @@ import { SLIDES, type ScreenSettings, type Slide } from "@/lib/screens/slides";
 import { formatDay, formatTime, type DateStr } from "@/lib/time/zone";
 import ClientCard, { type ClientCardApi } from "./ClientCard";
 import ColorWheel from "./ColorWheel";
+import { SalonLogo } from "@/components/SalonLogo";
 
 const time = (iso: string, tz: string) => formatTime(new Date(iso), tz).replace(/\s[A-Z]{2,5}$/, "");
 const hm = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ""}` : `${m}m`);
@@ -156,7 +157,18 @@ export default function ScreenPlayer({ name, slides, settings, data, clientCard,
       {settings.header && (
         <header className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-            {data.salon.logoUrl ? <img src={data.salon.logoUrl} alt="" className="size-10 shrink-0 rounded-xl object-cover sm:size-14" /> : <img src="/brand/mark-ivory.png" alt="" className="h-9 w-auto shrink-0 sm:h-12" />}
+            {data.salon.logoUrl ? (
+              <SalonLogo
+                url={data.salon.logoUrl}
+                name={data.salon.name}
+                // White only reads on the dark looks.
+                look={{ logoStyle: data.salon.logoLook?.logoStyle ?? "badge", logoTint: theme === "light" ? "original" : (data.salon.logoLook?.logoTint ?? "original") }}
+                tileClass="size-10 rounded-xl sm:size-14"
+                freeClass="h-10 w-auto max-w-[30vw] sm:h-14"
+              />
+            ) : (
+              <img src="/brand/mark-ivory.png" alt="" className="h-9 w-auto shrink-0 sm:h-12" />
+            )}
             <div className="min-w-0">
               <p className="truncate font-display text-2xl leading-none sm:text-4xl">{data.salon.name}</p>
               <p className="mt-1 text-sm text-muted sm:text-lg">{formatDay(data.salon.today, { weekday: "long", month: "long", day: "numeric" })}</p>

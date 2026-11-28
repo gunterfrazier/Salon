@@ -1,4 +1,5 @@
 import SiteFooter from "@/components/SiteFooter";
+import { SalonLogo } from "@/components/SalonLogo";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadSalonProfile } from "@/lib/data/salon-profile";
@@ -45,7 +46,6 @@ export default async function SalonPage({ params, searchParams }: Props) {
 
   const reviews = await loadPublicReviews(createAdminClient(), s.id).catch(() => null);
   const rated = reviews && reviews.summary.count > 0 ? reviews : null;
-  const initials = s.name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
   const place = [s.city, s.state].filter(Boolean).join(", ");
 
   return (
@@ -71,10 +71,7 @@ export default async function SalonPage({ params, searchParams }: Props) {
             </div>
           </div>
           <div className="mt-6 flex items-end gap-4">
-            <span className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-line bg-surface font-display text-3xl">
-              {/* eslint-disable-next-line @next/next/no-img-element -- salon's own logo */}
-              {s.logoUrl ? <img src={s.logoUrl} alt={`${s.name} logo`} className="size-full object-cover" /> : initials}
-            </span>
+            <SalonLogo url={s.logoUrl} name={s.name} look={s.branding} tileClass="size-20 rounded-2xl border border-line bg-surface font-display text-3xl" freeClass="h-20 w-auto max-w-[45%] sm:h-24" />
             <div className="min-w-0">
               <h1 className="font-display text-4xl leading-tight">{s.name}</h1>
               {place && <p className="text-sm text-muted">{place}</p>}

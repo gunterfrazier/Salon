@@ -4,7 +4,9 @@ import { ACCENT_PRESETS, accentStyle, branding, contrast, onAccent } from "./bra
 describe("branding", () => {
   it("keeps only valid values", () => {
     const id = "0b2a3c4d-1111-2222-3333-444455556666";
-    expect(branding({ accent: "#B76E79", logoPath: `${id}/logo.png`, coverPath: "../../etc/passwd" })).toEqual({ accent: "#b76e79", logoPath: `${id}/logo.png`, coverPath: null });
+    expect(branding({ accent: "#B76E79", logoPath: `${id}/logo.png`, coverPath: "../../etc/passwd" })).toEqual({ accent: "#b76e79", logoPath: `${id}/logo.png`, coverPath: null, logoStyle: "badge", logoTint: "original" });
+    expect(branding({ logoStyle: "free", logoTint: "white" })).toMatchObject({ logoStyle: "free", logoTint: "white" });
+    expect(branding({ logoStyle: "huge", logoTint: "neon" })).toMatchObject({ logoStyle: "badge", logoTint: "original" });
     expect(branding({ accent: "red" }).accent).toBeNull();
   });
   it("picks readable text on the accent", () => {

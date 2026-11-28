@@ -29,6 +29,8 @@ export default async function SalonSettingsPage() {
         accent={look.accent}
         logoUrl={mediaUrl(look.logoPath)}
         coverUrl={mediaUrl(look.coverPath)}
+        logoStyle={look.logoStyle}
+        logoTint={look.logoTint}
         photos={(photos ?? []).map((p) => ({ id: p.id, url: mediaUrl(p.path)!, caption: p.caption, staff: (p.staff as unknown as { display_name: string } | null)?.display_name ?? null }))}
         stylists={(staff ?? []).map((x) => ({ id: x.id, name: x.display_name }))}
       />
